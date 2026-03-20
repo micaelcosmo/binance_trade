@@ -1,5 +1,6 @@
 ```markdown
 # 📈 Binance Trade Bot Pro
+
 ![Version](https://img.shields.io/badge/version-v2.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 Um bot de trading algorítmico automatizado para a corretora Binance, focado em acúmulo inteligente de criptoativos (Jumps), gestão de risco automatizada e realização de lucros via Trailing Stop Loss Global.
@@ -15,18 +16,24 @@ Este projeto é um *fork* evoluído da arquitetura clássica de trading, aprimor
 O núcleo deste bot opera sob um paradigma de "Fazendeiro" (Acumulação) combinado com um "Caçador" (Trailing Stop). Ele foi desenhado para eliminar o fator emocional das operações de criptomoedas.
 
 ### 1. O Motor de Acúmulo (Jumps)
+
 O bot não faz "Buy and Hold" cego. Ele varre o mercado em tempo real através de conexões WebSocket buscando oportunidades de "pulo" (*Jump*). Se você possui a moeda A, e a moeda B apresenta uma variação de preço favorável que cubra as taxas da corretora e garanta um lucro mínimo real (definido pelo parâmetro `scout_margin`), o bot executa a troca. O objetivo primário é **aumentar a quantidade bruta de moedas** na sua carteira.
 
 ### 2. Trailing Stop Loss Global (A Máquina de Lucro)
+
 Diferente de estratégias engessadas que ficam presas em moedas desvalorizadas, este bot monitora o **Patrimônio Total em Dólares (USDT)**. 
+
 - **O Gatilho:** Quando o seu saldo total atinge uma meta percentual pré-configurada (`global_take_profit`), o sistema entra em estado de alerta.
 - **O Recuo (Trailing):** O bot passa a perseguir o preço como uma sombra. Se o mercado continuar subindo, ele atualiza o pico máximo de lucro. Se o mercado recuar uma porcentagem específica (`trailing_drop`) a partir desse pico, a "coleira" estica e o bot liquida a posição para USDT. Isso garante o lucro líquido no bolso e reinicia o ciclo com uma banca maior (Juros Compostos).
 
 ### 3. O Porteiro do Mercado (Histerese de BTC)
+
 O bot utiliza o Bitcoin (BTC) como termômetro global. Se o BTC apresentar um derretimento brusco (configurável em `btc_crash_limit`), o bot entra instantaneamente em **Modo Sobrevivência**, paralisando compras arriscadas e protegendo o capital em Dólar até que o mercado apresente sinais consistentes de recuperação (`btc_recover_limit`).
 
 ### 4. Dashboard Interativo (Cockpit de Operações)
+
 Acompanhe cada cálculo sob o capô através de um painel visual construído nativamente em Python (Tkinter). O painel entrega em tempo real:
+
 - Saldo Base vs. Saldo Atual (P/L Dinâmico).
 - Snapshot visual da moeda Anterior vs. Moeda Atual (Prova matemática do acúmulo).
 - Monitoramento do gatilho e estado do Trailing Stop Global.
@@ -35,6 +42,7 @@ Acompanhe cada cálculo sob o capô através de um painel visual construído nat
 ---
 
 ## 💡 Créditos e Origem
+
 Este projeto iniciou como uma ramificação (fork) inspirado no robusto motor open-source do [binance-trade-bot](https://github.com/edeng23/binance-trade-bot), evoluindo e divergindo para uma arquitetura "Pro" voltada a interfaces gráficas (IPC via JSON local), injeção de lógicas de Stop Móvel em nível de portfólio e otimizações pesadas nas rotinas de requisição.
 
 ---
@@ -42,12 +50,14 @@ Este projeto iniciou como uma ramificação (fork) inspirado no robusto motor op
 ## ⚙️ Instalação e Configuração
 
 ### Pré-requisitos
+
 - **Python 3.9+** instalado no sistema.
 - Conta na **Binance** com chaves de API geradas (Permissões de `Leitura` e `Trade` habilitadas. Por segurança, **NÃO** habilite permissões de saque).
 
 ### Passo a Passo de Setup
 
 **1. Clone o repositório para a sua máquina:**
+
 ```bash
 git clone [https://github.com/micaelcosmo/binance_trade.git](https://github.com/micaelcosmo/binance_trade.git)
 cd binance_trade
