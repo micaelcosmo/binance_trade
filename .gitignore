@@ -14,3 +14,5 @@ apprise.yml
 .DS_Store
 .bot/
 bot_status.json
+data/*.db
+logs/*.log
