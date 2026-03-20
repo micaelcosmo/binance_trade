@@ -53,6 +53,7 @@ Este projeto iniciou como uma ramificação (fork) inspirado no robusto motor op
 
 - **Python 3.9+** instalado no sistema.
 - Conta na **Binance** com chaves de API geradas (Permissões de `Leitura` e `Trade` habilitadas. Por segurança, **NÃO** habilite permissões de saque).
+```
 
 ### Passo a Passo de Setup
 
