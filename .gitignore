@@ -16,4 +16,4 @@ apprise.yml
 bot_status.json
 data/*.db
 logs/*.log
-supported_coin_list
+supported_coin_list.txt
