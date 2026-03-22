@@ -131,3 +131,25 @@ os processos paralelos em segundo plano. Relaxe e acompanhe a mágica acontecer 
 de altíssima volatilidade. Faça testes com valores baixos (ou na Testnet), opere com responsabilidade e gerencie 
 o seu próprio risco financeiro.
 ```
+
+---
+
+## ❓ FAQ & Solução de Problemas (Troubleshooting)
+
+Se você encontrou algum erro ao rodar o bot pela primeira vez, confira as soluções para os problemas mais comuns relatados pela comunidade:
+
+### 1. Erro de Timestamp (APIError code=-1021)
+**O erro:** `APIError(code=-1021): Timestamp for this request is outside of the recvWindow.`
+**O que significa:** O relógio do seu computador está fora de sincronia com os servidores da Binance em mais de 5 segundos. É uma trava de segurança da corretora contra *replay attacks*.
+**Como resolver:**
+- **No Windows:** Clique com o botão direito no relógio da barra de tarefas > "Ajustar data/hora" > Clique no botão **"Sincronizar agora"**. Reinicie o bot.
+- **No Linux/Mac:** Force a sincronização do NTP (Network Time Protocol) através do terminal ou configurações de sistema.
+
+### 2. Erro de Banco de Dados / ORM (SQLAlchemy ArgumentError)
+**O erro:** `sqlalchemy.exc.ArgumentError: Column expression, FROM clause, or other columns clause element expected...`
+**O que significa:** A versão instalada do SQLAlchemy no seu ambiente (`v2.0+`) sofreu mudanças de sintaxe (`breaking changes`) e não suporta mais o formato de `select([])` utilizado nativamente pelo motor base do bot.
+**Como resolver:**
+Faça o downgrade da biblioteca para a última versão estável da família 1.4.x rodando o comando abaixo com o seu ambiente virtual (VENV) ativado:
+```bash
+pip install SQLAlchemy==1.4.46
+```
