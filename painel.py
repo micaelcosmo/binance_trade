@@ -67,16 +67,16 @@ class BinanceBotGUI:
         self.lbl_cur_coin.grid(row=2, column=0, padx=10, pady=(15, 5), sticky="w")
         
         if self.current_strategy == 'profit_gain':
-            self.lbl_val_in = tk.Label(self.metrics_frame, text="Value In: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=25, anchor="w")
-            self.lbl_val_in.grid(row=2, column=1, padx=10, pady=(15, 5), sticky="w")
-            self.lbl_val_cur = tk.Label(self.metrics_frame, text="Current Value: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=30, anchor="w")
-            self.lbl_val_cur.grid(row=2, column=2, padx=10, pady=(15, 5), sticky="w")
-            self.lbl_vazio = tk.Label(self.metrics_frame, text="", bg=self.bg_frame, width=25)
-            self.lbl_vazio.grid(row=3, column=0, padx=10, pady=5)
-            self.lbl_tp = tk.Label(self.metrics_frame, text="TP: --", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), width=25, anchor="w")
-            self.lbl_tp.grid(row=3, column=1, padx=10, pady=5, sticky="w")
-            self.lbl_sl = tk.Label(self.metrics_frame, text="SL: --", bg=self.bg_frame, fg=self.accent_red, font=("Segoe UI", 10, "bold"), width=30, anchor="w")
-            self.lbl_sl.grid(row=3, column=2, padx=10, pady=5, sticky="w")
+            # Labels atualizados para refletir o JSON da estratégia de limites gráficos
+            self.lbl_route = tk.Label(self.metrics_frame, text="Rota: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=45, anchor="w")
+            self.lbl_route.grid(row=2, column=1, padx=10, pady=(15, 5), sticky="w")
+            self.lbl_meta = tk.Label(self.metrics_frame, text="Meta: --", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10), width=45, anchor="w")
+            self.lbl_meta.grid(row=2, column=2, padx=10, pady=(15, 5), sticky="w")
+            
+            self.lbl_det_ant = tk.Label(self.metrics_frame, text="Análise: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=45, anchor="w")
+            self.lbl_det_ant.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+            self.lbl_det_atu = tk.Label(self.metrics_frame, text="Alvo: --", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), width=45, anchor="w")
+            self.lbl_det_atu.grid(row=3, column=2, padx=10, pady=5, sticky="w")
         else:
             self.lbl_last_jump = tk.Label(self.metrics_frame, text="Último Salto: Nenhum", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=45, anchor="w")
             self.lbl_last_jump.grid(row=2, column=1, padx=10, pady=(15, 5), sticky="w")
@@ -94,7 +94,7 @@ class BinanceBotGUI:
             self.lbl_qtd = tk.Label(self.metrics_frame, text="[📦] Atual (--): -- | Venda: -- | Poeira: --", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), width=70, anchor="w")
             self.lbl_qtd.grid(row=4, column=1, columnspan=2, padx=10, pady=(0, 2), sticky="w")
             
-            # --- NOVA LINHA: TRAILING GLOBAL ---
+            # --- TRAILING GLOBAL ---
             self.lbl_trailing = tk.Label(self.metrics_frame, text="🎯 Trailing Global: Aguardando Inicialização...", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), width=70, anchor="w")
             self.lbl_trailing.grid(row=5, column=1, columnspan=2, padx=10, pady=(0, 5), sticky="w")
             # -----------------------------------
@@ -105,18 +105,21 @@ class BinanceBotGUI:
         self.log_area = scrolledtext.ScrolledText(self.content_frame, wrap=tk.WORD, bg="#000000", fg=self.accent_green, font=("Consolas", 10))
         self.log_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
 
-        if self.current_strategy == 'default':
-            self.right_panel = tk.Frame(self.content_frame, bg=self.bg_frame, width=250)
-            self.right_panel.pack(side=tk.RIGHT, fill=tk.Y)
-            self.right_panel.pack_propagate(False)
+        # === PAINEL DIREITO AGORA APARECE PARA AS DUAS ESTRATÉGIAS ===
+        self.right_panel = tk.Frame(self.content_frame, bg=self.bg_frame, width=250)
+        self.right_panel.pack(side=tk.RIGHT, fill=tk.Y)
+        self.right_panel.pack_propagate(False)
 
-            tk.Label(self.right_panel, text="🔥 APTAS (>= 2%)", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold")).pack(pady=(10,5))
-            self.list_hot = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_green, font=("Consolas", 10), selectbackground=self.bg_frame, highlightthickness=0)
-            self.list_hot.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
+        # Título dinâmico (Amarelo pra fora, Verde neon pra dentro rs)
+        title_hot = "🔥 APTAS (>= 2%)" if self.current_strategy == 'default' else "🟢 SINAIS H4 CONFIRMADOS"
+        tk.Label(self.right_panel, text=title_hot, bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold")).pack(pady=(10,5))
+        self.list_hot = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_green, font=("Consolas", 10), selectbackground=self.bg_frame, highlightthickness=0)
+        self.list_hot.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
 
-            tk.Label(self.right_panel, text="❄️ GELADEIRA (< 2%)", bg=self.bg_frame, fg=self.accent_red, font=("Segoe UI", 10, "bold")).pack(pady=(5,5))
-            self.list_cold = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_red, font=("Consolas", 10), selectbackground=self.bg_frame, highlightthickness=0)
-            self.list_cold.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
+        title_cold = "❄️ GELADEIRA (< 2%)" if self.current_strategy == 'default' else "❄️ GELADEIRA (QUEDA)"
+        tk.Label(self.right_panel, text=title_cold, bg=self.bg_frame, fg=self.accent_red, font=("Segoe UI", 10, "bold")).pack(pady=(5,5))
+        self.list_cold = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_red, font=("Consolas", 10), selectbackground=self.bg_frame, highlightthickness=0)
+        self.list_cold.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
 
         self.process = None
         self.bot_running = False
@@ -124,17 +127,31 @@ class BinanceBotGUI:
     def check_bot_state_json(self):
         if self.bot_running and os.path.exists("bot_status.json"):
             try:
-                with open("bot_status.json", "r") as f:
+                with open("bot_status.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 if data:
                     if self.current_strategy == 'profit_gain':
                         if "coin" in data:
                             self.lbl_cur_coin.config(text=f"Current Coin: {data.get('coin', 'BUSCANDO...')}")
-                            self.lbl_val_in.config(text=f"Value In: ${data.get('val_in', '--')}")
-                            self.lbl_val_cur.config(text=f"Current Value: ${data.get('val_cur', '--')}")
-                            self.lbl_tp.config(text=f"TP: ${data.get('tp', '--')}")
-                            self.lbl_sl.config(text=f"SL: ${data.get('sl', '--')}")
+                            self.lbl_route.config(text=f"{data.get('route', '--')}")
+                            self.lbl_meta.config(text=f"{data.get('meta_global', '--')}")
+                            self.lbl_det_ant.config(text=f"{data.get('detalhe_anterior', '--')}")
+                            self.lbl_det_atu.config(text=f"{data.get('detalhe_atual', '--')}")
+                            
+                            if "status" in data:
+                                cor = self.accent_yellow if "Mapeando" in data['status'] else self.accent_green
+                                if "Crash" in data['status']: cor = self.accent_red
+                                self.lbl_status.config(text=f"STATUS: {data['status']}", fg=cor)
+                                
+                            # Atualiza as caixinhas na direita!
+                            hot = data.get('aptas', [])
+                            cold = data.get('geladeira', [])
+                            self.list_hot.delete(0, tk.END)
+                            for c in hot: self.list_hot.insert(tk.END, c)
+                            self.list_cold.delete(0, tk.END)
+                            for c in cold: self.list_cold.insert(tk.END, c)
+                            
                     else:
                         if "coin" in data:
                             self.lbl_cur_coin.config(text=f"Current Coin: {data.get('coin', 'BUSCANDO...')}")
@@ -180,10 +197,8 @@ class BinanceBotGUI:
 
                             if init_bal > 0:
                                 if peak > 0:
-                                    # O Trailing armou e está perseguindo o preço!
                                     self.lbl_trailing.config(text=f"🎯 Trailing [ATIVO]: Gatilho {tp}% | Pico: {peak:.2f}% | Atual: {curr_p:.2f}% (Vende se recuar {drop}%)", fg=self.accent_green)
                                 else:
-                                    # Monitorando até bater os 3.5%
                                     self.lbl_trailing.config(text=f"🎯 Meta Global: Gatilho em {tp}% | Lucro Atual: {curr_p:.2f}%", fg=self.accent_yellow)
                             else:
                                 self.lbl_trailing.config(text="🎯 Meta Global: Calculando saldo base...", fg=self.fg_text)
@@ -204,10 +219,10 @@ class BinanceBotGUI:
         if self.process:
             for line in iter(self.process.stdout.readline, ''):
                 if self.current_strategy == 'profit_gain':
-                    if "RADAR" in line:
-                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Buscando Oportunidade", fg=self.accent_blue))
-                    elif "AGUARDANDO API" in line:
-                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Aguardando API...", fg=self.accent_red))
+                    if "Mapeando EMA" in line:
+                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Escaneando o Mercado...", fg=self.accent_blue))
+                    elif "LIMIT em" in line:
+                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Operação Executada!", fg=self.accent_green))
 
                     if "TAKE PROFIT!" in line:
                         self.trades_won += 1
@@ -258,7 +273,7 @@ class BinanceBotGUI:
         try:
             config = Config()
             client = Client(config.BINANCE_API_KEY, config.BINANCE_API_SECRET_KEY, tld=config.BINANCE_TLD)
-            bridge = config.BRIDGE.symbol
+            bridge = config.BRIDGE.symbol if hasattr(config.BRIDGE, 'symbol') else getattr(config, 'BRIDGE', 'USDT')
             
             for _ in range(3):
                 start_t = time.time()
@@ -327,7 +342,10 @@ class BinanceBotGUI:
         self.root.after(0, _append_and_clean)
 
 if __name__ == "__main__":
+    if sys.platform == 'win32':
+        import codecs
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+
     root = tk.Tk()
     app = BinanceBotGUI(root)
     root.mainloop()
-    
