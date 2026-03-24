@@ -17,10 +17,13 @@ class Strategy:
         bridge_attr = getattr(self.config, 'BRIDGE', 'USDT')
         self.base_coin = getattr(bridge_attr, 'symbol', bridge_attr)
         
+        # --- MATEMÁTICA DA OPERAÇÃO (TRAILING STOP) ---
         self.taxa_maker = 0.10
         self.margem_poeira = 0.80
-        self.lucro_liquido = 0.60
-        self.target_perc = self.taxa_maker * 2 + self.margem_poeira + self.lucro_liquido 
+        self.lucro_liquido = 0.10 
+        
+        self.trailing_activation_perc = self.taxa_maker * 2 + self.margem_poeira + self.lucro_liquido 
+        self.trailing_drop_perc = 0.20
         
         # 🛑 AIRBAG & REGRA DE OURO
         self.stop_loss_perc = 2.0 
@@ -32,12 +35,13 @@ class Strategy:
         self.operation_start_time = 0.0
         self.last_switch_time = 0.0
         self.qtd_altcoin_ativa = 0.0  
-        self.trades_won = 0           # <--- Placar de Vitórias
-        self.trades_lost = 0          # <--- Placar de Derrotas
+        self.preco_compra_ativo = 0.0
+        self.peak_profit_perc = 0.0   
+        self.trades_won = 0           
+        self.trades_lost = 0          
         self._load_state() 
         
         # --- ESTADOS PARA A UI ---
-        self.preco_compra_ativo = 0.0
         self.preco_atual_ativo = 0.0
         self.preco_alvo_ativo = 0.0
         self.chart_data_cache = []
@@ -58,6 +62,8 @@ class Strategy:
                     self.qtd_altcoin_ativa = data.get("qtd_altcoin_ativa", 0.0)
                     self.trades_won = data.get("trades_won", 0)
                     self.trades_lost = data.get("trades_lost", 0)
+                    self.preco_compra_ativo = data.get("preco_compra_ativo", 0.0)
+                    self.peak_profit_perc = data.get("peak_profit_perc", 0.0)
             except Exception:
                 pass
 
@@ -69,7 +75,9 @@ class Strategy:
                     "last_switch_time": self.last_switch_time,
                     "qtd_altcoin_ativa": self.qtd_altcoin_ativa,
                     "trades_won": self.trades_won,
-                    "trades_lost": self.trades_lost
+                    "trades_lost": self.trades_lost,
+                    "preco_compra_ativo": self.preco_compra_ativo,
+                    "peak_profit_perc": self.peak_profit_perc
                 }, f)
         except Exception as e:
             self.logger.error(f"Erro ao salvar estado local: {e}")
@@ -136,36 +144,30 @@ class Strategy:
         
         if saldo_base < 6.0: return False
 
-        comprou_mercado = False
         try:
             self.logger.info(f"🚀 ENTRADA REAL: Comprando {symbol} a mercado...")
-            tick_size, step_size = self.get_precision_filters(symbol)
+            _, step_size = self.get_precision_filters(symbol)
             
             compra_usdt = saldo_base * 0.99 
             quote_qty_str = self.format_decimal(compra_usdt, 0.01) 
             
             self.client.create_order(symbol=symbol, side=SIDE_BUY, type=ORDER_TYPE_MARKET, quoteOrderQty=quote_qty_str)
-            comprou_mercado = True
             time.sleep(2) 
             
             saldo_moeda = self._get_balance(coin)
             qtd_vender_str = self.format_decimal(saldo_moeda, step_size)
             
-            if float(qtd_vender_str) == 0: 
-                return True
+            if float(qtd_vender_str) == 0: return True
 
-            preco_venda = float(preco_atual) * (1 + (self.target_perc / 100))
-            preco_venda_str = self.format_decimal(preco_venda, tick_size)
-            
-            self.logger.info(f"🎯 Pendurando alvo de lucro (Sell LIMIT) em {preco_venda_str}...")
-            self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_LIMIT, timeInForce=TIME_IN_FORCE_GTC, quantity=qtd_vender_str, price=preco_venda_str)
+            self.logger.info(f"✅ Compra confirmada! Armando Trailing Stop invisível (Gatilho em +{self.trailing_activation_perc:.2f}%)")
             
             self.operation_start_time = time.time()
             self.qtd_altcoin_ativa = float(qtd_vender_str)
+            self.preco_compra_ativo = float(preco_atual)
+            self.peak_profit_perc = 0.0
+            self.preco_alvo_ativo = float(preco_atual) * (1 + (self.trailing_activation_perc / 100))
             self._save_state()
             
-            self.preco_compra_ativo = float(preco_atual)
-            self.preco_alvo_ativo = float(preco_venda_str)
             self.preco_atual_ativo = float(preco_atual)
             self.tempo_operacao_str = "0h 0m"
             self._write_json_ui() 
@@ -174,15 +176,12 @@ class Strategy:
 
         except Exception as e:
             self.logger.error(f"❌ ERRO CRÍTICO na corretora: {e}")
-            if comprou_mercado:
-                self.operation_start_time = time.time() 
-                self.qtd_altcoin_ativa = self._get_balance(coin)
-                self._save_state()
-                return True
             return False
 
     def scan_market(self):
-        self.logger.info("📊 Mapeando gráficos, carteira e Regras de Segurança...")
+        if not self.em_operacao:
+            self.logger.info("📊 Mapeando gráficos, rodando análise de ativos...")
+            
         aptas_temp = []
         geladeira_temp = []
         
@@ -193,7 +192,7 @@ class Strategy:
             saldos = {}
 
         if not self.em_operacao:
-            self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo = 0.0, 0.0, 0.0
+            self.preco_atual_ativo, self.preco_alvo_ativo = 0.0, 0.0
             self.chart_data_cache = []
             self.tempo_operacao_str = "0h 0m"
             saldo_base = saldos.get(self.base_coin, 0.0)
@@ -206,7 +205,7 @@ class Strategy:
                             ticker = self.client.get_symbol_ticker(symbol=f"{c}{self.base_coin}")
                             valor_dolar = qtd * float(ticker['price'])
                             if valor_dolar >= 5.0:
-                                self.logger.info(f"🔄 Recuperação de Estado: Assumindo {c}.")
+                                self.logger.info(f"🔄 Recuperação: Assumindo {c} com Trailing Dinâmico.")
                                 self.em_operacao = True
                                 self.moeda_atual_operacao = c
                                 self.qtd_altcoin_ativa = qtd
@@ -225,108 +224,103 @@ class Strategy:
             except: pass
 
             try:
-                open_orders = self.client.get_open_orders(symbol=symbol)
-                if open_orders:
-                    sell_order = open_orders[0]
-                    self.preco_alvo_ativo = float(sell_order['price'])
-                    self.preco_compra_ativo = self.preco_alvo_ativo / (1 + (self.target_perc / 100))
-                    
-                    ticker = self.client.get_symbol_ticker(symbol=symbol)
-                    self.preco_atual_ativo = float(ticker['price'])
-                    
-                    drop_pct = ((self.preco_atual_ativo - self.preco_compra_ativo) / self.preco_compra_ativo) * 100
-                    self.sl_monitor_drop = drop_pct
-                    
-                    # --- CONTROLE VISUAL DO TEMPO E DO COOLDOWN DA REGRA DE OURO ---
-                    segundos_ativos = time.time() - self.operation_start_time
-                    horas = int(segundos_ativos // 3600)
-                    minutos = int((segundos_ativos % 3600) // 60)
-                    
-                    segundos_desde_switch = time.time() - self.last_switch_time
-                    cooldown_restante = self.golden_rule_cooldown - segundos_desde_switch
-                    
-                    if cooldown_restante > 0:
-                        cd_h = int(cooldown_restante // 3600)
-                        cd_m = int((cooldown_restante % 3600) // 60)
-                        status_cd = f" (Regra de Ouro em: {cd_h}h {cd_m}m)"
-                    else:
-                        status_cd = " (Regra de Ouro: Pronta)"
-                        
-                    self.tempo_operacao_str = f"{horas}h {minutos}m{status_cd}"
-                    # -------------------------------------------------------------
-                    
-                    if drop_pct <= -self.stop_loss_perc:
-                        self.logger.warning(f"🚨 STOP LOSS ACIONADO para {self.moeda_atual_operacao}!")
-                        self.client.cancel_order(symbol=symbol, orderId=sell_order['orderId'])
-                        time.sleep(1) 
-                        saldo_moeda = self._get_balance(self.moeda_atual_operacao)
-                        _, step_size = self.get_precision_filters(symbol)
-                        self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_moeda, step_size))
-                        
-                        self.trades_lost += 1 # Computa Derrota!
-                        self.em_operacao = False
-                        self.moeda_atual_operacao = None
-                        self.sl_monitor_drop, self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo, self.qtd_altcoin_ativa = 0.0, 0.0, 0.0, 0.0, 0.0
-                        self.chart_data_cache = []
-                        self._save_state()
-                    else:
-                        if segundos_ativos > self.max_hold_time_secs and (-1.0 <= drop_pct <= -0.15):
-                            if segundos_desde_switch > self.golden_rule_cooldown:
-                                self.logger.info("⏳ Bot preso em prejuízo leve por > 1h. Caçando nova oportunidade...")
-                                nova_moeda_promissora = None
-                                nova_cotacao = 0.0
-                                for check_coin in self.manager.config.SUPPORTED_COIN_LIST:
-                                    if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
-                                    up, p_atual, _ = self.get_ema_signal(f"{check_coin}{self.base_coin}")
-                                    if up:
-                                        nova_moeda_promissora = check_coin
-                                        nova_cotacao = p_atual
-                                        break
-                                
-                                if nova_moeda_promissora:
-                                    self.logger.warning(f"👑 REGRA DE OURO ATIVADA! Migrando para {nova_moeda_promissora}!")
-                                    self.client.cancel_order(symbol=symbol, orderId=sell_order['orderId'])
-                                    time.sleep(1)
-                                    saldo_moeda = self._get_balance(self.moeda_atual_operacao)
-                                    _, step_size = self.get_precision_filters(symbol)
-                                    self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_moeda, step_size))
-                                    time.sleep(2)
-                                    
-                                    self.trades_lost += 1 # Computa Derrota (Prejuízo Leve Assumido)
-                                    self.last_switch_time = time.time()
-                                    self._save_state()
-                                    
-                                    self.em_operacao = False 
-                                    sucesso_switch = self.execute_real_trade(nova_moeda_promissora, nova_cotacao)
-                                    if sucesso_switch:
-                                        self.em_operacao = True
-                                        self.moeda_atual_operacao = nova_moeda_promissora
-                                    return 
+                ticker = self.client.get_symbol_ticker(symbol=symbol)
+                self.preco_atual_ativo = float(ticker['price'])
+                
+                saldo_moeda = self._get_balance(self.moeda_atual_operacao)
+                if (saldo_moeda * self.preco_atual_ativo) < 5.0:
+                    self.logger.info(f"✅ Saldo esgotado em {self.moeda_atual_operacao}. Operação finalizada.")
+                    self.em_operacao = False
+                    self.moeda_atual_operacao = None
+                    self.sl_monitor_drop, self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo, self.qtd_altcoin_ativa, self.peak_profit_perc = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                    self.chart_data_cache = []
+                    self._save_state()
+                    return
 
-                        self.logger.info(f"[STATUS] ⏳ Tempo: {horas}h {minutos}m | Alvo (+{self.target_perc:.2f}%) para {self.moeda_atual_operacao}... Posição: {drop_pct:.2f}%")
-                        self._write_json_ui() 
+                if self.preco_compra_ativo <= 0:
+                    self.preco_compra_ativo = self.preco_atual_ativo
+                    self._save_state()
+
+                drop_pct = ((self.preco_atual_ativo - self.preco_compra_ativo) / self.preco_compra_ativo) * 100
+                self.sl_monitor_drop = drop_pct
+                
+                if drop_pct > self.peak_profit_perc:
+                    self.peak_profit_perc = drop_pct
+                    self._save_state()
+
+                if self.peak_profit_perc >= self.trailing_activation_perc:
+                    gatilho_perc = self.peak_profit_perc - self.trailing_drop_perc
+                    self.preco_alvo_ativo = self.preco_compra_ativo * (1 + (gatilho_perc / 100))
                 else:
-                    qtd = saldos.get(self.moeda_atual_operacao, 0.0)
-                    saldo_dolar = qtd * float(self.client.get_symbol_ticker(symbol=symbol)['price']) if qtd > 0 else 0.0
-                    if saldo_dolar < 5.0:
-                        self.logger.info(f"✅ TAKE PROFIT CONFIRMADO para {self.moeda_atual_operacao}! Dinheiro no bolso.")
-                        self.trades_won += 1 # Computa Vitória!
-                        self.operation_start_time = 0.0 
-                        self.qtd_altcoin_ativa = 0.0
-                        self._save_state()
-                    else:
-                        self.logger.warning(f"⚠️ Ordem limite ausente. Forçando venda a mercado para proteção.")
-                        _, step_size = self.get_precision_filters(symbol)
-                        self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(qtd, step_size))
+                    self.preco_alvo_ativo = self.preco_compra_ativo * (1 + (self.trailing_activation_perc / 100))
+
+                segundos_ativos = time.time() - self.operation_start_time
+                horas = int(segundos_ativos // 3600)
+                minutos = int((segundos_ativos % 3600) // 60)
+                
+                segundos_desde_switch = time.time() - self.last_switch_time
+                cooldown_restante = self.golden_rule_cooldown - segundos_desde_switch
+                status_cd = f" (Regra de Ouro em: {int(cooldown_restante//3600)}h {int((cooldown_restante%3600)//60)}m)" if cooldown_restante > 0 else " (Regra de Ouro: Pronta)"
+                self.tempo_operacao_str = f"{horas}h {minutos}m{status_cd}"
+
+                vender_agora = False
+                motivo_venda = ""
+
+                if drop_pct <= -self.stop_loss_perc:
+                    vender_agora = True
+                    motivo_venda = "STOP_LOSS"
+                    self.logger.warning(f"🚨 STOP LOSS ACIONADO para {self.moeda_atual_operacao}! Queda de {drop_pct:.2f}%")
+                
+                elif self.peak_profit_perc >= self.trailing_activation_perc and (self.peak_profit_perc - drop_pct) >= self.trailing_drop_perc:
+                    vender_agora = True
+                    motivo_venda = "TRAILING_STOP"
+                    self.logger.info(f"✅ TAKE PROFIT TRAILING ACIONADO para {self.moeda_atual_operacao}! Pico atingido: {self.peak_profit_perc:.2f}% | Fechando em: {drop_pct:.2f}%")
+
+                if vender_agora:
+                    _, step_size = self.get_precision_filters(symbol)
+                    self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_moeda, step_size))
+                    
+                    if motivo_venda == "STOP_LOSS": self.trades_lost += 1
+                    else: self.trades_won += 1
                     
                     self.em_operacao = False
                     self.moeda_atual_operacao = None
-                    self.sl_monitor_drop, self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo = 0.0, 0.0, 0.0, 0.0
+                    self.sl_monitor_drop, self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo, self.qtd_altcoin_ativa, self.peak_profit_perc = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                     self.chart_data_cache = []
-                    self.tempo_operacao_str = "0h 0m"
+                    self._save_state()
+                else:
+                    if segundos_ativos > self.max_hold_time_secs and (-1.0 <= drop_pct <= -0.15) and cooldown_restante <= 0:
+                        self.logger.info("⏳ Bot preso em prejuízo leve por > 1h. Caçando nova oportunidade...")
+                        nova_moeda = None
+                        nova_cotacao = 0.0
+                        for check_coin in self.manager.config.SUPPORTED_COIN_LIST:
+                            if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
+                            up, p_atual, _ = self.get_ema_signal(f"{check_coin}{self.base_coin}")
+                            if up:
+                                nova_moeda = check_coin
+                                nova_cotacao = p_atual
+                                break
+                        
+                        if nova_moeda:
+                            self.logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda}!")
+                            _, step_size = self.get_precision_filters(symbol)
+                            self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_moeda, step_size))
+                            time.sleep(2)
+                            self.trades_lost += 1 
+                            self.last_switch_time = time.time()
+                            self.em_operacao = False 
+                            self._save_state()
+                            
+                            if self.execute_real_trade(nova_moeda, nova_cotacao):
+                                self.em_operacao = True
+                                self.moeda_atual_operacao = nova_moeda
+                            return
+
+                    self._write_json_ui() 
             except Exception as e:
                 self.logger.error(f"Erro no monitoramento: {e}")
 
+        # ---------------- VARREDURA GRÁFICA & ANÁLISE ----------------
         for coin in self.manager.config.SUPPORTED_COIN_LIST:
             if coin == self.base_coin: continue
             symbol = f"{coin}{self.base_coin}"
@@ -340,12 +334,19 @@ class Strategy:
             if uptrend:
                 aptas_temp.append(item_linha)
                 if not self.em_operacao:
+                    self.logger.info(f"🟢 {coin} | Análise: Detectada ascensão (EMA 9 > 21)! Preparando bote...")
                     sucesso = self.execute_real_trade(coin, preco_atual)
                     if sucesso:
                         self.em_operacao = True
                         self.moeda_atual_operacao = coin
             else:
                 geladeira_temp.append(item_linha)
+                # Só imprime a análise verbosa se não estivermos em operação
+                if not self.em_operacao:
+                    if var_4h < -2.0:
+                        self.logger.info(f"❄️ {coin} | Análise: Em geladeira. Ativo sangrando muito ({var_4h:.2f}% nas últimas 4h).")
+                    else:
+                        self.logger.info(f"⏸️ {coin} | Análise: Não investido porque está abaixo da curva na regra (EMA 9 < 21).")
 
         self.aptas_cache = aptas_temp
         self.geladeira_cache = geladeira_temp
@@ -358,6 +359,11 @@ class Strategy:
         except Exception:
             btc_price, btc_change = 0.0, 0.0
             
+        if self.peak_profit_perc >= self.trailing_activation_perc:
+            txt_alvo = f"🚀 TRAILING ATIVO! Pico: {self.peak_profit_perc:.2f}% | Trava de Venda Armada em: {self.peak_profit_perc - self.trailing_drop_perc:.2f}%"
+        else:
+            txt_alvo = f"[🎯] Gatilho Trailing: {self.trailing_activation_perc:.2f}% | [🛑] SL: -{self.stop_loss_perc:.2f}% (Var Atual: {self.sl_monitor_drop:+.2f}%)"
+            
         status_data = {
             "coin": self.moeda_atual_operacao if self.em_operacao else self.base_coin,
             "status": "Em Operação (Alvo/Stop)" if self.em_operacao else "Mapeando Tendências",
@@ -369,9 +375,9 @@ class Strategy:
             "active_qty": self.qtd_altcoin_ativa,          
             "buy_time": self.operation_start_time,         
             "chart_data": self.chart_data_cache,
-            "trades_won": self.trades_won,     # <--- Manda W pro Painel
-            "trades_lost": self.trades_lost,   # <--- Manda L pro Painel
-            "detalhe_atual": f"[⏳] Duração: {self.tempo_operacao_str} | [🎯] Alvo: {self.target_perc:.2f}% | [🛑] SL: -{self.stop_loss_perc:.2f}% (Var Atual: {self.sl_monitor_drop:+.2f}%)",
+            "trades_won": self.trades_won,     
+            "trades_lost": self.trades_lost,   
+            "detalhe_atual": f"[⏳] Duração: {self.tempo_operacao_str} | {txt_alvo}",
             "aptas": self.aptas_cache,
             "geladeira": self.geladeira_cache
         }
