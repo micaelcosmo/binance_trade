@@ -10,6 +10,7 @@ import os
 from binance_trade_bot.config import Config
 from binance.client import Client
 
+
 class BinanceBotGUI:
     def __init__(self, root):
         self.root = root
@@ -52,15 +53,14 @@ class BinanceBotGUI:
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
         self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=15)
 
-        txt_ini = f"${self.saldo_inicial:.2f}" if self.saldo_inicial > 0 else "--"
-        self.lbl_inicial = tk.Label(self.metrics_frame, text=f"[S] Inicial: {txt_ini}", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 11, "bold"), width=25, anchor="w")
+        texto_inicial = f"${self.saldo_inicial:.2f}" if self.saldo_inicial > 0 else "--"
+        self.lbl_inicial = tk.Label(self.metrics_frame, text=f"[S] Inicial: {texto_inicial}", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 11, "bold"), width=25, anchor="w")
         self.lbl_inicial.grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.lbl_atual = tk.Label(self.metrics_frame, text="[$] Atual: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 11, "bold"), width=25, anchor="w")
         self.lbl_atual.grid(row=0, column=1, padx=10, pady=5, sticky="w")
         self.lbl_pl = tk.Label(self.metrics_frame, text="[%] P/L Total: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 11, "bold"), width=30, anchor="w")
         self.lbl_pl.grid(row=0, column=2, padx=10, pady=5, sticky="w")
 
-        # --- LARGURAS AUMENTADAS AQUI (Largura de Status passou de 25 para 35) ---
         self.lbl_status = tk.Label(self.metrics_frame, text="STATUS: Parado", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), width=35, anchor="w")
         self.lbl_status.grid(row=1, column=0, padx=10, pady=5, sticky="w")
         self.lbl_trades = tk.Label(self.metrics_frame, text="TRADES: 0 | W: 0 | L: 0 (0.0%)", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), width=35, anchor="w")
@@ -84,11 +84,9 @@ class BinanceBotGUI:
             self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), width=40, anchor="w")
             self.lbl_btc.grid(row=2, column=3, padx=10, pady=(15, 5), sticky="w")
 
-            # --- LARGURA AUMENTADA AQUI (Largura de Detalhes passou de 90 para 110) ---
-            self.lbl_det_atu = tk.Label(self.metrics_frame, text="Análise: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=110, anchor="w")
+            self.lbl_det_atu = tk.Label(self.metrics_frame, text="Análise: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=130, anchor="w")
             self.lbl_det_atu.grid(row=5, column=1, columnspan=3, padx=10, pady=5, sticky="w")
             
-            # ====== O MINIGRÁFICO AUMENTADO (De 220x80 para 280x110) ======
             self.canvas_chart = tk.Canvas(self.metrics_frame, bg="#000000", width=280, height=110, highlightthickness=1, highlightbackground="#3c4043")
             self.canvas_chart.grid(row=1, column=4, rowspan=3, padx=(0,10), pady=5, sticky="e")
             self.lbl_chart_title = tk.Label(self.metrics_frame, text="Mini-Gráfico (Inativo)", bg=self.bg_frame, fg="#9aa0a6", font=("Segoe UI", 8, "bold"))
@@ -123,13 +121,13 @@ class BinanceBotGUI:
         self.right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         self.right_panel.pack_propagate(False)
 
-        title_hot = "🔥 APTAS (>= 2%)" if self.current_strategy == 'default' else "🟢 SINAIS H4 CONFIRMADOS"
-        tk.Label(self.right_panel, text=title_hot, bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold")).pack(pady=(10,5))
+        titulo_lista_aptas = "🔥 APTAS (>= 2%)" if self.current_strategy == 'default' else "🟢 SINAIS H4 CONFIRMADOS"
+        tk.Label(self.right_panel, text=titulo_lista_aptas, bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold")).pack(pady=(10,5))
         self.list_hot = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_green, font=("Consolas", 9), selectbackground=self.bg_frame, highlightthickness=0)
         self.list_hot.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
 
-        title_cold = "❄️ GELADEIRA (< 2%)" if self.current_strategy == 'default' else "❄️ GELADEIRA (QUEDA)"
-        tk.Label(self.right_panel, text=title_cold, bg=self.bg_frame, fg=self.accent_red, font=("Segoe UI", 10, "bold")).pack(pady=(5,5))
+        titulo_lista_geladeira = "❄️ GELADEIRA (< 2%)" if self.current_strategy == 'default' else "❄️ GELADEIRA (QUEDA)"
+        tk.Label(self.right_panel, text=titulo_lista_geladeira, bg=self.bg_frame, fg=self.accent_red, font=("Segoe UI", 10, "bold")).pack(pady=(5,5))
         self.list_cold = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_red, font=("Consolas", 9), selectbackground=self.bg_frame, highlightthickness=0)
         self.list_cold.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
 
@@ -139,15 +137,15 @@ class BinanceBotGUI:
     def _load_gui_state(self):
         if os.path.exists(self.gui_state_file):
             try:
-                with open(self.gui_state_file, "r") as f:
-                    data = json.load(f)
-                    self.saldo_inicial = data.get("saldo_inicial", 0.0)
+                with open(self.gui_state_file, "r") as file_handler:
+                    state_data = json.load(file_handler)
+                    self.saldo_inicial = state_data.get("saldo_inicial", 0.0)
             except: pass
 
     def _save_gui_state(self):
         try:
-            with open(self.gui_state_file, "w") as f:
-                json.dump({"saldo_inicial": self.saldo_inicial}, f)
+            with open(self.gui_state_file, "w") as file_handler:
+                json.dump({"saldo_inicial": self.saldo_inicial}, file_handler)
         except: pass
 
     def reset_initial_balance(self):
@@ -157,165 +155,165 @@ class BinanceBotGUI:
             self.lbl_inicial.config(text=f"[S] Inicial: ${self.saldo_inicial:.2f}")
             self.log_message("\n[✓] ♻️ Saldo Inicial sincronizado com sucesso!\n")
 
-    def draw_mini_chart(self, data, coin, buy_price=0.0, buy_time=0.0):
+    def draw_mini_chart(self, chart_data_points, coin_symbol, buy_price_value=0.0, buy_time_stamp=0.0):
         self.canvas_chart.delete("all")
-        if not data or len(data) < 2:
-            self.lbl_chart_title.config(text=f"{coin} - Aguardando Dados...")
+        if not chart_data_points or len(chart_data_points) < 2:
+            self.lbl_chart_title.config(text=f"{coin_symbol} - Aguardando Dados...")
             return
 
-        self.lbl_chart_title.config(text=f"{coin} - Últimas 2h30 (5m)", fg=self.accent_blue)
+        self.lbl_chart_title.config(text=f"{coin_symbol} - Últimas 2h30 (5m)", fg=self.accent_blue)
         
-        w = int(self.canvas_chart['width'])
-        h = int(self.canvas_chart['height'])
-        pad = 5
+        canvas_width = int(self.canvas_chart['width'])
+        canvas_height = int(self.canvas_chart['height'])
+        padding_value = 5
         
-        min_val = min(data)
-        max_val = max(data)
-        val_range = max_val - min_val if max_val != min_val else 1
+        min_chart_value = min(chart_data_points)
+        max_chart_value = max(chart_data_points)
+        value_range = max_chart_value - min_chart_value if max_chart_value != min_chart_value else 1
         
-        color = self.accent_green if data[-1] >= data[0] else self.accent_red
+        line_color = self.accent_green if chart_data_points[-1] >= chart_data_points[0] else self.accent_red
         
-        points = []
-        x_step = (w - 2*pad) / (len(data) - 1)
-        for i, val in enumerate(data):
-            x = pad + i * x_step
-            y = pad + (h - 2*pad) * (1 - (val - min_val) / val_range)
-            points.append(x)
-            points.append(y)
+        plotted_points = []
+        x_axis_step = (canvas_width - 2*padding_value) / (len(chart_data_points) - 1)
+        for index, current_value in enumerate(chart_data_points):
+            x_coordinate = padding_value + index * x_axis_step
+            y_coordinate = padding_value + (canvas_height - 2*padding_value) * (1 - (current_value - min_chart_value) / value_range)
+            plotted_points.append(x_coordinate)
+            plotted_points.append(y_coordinate)
             
-        self.canvas_chart.create_line(points, fill=color, width=2, smooth=True)
+        self.canvas_chart.create_line(plotted_points, fill=line_color, width=2, smooth=True)
 
-        if buy_price > 0 and (min_val <= buy_price <= max_val):
-            y_buy = pad + (h - 2*pad) * (1 - (buy_price - min_val) / val_range)
-            self.canvas_chart.create_line(pad, y_buy, w-pad, y_buy, fill="#f2a900", dash=(2, 2))
-            if buy_time > 0:
-                diff_sec = time.time() - buy_time
-                candles_ago = diff_sec / 300.0 
-                idx_compra = (len(data) - 1) - candles_ago
-                if 0 <= idx_compra <= len(data) - 1:
-                    x_buy = pad + idx_compra * x_step
-                    raio = 3
-                    self.canvas_chart.create_oval(x_buy-raio, y_buy-raio, x_buy+raio, y_buy+raio, fill="#f2a900", outline="#ffffff", width=1)
+        if buy_price_value > 0 and (min_chart_value <= buy_price_value <= max_chart_value):
+            y_buy_coordinate = padding_value + (canvas_height - 2*padding_value) * (1 - (buy_price_value - min_chart_value) / value_range)
+            self.canvas_chart.create_line(padding_value, y_buy_coordinate, canvas_width-padding_value, y_buy_coordinate, fill="#f2a900", dash=(2, 2))
+            if buy_time_stamp > 0:
+                diff_seconds = time.time() - buy_time_stamp
+                candles_ago_count = diff_seconds / 300.0 
+                idx_compra_plot = (len(chart_data_points) - 1) - candles_ago_count
+                if 0 <= idx_compra_plot <= len(chart_data_points) - 1:
+                    x_buy_coordinate = padding_value + idx_compra_plot * x_axis_step
+                    circle_radius = 3
+                    self.canvas_chart.create_oval(x_buy_coordinate-circle_radius, y_buy_coordinate-circle_radius, x_buy_coordinate+circle_radius, y_buy_coordinate+circle_radius, fill="#f2a900", outline="#ffffff", width=1)
 
     def check_bot_state_json(self):
         if self.bot_running and os.path.exists("bot_status.json"):
             try:
-                with open("bot_status.json", "r", encoding="utf-8") as f:
-                    data = json.load(f)
+                with open("bot_status.json", "r", encoding="utf-8") as file_handler:
+                    state_data = json.load(file_handler)
                 
-                if data:
+                if state_data:
                     if self.current_strategy == 'profit_gain':
-                        if "coin" in data:
-                            coin = data.get('coin', 'BUSCANDO...')
-                            self.lbl_cur_coin.config(text=f"Current Coin: {coin}")
+                        if "coin" in state_data:
+                            coin_symbol = state_data.get('coin', 'BUSCANDO...')
+                            self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol}")
                             
-                            btc_p = data.get('btc_price', 0.0)
-                            btc_c = data.get('btc_change', 0.0)
-                            cor_btc = self.accent_green if btc_c >= 0 else self.accent_red
-                            self.lbl_btc.config(text=f"BTC: ${btc_p:,.2f} | Var: {btc_c:+.2f}%", fg=cor_btc)
+                            btc_price_value = state_data.get('btc_price', 0.0)
+                            btc_change_value = state_data.get('btc_change', 0.0)
+                            cor_texto_btc = self.accent_green if btc_change_value >= 0 else self.accent_red
+                            self.lbl_btc.config(text=f"BTC: ${btc_price_value:,.2f} | Var: {btc_change_value:+.2f}%", fg=cor_texto_btc)
                             
-                            bp = data.get('buy_price', 0.0)
-                            cp = data.get('current_price', 0.0)
-                            tp = data.get('target_price', 0.0)
-                            qty = data.get('active_qty', 0.0)
-                            b_time = data.get('buy_time', 0.0)
+                            buy_price_value = state_data.get('buy_price', 0.0)
+                            current_price_value = state_data.get('current_price', 0.0)
+                            target_price_value = state_data.get('target_price', 0.0)
+                            active_quantity = state_data.get('active_qty', 0.0)
+                            buy_time_stamp = state_data.get('buy_time', 0.0)
                             
-                            if bp > 0 and qty > 0:
-                                buy_usdt = bp * qty
-                                cur_usdt = cp * qty
-                                tgt_usdt = tp * qty
-                                self.lbl_buy_price.config(text=f"[🛒] Compra Est.: ${bp:.6f}   |   {buy_usdt:.2f} USDT ⇌ {qty:.4f} {coin}")
-                                self.lbl_cur_price.config(text=f"[💲] Atual: ${cp:.6f}   |   {cur_usdt:.2f} USDT ⇌ {qty:.4f} {coin}")
-                                self.lbl_tgt_price.config(text=f"[🎯] Alvo (Venda): ${tp:.6f}   |   {tgt_usdt:.2f} USDT ⇌ {qty:.4f} {coin}")
+                            if buy_price_value > 0 and active_quantity > 0:
+                                total_buy_usdt = buy_price_value * active_quantity
+                                total_current_usdt = current_price_value * active_quantity
+                                total_target_usdt = target_price_value * active_quantity
+                                self.lbl_buy_price.config(text=f"[🛒] Compra Est.: ${buy_price_value:.6f}   |   {total_buy_usdt:.2f} USDT ⇌ {active_quantity:.4f} {coin_symbol}")
+                                self.lbl_cur_price.config(text=f"[💲] Atual: ${current_price_value:.6f}   |   {total_current_usdt:.2f} USDT ⇌ {active_quantity:.4f} {coin_symbol}")
+                                self.lbl_tgt_price.config(text=f"[🎯] Alvo (Venda): ${target_price_value:.6f}   |   {total_target_usdt:.2f} USDT ⇌ {active_quantity:.4f} {coin_symbol}")
                             else:
                                 self.lbl_buy_price.config(text="[🛒] Compra Est.: --")
                                 self.lbl_cur_price.config(text="[💲] Atual: --")
                                 self.lbl_tgt_price.config(text="[🎯] Alvo (Venda): --")
                                 
-                            self.lbl_det_atu.config(text=f"{data.get('detalhe_atual', '--')}")
+                            self.lbl_det_atu.config(text=f"{state_data.get('detalhe_atual', '--')}")
                             
-                            tw = data.get("trades_won", 0)
-                            tl = data.get("trades_lost", 0)
-                            total_t = tw + tl
-                            win_rate = (tw / total_t * 100) if total_t > 0 else 0.0
-                            self.lbl_trades.config(text=f"TRADES: {total_t} | W: {tw} | L: {tl} ({win_rate:.1f}%)")
+                            trades_won_count = state_data.get("trades_won", 0)
+                            trades_lost_count = state_data.get("trades_lost", 0)
+                            total_trades_count = trades_won_count + trades_lost_count
+                            win_rate_percentage = (trades_won_count / total_trades_count * 100) if total_trades_count > 0 else 0.0
+                            self.lbl_trades.config(text=f"TRADES: {total_trades_count} | W: {trades_won_count} | L: {trades_lost_count} ({win_rate_percentage:.1f}%)")
                             
-                            if "status" in data:
-                                cor = self.accent_yellow if "Em Operação" in data['status'] else self.accent_blue
-                                if "Crash" in data['status']: cor = self.accent_red
-                                self.lbl_status.config(text=f"STATUS: {data['status']}", fg=cor)
+                            if "status" in state_data:
+                                cor_texto_status = self.accent_yellow if "Em Operação" in state_data['status'] else self.accent_blue
+                                if "Crash" in state_data['status']: cor_texto_status = self.accent_red
+                                self.lbl_status.config(text=f"STATUS: {state_data['status']}", fg=cor_texto_status)
                             
-                            chart_data = data.get('chart_data', [])
-                            if chart_data:
-                                self.draw_mini_chart(chart_data, coin, bp, b_time)
+                            chart_data_points = state_data.get('chart_data', [])
+                            if chart_data_points:
+                                self.draw_mini_chart(chart_data_points, coin_symbol, buy_price_value, buy_time_stamp)
                             else:
                                 self.canvas_chart.delete("all")
                                 self.lbl_chart_title.config(text="Mini-Gráfico (Inativo)", fg="#9aa0a6")
 
-                            hot = data.get('aptas', [])
-                            cold = data.get('geladeira', [])
+                            aptas_list = state_data.get('aptas', [])
+                            geladeira_list = state_data.get('geladeira', [])
                             self.list_hot.delete(0, tk.END)
-                            for c in hot: self.list_hot.insert(tk.END, c)
+                            for item in aptas_list: self.list_hot.insert(tk.END, item)
                             self.list_cold.delete(0, tk.END)
-                            for c in cold: self.list_cold.insert(tk.END, c)
+                            for item in geladeira_list: self.list_cold.insert(tk.END, item)
                             
                     else:
-                        if "coin" in data:
-                            self.lbl_cur_coin.config(text=f"Current Coin: {data.get('coin', 'BUSCANDO...')}")
-                            self.lbl_last_jump.config(text=f"Último Salto: {data.get('last_jump', 'Nenhum')}")
+                        if "coin" in state_data:
+                            self.lbl_cur_coin.config(text=f"Current Coin: {state_data.get('coin', 'BUSCANDO...')}")
+                            self.lbl_last_jump.config(text=f"Último Salto: {state_data.get('last_jump', 'Nenhum')}")
                             
-                            btc_p = data.get('btc_price', 0.0)
-                            btc_c = data.get('btc_change', 0.0)
-                            cor_btc = self.accent_green if btc_c >= 0 else self.accent_red
-                            self.lbl_btc.config(text=f"BTC: ${btc_p:,.2f} | Var: {btc_c:+.2f}%", fg=cor_btc)
+                            btc_price_value = state_data.get('btc_price', 0.0)
+                            btc_change_value = state_data.get('btc_change', 0.0)
+                            cor_texto_btc = self.accent_green if btc_change_value >= 0 else self.accent_red
+                            self.lbl_btc.config(text=f"BTC: ${btc_price_value:,.2f} | Var: {btc_change_value:+.2f}%", fg=cor_texto_btc)
                             
-                            self.lbl_rota.config(text=f"Rota: {data.get('route', 'Analisando...')}")
+                            self.lbl_rota.config(text=f"Rota: {state_data.get('route', 'Analisando...')}")
                             
-                            if "status" in data:
-                                cor = self.accent_yellow if "Segurando" in data['status'] else self.accent_blue
-                                if "Crash" in data['status']: cor = self.accent_red
-                                self.lbl_status.config(text=f"STATUS: {data['status']}", fg=cor)
+                            if "status" in state_data:
+                                cor_texto_status = self.accent_yellow if "Segurando" in state_data['status'] else self.accent_blue
+                                if "Crash" in state_data['status']: cor_texto_status = self.accent_red
+                                self.lbl_status.config(text=f"STATUS: {state_data['status']}", fg=cor_texto_status)
 
-                            p_coin = data.get('prev_coin', 'Nenhuma')
-                            pq = data.get('prev_qty', 0.0)
-                            ps = data.get('prev_sell', 0.0)
-                            pd = data.get('prev_dust', 0.0)
+                            prev_coin_symbol = state_data.get('prev_coin', 'Nenhuma')
+                            prev_quantity = state_data.get('prev_qty', 0.0)
+                            prev_sell_quantity = state_data.get('prev_sell', 0.0)
+                            prev_dust_amount = state_data.get('prev_dust', 0.0)
                             
-                            if p_coin in ["Nenhuma", "USDT"]:
-                                self.lbl_qtd_prev.config(text=f"[⏪] Anterior ({p_coin}): -- | Venda Real: -- | Poeira: --", fg="#9aa0a6")
+                            if prev_coin_symbol in ["Nenhuma", "USDT"]:
+                                self.lbl_qtd_prev.config(text=f"[⏪] Anterior ({prev_coin_symbol}): -- | Venda Real: -- | Poeira: --", fg="#9aa0a6")
                             else:
-                                self.lbl_qtd_prev.config(text=f"[⏪] Anterior ({p_coin}): {pq:.4f} | Venda Real: {ps:.4f} | Poeira: {pd:.4f}", fg="#9aa0a6")
+                                self.lbl_qtd_prev.config(text=f"[⏪] Anterior ({prev_coin_symbol}): {prev_quantity:.4f} | Venda Real: {prev_sell_quantity:.4f} | Poeira: {prev_dust_amount:.4f}", fg="#9aa0a6")
                             
-                            c_coin = data.get('coin', 'BUSCANDO...')
-                            cq = data.get('current_qty', 0.0)
-                            sq = data.get('sell_qty', 0.0)
-                            du = data.get('dust', 0.0)
+                            current_coin_symbol = state_data.get('coin', 'BUSCANDO...')
+                            current_quantity = state_data.get('current_qty', 0.0)
+                            sell_quantity = state_data.get('sell_qty', 0.0)
+                            dust_amount = state_data.get('dust', 0.0)
 
-                            if cq == 0.0:
-                                self.lbl_qtd.config(text=f"[📦] Atual ({c_coin}): -- | Venda Real: -- | Poeira: --", fg=self.fg_text)
+                            if current_quantity == 0.0:
+                                self.lbl_qtd.config(text=f"[📦] Atual ({current_coin_symbol}): -- | Venda Real: -- | Poeira: --", fg=self.fg_text)
                             else:
-                                self.lbl_qtd.config(text=f"[📦] Atual ({c_coin}): {cq:.4f} | Venda Real: {sq:.4f} | Poeira: {du:.4f}", fg=self.accent_green)
+                                self.lbl_qtd.config(text=f"[📦] Atual ({current_coin_symbol}): {current_quantity:.4f} | Venda Real: {sell_quantity:.4f} | Poeira: {dust_amount:.4f}", fg=self.accent_green)
 
-                            init_bal = data.get("init_bal", 0.0)
-                            peak = data.get("peak_profit", 0.0)
-                            curr_p = data.get("curr_profit", 0.0)
-                            tp = data.get("global_tp", 3.5)
-                            drop = data.get("trailing_drop", 0.4)
+                            initial_balance_value = state_data.get("init_bal", 0.0)
+                            peak_profit_value = state_data.get("peak_profit", 0.0)
+                            current_profit_value = state_data.get("curr_profit", 0.0)
+                            target_profit_value = state_data.get("global_tp", 3.5)
+                            trailing_drop_value = state_data.get("trailing_drop", 0.4)
 
-                            if init_bal > 0:
-                                if peak > 0:
-                                    self.lbl_trailing.config(text=f"🎯 Trailing [ATIVO]: Gatilho {tp}% | Pico: {peak:.2f}% | Atual: {curr_p:.2f}% (Vende se recuar {drop}%)", fg=self.accent_green)
+                            if initial_balance_value > 0:
+                                if peak_profit_value > 0:
+                                    self.lbl_trailing.config(text=f"🎯 Trailing [ATIVO]: Gatilho {target_profit_value}% | Pico: {peak_profit_value:.2f}% | Atual: {current_profit_value:.2f}% (Vende se recuar {trailing_drop_value}%)", fg=self.accent_green)
                                 else:
-                                    self.lbl_trailing.config(text=f"🎯 Meta Global: Gatilho em {tp}% | Lucro Atual: {curr_p:.2f}%", fg=self.accent_yellow)
+                                    self.lbl_trailing.config(text=f"🎯 Meta Global: Gatilho em {target_profit_value}% | Lucro Atual: {current_profit_value:.2f}%", fg=self.accent_yellow)
                             else:
                                 self.lbl_trailing.config(text="🎯 Meta Global: Calculando saldo base...", fg=self.fg_text)
 
-                            hot = data.get('hot_coins', [])
-                            cold = data.get('cold_coins', [])
+                            hot_coins_list = state_data.get('hot_coins', [])
+                            cold_coins_list = state_data.get('cold_coins', [])
                             self.list_hot.delete(0, tk.END)
-                            for c in hot: self.list_hot.insert(tk.END, c)
+                            for item in hot_coins_list: self.list_hot.insert(tk.END, item)
                             self.list_cold.delete(0, tk.END)
-                            for c in cold: self.list_cold.insert(tk.END, c)
+                            for item in cold_coins_list: self.list_cold.insert(tk.END, item)
 
             except Exception: pass 
                 
@@ -323,21 +321,21 @@ class BinanceBotGUI:
 
     def read_output(self):
         if self.process:
-            for line in iter(self.process.stdout.readline, ''):
+            for log_line in iter(self.process.stdout.readline, ''):
                 if self.current_strategy == 'profit_gain':
-                    if "Mapeando EMA" in line:
+                    if "Mapeando EMA" in log_line:
                         self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Escaneando o Mercado...", fg=self.accent_blue))
-                    elif "LIMIT em" in line:
+                    elif "LIMIT em" in log_line or "ENTRADA REAL" in log_line:
                         self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Operação Executada!", fg=self.accent_green))
-                    if "TAKE PROFIT!" in line:
+                    if "TAKE PROFIT" in log_line:
                         self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Vendendo (Lucro)!", fg=self.accent_green))
-                    if "STOP LOSS" in line or "TIMEOUT!" in line:
+                    if "STOP LOSS" in log_line or "TIMEOUT!" in log_line:
                         self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Vendendo (Loss/Timeout)!", fg=self.accent_red))
                 else:
-                    if "jumping from" in line or "Jumping from" in line:
+                    if "jumping from" in log_line or "Jumping from" in log_line:
                         self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Realizando Salto (Jump)...", fg=self.accent_green))
 
-                self.log_message(line)
+                self.log_message(log_line)
             
             self.process.stdout.close()
             self.process.wait()
@@ -346,39 +344,39 @@ class BinanceBotGUI:
                 self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Erro/Crash (Veja o Log)", fg=self.accent_red))
                 self.bot_running = False
 
-    def get_total_usdt_balance(self, client, bridge_symbol):
+    def get_total_usdt_balance(self, binance_client_instance, bridge_symbol):
         try:
-            acc = client.get_account()
-            tickers = {t['symbol']: float(t['price']) for t in client.get_symbol_ticker()}
-            total_usdt = 0.0
-            for b in acc['balances']:
-                free = float(b['free']) + float(b['locked'])
-                if free > 0:
-                    asset = b['asset']
-                    if asset == bridge_symbol: total_usdt += free
+            account_data = binance_client_instance.get_account()
+            ticker_dictionary = {ticker_info['symbol']: float(ticker_info['price']) for ticker_info in binance_client_instance.get_symbol_ticker()}
+            total_usdt_value = 0.0
+            for balance_info in account_data['balances']:
+                free_balance = float(balance_info['free']) + float(balance_info['locked'])
+                if free_balance > 0:
+                    asset_symbol = balance_info['asset']
+                    if asset_symbol == bridge_symbol: total_usdt_value += free_balance
                     else:
-                        sym = f"{asset}{bridge_symbol}"
-                        if sym in tickers: total_usdt += free * tickers[sym]
-            return total_usdt
+                        market_symbol = f"{asset_symbol}{bridge_symbol}"
+                        if market_symbol in ticker_dictionary: total_usdt_value += free_balance * ticker_dictionary[market_symbol]
+            return total_usdt_value
         except: return 0.0
 
     def update_stats_loop(self):
         try:
-            config = Config()
-            client = Client(config.BINANCE_API_KEY, config.BINANCE_API_SECRET_KEY, tld=config.BINANCE_TLD)
-            bridge = config.BRIDGE.symbol if hasattr(config.BRIDGE, 'symbol') else getattr(config, 'BRIDGE', 'USDT')
+            config_instance = Config()
+            binance_client_instance = Client(config_instance.BINANCE_API_KEY, config_instance.BINANCE_API_SECRET_KEY, tld=config_instance.BINANCE_TLD)
+            bridge_symbol = config_instance.BRIDGE.symbol if hasattr(config_instance.BRIDGE, 'symbol') else getattr(config_instance, 'BRIDGE', 'USDT')
             
             for _ in range(3):
-                start_t = time.time()
-                total_atual = self.get_total_usdt_balance(client, bridge)
-                ping = int((time.time() - start_t) * 1000)
-                if total_atual > 0:
-                    self.saldo_atual = total_atual
+                start_time = time.time()
+                total_atual_value = self.get_total_usdt_balance(binance_client_instance, bridge_symbol)
+                ping_latency_ms = int((time.time() - start_time) * 1000)
+                if total_atual_value > 0:
+                    self.saldo_atual = total_atual_value
                     if self.saldo_inicial == 0.0:
-                        self.saldo_inicial = total_atual
+                        self.saldo_inicial = total_atual_value
                         self._save_gui_state()
                         
-                    self.root.after(0, lambda u=self.saldo_inicial, p=ping: [
+                    self.root.after(0, lambda u=self.saldo_inicial, p=ping_latency_ms: [
                         self.lbl_inicial.config(text=f"[S] Inicial: ${u:.2f}"),
                         self.lbl_ping.config(text=f"PING: {p} ms")
                     ])
@@ -386,23 +384,23 @@ class BinanceBotGUI:
                 time.sleep(1)
             
             while self.bot_running:
-                start_t = time.time()
-                total_atual = self.get_total_usdt_balance(client, bridge)
-                ping = int((time.time() - start_t) * 1000)
+                start_time = time.time()
+                total_atual_value = self.get_total_usdt_balance(binance_client_instance, bridge_symbol)
+                ping_latency_ms = int((time.time() - start_time) * 1000)
                 
-                if total_atual > 0:
-                    self.saldo_atual = total_atual
+                if total_atual_value > 0:
+                    self.saldo_atual = total_atual_value
                     
-                if self.saldo_inicial > 0 and total_atual > 0:
-                    pl = total_atual - self.saldo_inicial
-                    pl_perc = (pl / self.saldo_inicial) * 100
-                    cor_pl = self.accent_green if pl >= 0 else self.accent_red
+                if self.saldo_inicial > 0 and total_atual_value > 0:
+                    profit_loss_value = total_atual_value - self.saldo_inicial
+                    profit_loss_percentage = (profit_loss_value / self.saldo_inicial) * 100
+                    cor_texto_pl = self.accent_green if profit_loss_value >= 0 else self.accent_red
                 else:
-                    pl = pl_perc = 0
-                    cor_pl = self.fg_text
+                    profit_loss_value = profit_loss_percentage = 0
+                    cor_texto_pl = self.fg_text
 
-                if total_atual > 0:
-                    self.root.after(0, lambda a=total_atual, p=pl, pp=pl_perc, c=cor_pl, pi=ping: [
+                if total_atual_value > 0:
+                    self.root.after(0, lambda a=total_atual_value, p=profit_loss_value, pp=profit_loss_percentage, c=cor_texto_pl, pi=ping_latency_ms: [
                         self.lbl_atual.config(text=f"[$] Atual: ${a:.2f}"),
                         self.lbl_pl.config(text=f"[%] P/L Total: ${p:.2f} ({pp:.2f}%)", fg=c),
                         self.lbl_ping.config(text=f"PING: {pi} ms")
@@ -413,14 +411,14 @@ class BinanceBotGUI:
     def start_bot(self):
         self.log_message("[!] Iniciando...\n")
         self.lbl_status.config(text="STATUS: Booting...", fg=self.fg_text)
-        with open("bot_status.json", "w") as f: json.dump({}, f)
+        with open("bot_status.json", "w") as file_handler: json.dump({}, file_handler)
         
-        env = os.environ.copy()
-        env["PYTHONIOENCODING"] = "utf-8"
+        environment_variables = os.environ.copy()
+        environment_variables["PYTHONIOENCODING"] = "utf-8"
         self.bot_running = True
         self.process = subprocess.Popen(
             [sys.executable, "-m", "binance_trade_bot"], 
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, encoding='utf-8', errors='replace', env=env
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, encoding='utf-8', errors='replace', env=environment_variables
         )
         threading.Thread(target=self.read_output, daemon=True).start()
         threading.Thread(target=self.update_stats_loop, daemon=True).start()
@@ -433,12 +431,12 @@ class BinanceBotGUI:
 
     def clear_log(self): self.log_area.delete(1.0, tk.END)
 
-    def log_message(self, message):
+    def log_message(self, message_text):
         def _append_and_clean():
-            self.log_area.insert(tk.END, message)
+            self.log_area.insert(tk.END, message_text)
             self.log_area.yview(tk.END)
-            linhas_totais = int(self.log_area.index('end-1c').split('.')[0])
-            if linhas_totais > 1500: self.log_area.delete('1.0', '500.0')
+            total_linhas_log = int(self.log_area.index('end-1c').split('.')[0])
+            if total_linhas_log > 1500: self.log_area.delete('1.0', '500.0')
         self.root.after(0, _append_and_clean)
 
 if __name__ == "__main__":
@@ -446,6 +444,6 @@ if __name__ == "__main__":
         import codecs
         sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
-    root = tk.Tk()
-    app = BinanceBotGUI(root)
-    root.mainloop()
+    root_window = tk.Tk()
+    app_instance = BinanceBotGUI(root_window)
+    root_window.mainloop()

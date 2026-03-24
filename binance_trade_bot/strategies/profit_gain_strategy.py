@@ -4,10 +4,10 @@ import math
 import os
 import pandas
 import pandas_ta
-from binance.enums import *
 
-# IMPORTANDO O NOSSO AGENTE DE IA
+from binance.enums import *
 from binance_trade_bot.models.ai_agent import MarketAnalyzer
+
 
 class Strategy:
     def __init__(self, binance_manager, database_connection, system_logger, system_configuration):
@@ -21,6 +21,7 @@ class Strategy:
         self.base_coin = getattr(bridge_attribute, 'symbol', bridge_attribute)
         
         self.ai_agent = MarketAnalyzer(self.system_logger)
+        self.ultimo_veredito_ia = "Aguardando sinal verde matemático..."
         
         self.taxa_maker = 0.10
         self.margem_poeira = 0.80
@@ -382,12 +383,17 @@ class Strategy:
 
                         if analise_agente_ia.get("recomendacao") == "COMPRAR" and analise_agente_ia.get("confianca", 0) >= 70:
                             self.system_logger.warning(f"🤖 IA APROVOU ({analise_agente_ia.get('confianca')}%): {analise_agente_ia.get('motivo')}")
+                            self.ultimo_veredito_ia = f"✅ COMPRA {check_coin} APROVADA ({analise_agente_ia.get('confianca')}%)"
+                            
                             compra_realizada_com_sucesso = self.execute_real_trade(check_coin, preco_atual)
                             if compra_realizada_com_sucesso:
                                 self.em_operacao = True
                                 self.moeda_atual_operacao = check_coin
                         else:
-                            self.system_logger.info(f"🛑 IA RECUSOU ({analise_agente_ia.get('confianca', 0)}%): {analise_agente_ia.get('motivo')}")
+                            motivo_recusa_texto = analise_agente_ia.get('motivo', 'Sem motivo detalhado')
+                            veredito_texto = f"🛑 {check_coin} VETADA ({analise_agente_ia.get('confianca', 0)}%): {motivo_recusa_texto}"
+                            self.system_logger.info(veredito_texto)
+                            self.ultimo_veredito_ia = veredito_texto
                             
             else:
                 geladeira_temporary_list.append(texto_linha_lateral)
@@ -408,10 +414,13 @@ class Strategy:
         except Exception:
             btc_price_value, btc_change_value = 0.0, 0.0
             
-        if self.peak_profit_percentage >= self.trailing_activation_percentage:
-            texto_alvo_dinamico = f"🚀 TRAILING ATIVO! Pico: {self.peak_profit_percentage:.2f}% | Trava de Venda Armada em: {self.peak_profit_percentage - self.trailing_drop_percentage:.2f}%"
+        if self.em_operacao:
+            if self.peak_profit_percentage >= self.trailing_activation_percentage:
+                detalhe_centralizado = f"[⏳] Duração: {self.tempo_operacao_string} | 🚀 TRAILING ATIVO! Pico: {self.peak_profit_percentage:.2f}% | Trava de Venda: {self.peak_profit_percentage - self.trailing_drop_percentage:.2f}%"
+            else:
+                detalhe_centralizado = f"[⏳] Duração: {self.tempo_operacao_string} | [🎯] Gatilho Trailing: {self.trailing_activation_percentage:.2f}% | [🛑] SL: -{self.stop_loss_percentage:.2f}% (Var Atual: {self.stop_loss_monitor_drop:+.2f}%)"
         else:
-            texto_alvo_dinamico = f"[🎯] Gatilho Trailing: {self.trailing_activation_percentage:.2f}% | [🛑] SL: -{self.stop_loss_percentage:.2f}% (Var Atual: {self.stop_loss_monitor_drop:+.2f}%)"
+            detalhe_centralizado = f"🧠 ÚLTIMO VEREDITO IA: {self.ultimo_veredito_ia}"
             
         status_data_dictionary = {
             "coin": self.moeda_atual_operacao if self.em_operacao else self.base_coin,
@@ -426,7 +435,7 @@ class Strategy:
             "chart_data": self.chart_data_cache,
             "trades_won": self.trades_won,     
             "trades_lost": self.trades_lost,   
-            "detalhe_atual": f"[⏳] Duração: {self.tempo_operacao_string} | {texto_alvo_dinamico}",
+            "detalhe_atual": detalhe_centralizado,
             "aptas": self.aptas_cache,
             "geladeira": self.geladeira_cache
         }
