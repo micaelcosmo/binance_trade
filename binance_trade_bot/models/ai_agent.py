@@ -1,23 +1,25 @@
 import os
 import json
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema.output_parser import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class MarketAnalyzer:
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self, system_logger):
+        self.system_logger = system_logger
         
-        # Puxa a chave diretamente das variáveis de ambiente ou arquivo .env
-        api_key = os.getenv('GOOGLE_API_KEY')
+        google_api_key = os.getenv('GOOGLE_API_KEY')
 
-        if not api_key:
-            self.logger.warning("⚠️ GOOGLE_API_KEY não encontrada! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
+        if not google_api_key:
+            self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
             self.language_model = None
         else:
             self.language_model = ChatGoogleGenerativeAI(
                 model="gemini-1.5-flash",
-                google_api_key=api_key,
+                google_api_key=google_api_key,
                 temperature=0.1, 
                 model_kwargs={"response_mime_type": "application/json"}
             )
@@ -58,7 +60,7 @@ class MarketAnalyzer:
             dataframe_recent_candles = dataframe_candles.tail(5)[['timestamp', 'open', 'high', 'low', 'close', 'vol']]
             candles_string_format = dataframe_recent_candles.to_string(index=False)
 
-            self.logger.info(f"🧠 Consultando Oráculo IA (Gemini) para {moeda_alvo}...")
+            self.system_logger.info(f"🧠 Consultando Oráculo IA (Gemini) para {moeda_alvo}...")
             
             resposta_bruta = self.processing_chain.invoke({
                 "moeda_alvo": moeda_alvo,
@@ -74,6 +76,6 @@ class MarketAnalyzer:
             return resposta_json
 
         except Exception as erro_execucao:
-            self.logger.error(f"Erro no Agente IA: {erro_execucao}")
+            self.system_logger.error(f"Erro no Agente IA: {erro_execucao}")
             return {"recomendacao": "AGUARDAR", "confianca": 0, "motivo": "Falha na comunicação com a API."}
-    
+        

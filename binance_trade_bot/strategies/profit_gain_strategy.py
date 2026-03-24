@@ -2,25 +2,25 @@ import time
 import json
 import math
 import os
-import pandas as pd
-import pandas_ta as ta
+import pandas
+import pandas_ta
 from binance.enums import *
 
 # IMPORTANDO O NOSSO AGENTE DE IA
 from binance_trade_bot.models.ai_agent import MarketAnalyzer
 
 class Strategy:
-    def __init__(self, manager, db, logger, config):
-        self.manager = manager
-        self.db = db
-        self.logger = logger
-        self.config = config
-        self.client = manager.binance_client
+    def __init__(self, binance_manager, database_connection, system_logger, system_configuration):
+        self.binance_manager = binance_manager
+        self.database_connection = database_connection
+        self.system_logger = system_logger
+        self.system_configuration = system_configuration
+        self.binance_client = binance_manager.binance_client
         
-        bridge_attribute = getattr(self.config, 'BRIDGE', 'USDT')
+        bridge_attribute = getattr(self.system_configuration, 'BRIDGE', 'USDT')
         self.base_coin = getattr(bridge_attribute, 'symbol', bridge_attribute)
         
-        self.ai_agent = MarketAnalyzer(self.logger)
+        self.ai_agent = MarketAnalyzer(self.system_logger)
         
         self.taxa_maker = 0.10
         self.margem_poeira = 0.80
@@ -81,14 +81,14 @@ class Strategy:
                     "peak_profit_percentage": self.peak_profit_percentage
                 }, file_handler)
         except Exception as erro_escrita:
-            self.logger.error(f"Erro ao salvar estado local: {erro_escrita}")
+            self.system_logger.error(f"Erro ao salvar estado local: {erro_escrita}")
 
     def initialize(self):
-        self.logger.info("🚀 Inicializando Profit Gain Pro com IA (MODO PRODUÇÃO)...")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA (MODO PRODUÇÃO)...")
         self._write_json_ui()
 
     def scout(self):
-        self.logger.info(f"[HEARTBEAT] 💓 Motor executando varredura. Base oficial: {self.base_coin}")
+        self.system_logger.info(f"[HEARTBEAT] 💓 Motor executando varredura. Base oficial: {self.base_coin}")
         self.scan_market()
         self._write_json_ui()
 
@@ -97,17 +97,17 @@ class Strategy:
 
     def _desbloquear_saldo(self, target_symbol):
         try:
-            open_orders_list = self.client.get_open_orders(symbol=target_symbol)
+            open_orders_list = self.binance_client.get_open_orders(symbol=target_symbol)
             for order_info in open_orders_list:
-                self.logger.info(f"🚜 Trator: Cancelando ordem pendente antiga ({order_info['orderId']}) para liberar saldo...")
-                self.client.cancel_order(symbol=target_symbol, orderId=order_info['orderId'])
+                self.system_logger.info(f"🚜 Trator: Cancelando ordem pendente antiga ({order_info['orderId']}) para liberar saldo...")
+                self.binance_client.cancel_order(symbol=target_symbol, orderId=order_info['orderId'])
                 time.sleep(0.5) 
         except Exception as erro_desbloqueio:
-            self.logger.error(f"Erro ao tentar limpar ordens travadas: {erro_desbloqueio}")
+            self.system_logger.error(f"Erro ao tentar limpar ordens travadas: {erro_desbloqueio}")
 
     def _get_balance(self, asset_symbol, free_only=False):
         try:
-            balance_data = self.client.get_asset_balance(asset=asset_symbol)
+            balance_data = self.binance_client.get_asset_balance(asset=asset_symbol)
             if free_only:
                 return float(balance_data['free'])
             return float(balance_data['free']) + float(balance_data['locked'])
@@ -116,7 +116,7 @@ class Strategy:
 
     def get_precision_filters(self, target_symbol):
         try:
-            symbol_info = self.client.get_symbol_info(target_symbol)
+            symbol_info = self.binance_client.get_symbol_info(target_symbol)
             tick_size_value, step_size_value = 0.00000001, 0.00000001
             for filter_item in symbol_info['filters']:
                 if filter_item['filterType'] == 'PRICE_FILTER': tick_size_value = float(filter_item['tickSize'])
@@ -134,12 +134,12 @@ class Strategy:
 
     def get_ema_signal(self, target_symbol):
         try:
-            klines_data = self.client.get_klines(symbol=target_symbol, interval='5m', limit=50)
-            dataframe_klines = pd.DataFrame(klines_data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
+            klines_data = self.binance_client.get_klines(symbol=target_symbol, interval='5m', limit=50)
+            dataframe_klines = pandas.DataFrame(klines_data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             
             column_names_to_convert = ['open', 'high', 'low', 'close', 'vol']
             for column_name in column_names_to_convert:
-                dataframe_klines[column_name] = pd.to_numeric(dataframe_klines[column_name])
+                dataframe_klines[column_name] = pandas.to_numeric(dataframe_klines[column_name])
             
             dataframe_klines.ta.ema(length=9, append=True)
             dataframe_klines.ta.ema(length=21, append=True)
@@ -164,13 +164,13 @@ class Strategy:
         if saldo_base_disponivel < 6.0: return False
 
         try:
-            self.logger.info(f"🚀 ENTRADA REAL: Comprando {market_symbol} a mercado...")
+            self.system_logger.info(f"🚀 ENTRADA REAL: Comprando {market_symbol} a mercado...")
             ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
             
             compra_quantidade_usdt = saldo_base_disponivel * 0.99 
             quote_quantity_string = self.format_decimal(compra_quantidade_usdt, 0.01) 
             
-            self.client.create_order(symbol=market_symbol, side=SIDE_BUY, type=ORDER_TYPE_MARKET, quoteOrderQty=quote_quantity_string)
+            self.binance_client.create_order(symbol=market_symbol, side=SIDE_BUY, type=ORDER_TYPE_MARKET, quoteOrderQty=quote_quantity_string)
             time.sleep(2) 
             
             saldo_moeda_comprada = self._get_balance(coin_symbol)
@@ -178,7 +178,7 @@ class Strategy:
             
             if float(quantidade_vender_string) == 0: return True
 
-            self.logger.info(f"✅ Compra confirmada! Armando Trailing Stop invisível (Gatilho em +{self.trailing_activation_percentage:.2f}%)")
+            self.system_logger.info(f"✅ Compra confirmada! Armando Trailing Stop invisível (Gatilho em +{self.trailing_activation_percentage:.2f}%)")
             
             self.operation_start_time = time.time()
             self.quantidade_altcoin_ativa = float(quantidade_vender_string)
@@ -194,18 +194,18 @@ class Strategy:
             return True
 
         except Exception as erro_compra:
-            self.logger.error(f"❌ ERRO CRÍTICO na corretora: {erro_compra}")
+            self.system_logger.error(f"❌ ERRO CRÍTICO na corretora: {erro_compra}")
             return False
 
     def scan_market(self):
         if not self.em_operacao:
-            self.logger.info("📊 Mapeando gráficos e aguardando Validação da IA (Gemini)...")
+            self.system_logger.info("📊 Mapeando gráficos e aguardando Validação da IA (Gemini)...")
             
         aptas_temporary_list = []
         geladeira_temporary_list = []
         
         try:
-            account_data = self.client.get_account()
+            account_data = self.binance_client.get_account()
             saldos_dicionario = {balance_info['asset']: float(balance_info['free']) + float(balance_info['locked']) for balance_info in account_data['balances']}
         except Exception:
             saldos_dicionario = {}
@@ -217,15 +217,15 @@ class Strategy:
             saldo_moeda_base = saldos_dicionario.get(self.base_coin, 0.0)
             
             if saldo_moeda_base < 5.0:
-                ordem_busca_moedas = ["BTC"] + [check_coin for check_coin in self.manager.config.SUPPORTED_COIN_LIST if check_coin not in ["BTC", self.base_coin]]
+                ordem_busca_moedas = ["BTC"] + [check_coin for check_coin in self.system_configuration.SUPPORTED_COIN_LIST if check_coin not in ["BTC", self.base_coin]]
                 for check_coin in ordem_busca_moedas:
                     quantidade_moeda = saldos_dicionario.get(check_coin, 0.0)
                     if quantidade_moeda > 0:
                         try:
-                            ticker_info = self.client.get_symbol_ticker(symbol=f"{check_coin}{self.base_coin}")
+                            ticker_info = self.binance_client.get_symbol_ticker(symbol=f"{check_coin}{self.base_coin}")
                             valor_convertido_dolar = quantidade_moeda * float(ticker_info['price'])
                             if valor_convertido_dolar >= 5.0:
-                                self.logger.info(f"🔄 Recuperação: Assumindo {check_coin} com Trailing Dinâmico.")
+                                self.system_logger.info(f"🔄 Recuperação: Assumindo {check_coin} com Trailing Dinâmico.")
                                 self.em_operacao = True
                                 self.moeda_atual_operacao = check_coin
                                 self.quantidade_altcoin_ativa = quantidade_moeda
@@ -239,17 +239,17 @@ class Strategy:
             market_symbol = f"{self.moeda_atual_operacao}{self.base_coin}"
             
             try:
-                klines_history = self.client.get_klines(symbol=market_symbol, interval='5m', limit=30)
+                klines_history = self.binance_client.get_klines(symbol=market_symbol, interval='5m', limit=30)
                 self.chart_data_cache = [float(kline_item[4]) for kline_item in klines_history]
             except: pass
 
             try:
-                ticker_info = self.client.get_symbol_ticker(symbol=market_symbol)
+                ticker_info = self.binance_client.get_symbol_ticker(symbol=market_symbol)
                 self.preco_atual_ativo = float(ticker_info['price'])
                 
                 saldo_moeda_operada = self._get_balance(self.moeda_atual_operacao)
                 if (saldo_moeda_operada * self.preco_atual_ativo) < 5.0:
-                    self.logger.info(f"✅ Saldo esgotado em {self.moeda_atual_operacao}. Operação finalizada.")
+                    self.system_logger.info(f"✅ Saldo esgotado em {self.moeda_atual_operacao}. Operação finalizada.")
                     self.em_operacao = False
                     self.moeda_atual_operacao = None
                     self.stop_loss_monitor_drop, self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo, self.quantidade_altcoin_ativa, self.peak_profit_percentage = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
@@ -289,19 +289,19 @@ class Strategy:
                 if drop_percentage <= -self.stop_loss_percentage:
                     is_selling_now = True
                     motivo_venda_executada = "STOP_LOSS"
-                    self.logger.warning(f"🚨 STOP LOSS ACIONADO para {self.moeda_atual_operacao}! Queda de {drop_percentage:.2f}%")
+                    self.system_logger.warning(f"🚨 STOP LOSS ACIONADO para {self.moeda_atual_operacao}! Queda de {drop_percentage:.2f}%")
                 
                 elif self.peak_profit_percentage >= self.trailing_activation_percentage and (self.peak_profit_percentage - drop_percentage) >= self.trailing_drop_percentage:
                     is_selling_now = True
                     motivo_venda_executada = "TRAILING_STOP"
-                    self.logger.info(f"✅ TAKE PROFIT TRAILING ACIONADO para {self.moeda_atual_operacao}! Pico atingido: {self.peak_profit_percentage:.2f}% | Fechando em: {drop_percentage:.2f}%")
+                    self.system_logger.info(f"✅ TAKE PROFIT TRAILING ACIONADO para {self.moeda_atual_operacao}! Pico atingido: {self.peak_profit_percentage:.2f}% | Fechando em: {drop_percentage:.2f}%")
 
                 if is_selling_now:
                     self._desbloquear_saldo(market_symbol) 
                     saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
                     ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
                     
-                    self.client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
+                    self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
                     
                     if motivo_venda_executada == "STOP_LOSS": self.trades_lost += 1
                     else: self.trades_won += 1
@@ -313,33 +313,33 @@ class Strategy:
                     self._save_state()
                 else:
                     if segundos_ativos_operacao > self.maximum_hold_time_seconds and (-1.0 <= drop_percentage <= -0.15) and cooldown_restante_segundos <= 0:
-                        self.logger.info("⏳ Bot preso. Caçando nova oportunidade...")
+                        self.system_logger.info("⏳ Bot preso. Caçando nova oportunidade...")
                         nova_moeda_promissora = None
                         nova_cotacao_promissora = 0.0
                         
-                        for check_coin in self.manager.config.SUPPORTED_COIN_LIST:
+                        for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
                             if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
                             is_uptrend, preco_atual, variacao_4h, rsi_atual, dataframe_candles = self.get_ema_signal(f"{check_coin}{self.base_coin}")
                             
                             if is_uptrend and rsi_atual < 70.0:
-                                self.logger.info(f"🔎 Regra de Ouro: Validando {check_coin} com a IA...")
+                                self.system_logger.info(f"🔎 Regra de Ouro: Validando {check_coin} com a IA...")
                                 analise_agente_ia = self.ai_agent.analisar(check_coin, preco_atual, rsi_atual, variacao_4h, dataframe_candles)
                                 
                                 if analise_agente_ia.get("recomendacao") == "COMPRAR" and analise_agente_ia.get("confianca", 0) >= 70:
-                                    self.logger.warning(f"🤖 IA APROVOU TROCA ({analise_agente_ia.get('confianca')}%): {analise_agente_ia.get('motivo')}")
+                                    self.system_logger.warning(f"🤖 IA APROVOU TROCA ({analise_agente_ia.get('confianca')}%): {analise_agente_ia.get('motivo')}")
                                     nova_moeda_promissora = check_coin
                                     nova_cotacao_promissora = preco_atual
                                     break
                                 else:
-                                    self.logger.info(f"🛑 IA VETOU TROCA para {check_coin}: {analise_agente_ia.get('motivo')}")
+                                    self.system_logger.info(f"🛑 IA VETOU TROCA para {check_coin}: {analise_agente_ia.get('motivo')}")
                         
                         if nova_moeda_promissora:
-                            self.logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda_promissora} com aval da IA!")
+                            self.system_logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda_promissora} com aval da IA!")
                             self._desbloquear_saldo(market_symbol) 
                             saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
                             ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
                             
-                            self.client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
+                            self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
                             time.sleep(2)
                             
                             self.trades_lost += 1 
@@ -354,10 +354,10 @@ class Strategy:
 
                     self._write_json_ui() 
             except Exception as erro_monitoramento:
-                self.logger.error(f"Erro no monitoramento: {erro_monitoramento}")
+                self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")
 
         # ---------------- VARREDURA GRÁFICA & ANÁLISE IA ----------------
-        for check_coin in self.manager.config.SUPPORTED_COIN_LIST:
+        for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
             if check_coin == self.base_coin: continue
             market_symbol = f"{check_coin}{self.base_coin}"
             
@@ -372,37 +372,37 @@ class Strategy:
                 if rsi_atual >= 70.0:
                     geladeira_temporary_list.append(texto_linha_lateral)
                     if not self.em_operacao:
-                        self.logger.info(f"⚠️ {check_coin} | Filtro Matemático: EMA cruzou, mas RSI estourado em {rsi_atual:.2f}. Evitando topo!")
+                        self.system_logger.info(f"⚠️ {check_coin} | Filtro Matemático: EMA cruzou, mas RSI estourado em {rsi_atual:.2f}. Evitando topo!")
                 else:
                     aptas_temporary_list.append(texto_linha_lateral)
                     if not self.em_operacao:
-                        self.logger.info(f"🟢 {check_coin} | Matemática OK (EMA Alta, RSI {rsi_atual:.2f}). Solicitando aval da IA...")
+                        self.system_logger.info(f"🟢 {check_coin} | Matemática OK (EMA Alta, RSI {rsi_atual:.2f}). Solicitando aval da IA...")
                         
                         analise_agente_ia = self.ai_agent.analisar(check_coin, preco_atual, rsi_atual, variacao_4h, dataframe_candles)
 
                         if analise_agente_ia.get("recomendacao") == "COMPRAR" and analise_agente_ia.get("confianca", 0) >= 70:
-                            self.logger.warning(f"🤖 IA APROVOU ({analise_agente_ia.get('confianca')}%): {analise_agente_ia.get('motivo')}")
+                            self.system_logger.warning(f"🤖 IA APROVOU ({analise_agente_ia.get('confianca')}%): {analise_agente_ia.get('motivo')}")
                             compra_realizada_com_sucesso = self.execute_real_trade(check_coin, preco_atual)
                             if compra_realizada_com_sucesso:
                                 self.em_operacao = True
                                 self.moeda_atual_operacao = check_coin
                         else:
-                            self.logger.info(f"🛑 IA RECUSOU ({analise_agente_ia.get('confianca', 0)}%): {analise_agente_ia.get('motivo')}")
+                            self.system_logger.info(f"🛑 IA RECUSOU ({analise_agente_ia.get('confianca', 0)}%): {analise_agente_ia.get('motivo')}")
                             
             else:
                 geladeira_temporary_list.append(texto_linha_lateral)
                 if not self.em_operacao:
                     if variacao_4h < -2.0:
-                        self.logger.info(f"❄️ {check_coin} | Análise: Em geladeira. Ativo sangrando ({variacao_4h:.2f}% nas últimas 4h).")
+                        self.system_logger.info(f"❄️ {check_coin} | Análise: Em geladeira. Ativo sangrando ({variacao_4h:.2f}% nas últimas 4h).")
                     else:
-                        self.logger.info(f"⏸️ {check_coin} | Análise: Abaixo da curva (EMA 9 < 21).")
+                        self.system_logger.info(f"⏸️ {check_coin} | Análise: Abaixo da curva (EMA 9 < 21).")
 
         self.aptas_cache = aptas_temporary_list
         self.geladeira_cache = geladeira_temporary_list
 
     def _write_json_ui(self):
         try:
-            btc_ticker_info = self.client.get_ticker(symbol=f"BTC{self.base_coin}")
+            btc_ticker_info = self.binance_client.get_ticker(symbol=f"BTC{self.base_coin}")
             btc_price_value = float(btc_ticker_info['lastPrice'])
             btc_change_value = float(btc_ticker_info['priceChangePercent'])
         except Exception:
