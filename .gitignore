@@ -17,3 +17,4 @@ bot_status.json
 data/*.db
 logs/*.log
 supported_coin_list
+gui_state.json
