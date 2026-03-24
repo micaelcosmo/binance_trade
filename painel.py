@@ -46,7 +46,6 @@ class BinanceBotGUI:
         tk.Button(self.top_frame, text="RUN > Iniciar Bot", command=self.start_bot, bg=self.accent_blue, font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.LEFT, padx=15)
         tk.Button(self.top_frame, text="STOP > Parar Bot", command=self.stop_bot, bg=self.accent_red, font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.LEFT, padx=5)
         
-        # O Novo Botão de Sincronizar o Saldo Inicial!
         tk.Button(self.top_frame, text="CLR > Limpar Log", command=self.clear_log, bg="#3c4043", fg="white", font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.RIGHT, padx=15)
         tk.Button(self.top_frame, text="♻ Atualizar Inicial", command=self.reset_initial_balance, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=18).pack(side=tk.RIGHT, padx=5)
         
@@ -61,7 +60,8 @@ class BinanceBotGUI:
         self.lbl_pl = tk.Label(self.metrics_frame, text="[%] P/L Total: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 11, "bold"), width=30, anchor="w")
         self.lbl_pl.grid(row=0, column=2, padx=10, pady=5, sticky="w")
 
-        self.lbl_status = tk.Label(self.metrics_frame, text="STATUS: Parado", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), width=25, anchor="w")
+        # --- LARGURAS AUMENTADAS AQUI (Largura de Status passou de 25 para 35) ---
+        self.lbl_status = tk.Label(self.metrics_frame, text="STATUS: Parado", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), width=35, anchor="w")
         self.lbl_status.grid(row=1, column=0, padx=10, pady=5, sticky="w")
         self.lbl_trades = tk.Label(self.metrics_frame, text="TRADES: 0 | W: 0 | L: 0 (0.0%)", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), width=35, anchor="w")
         self.lbl_trades.grid(row=1, column=1, padx=10, pady=5, sticky="w")
@@ -84,10 +84,12 @@ class BinanceBotGUI:
             self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), width=40, anchor="w")
             self.lbl_btc.grid(row=2, column=3, padx=10, pady=(15, 5), sticky="w")
 
-            self.lbl_det_atu = tk.Label(self.metrics_frame, text="Análise: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=90, anchor="w")
+            # --- LARGURA AUMENTADA AQUI (Largura de Detalhes passou de 90 para 110) ---
+            self.lbl_det_atu = tk.Label(self.metrics_frame, text="Análise: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=110, anchor="w")
             self.lbl_det_atu.grid(row=5, column=1, columnspan=3, padx=10, pady=5, sticky="w")
             
-            self.canvas_chart = tk.Canvas(self.metrics_frame, bg="#000000", width=220, height=80, highlightthickness=1, highlightbackground="#3c4043")
+            # ====== O MINIGRÁFICO AUMENTADO (De 220x80 para 280x110) ======
+            self.canvas_chart = tk.Canvas(self.metrics_frame, bg="#000000", width=280, height=110, highlightthickness=1, highlightbackground="#3c4043")
             self.canvas_chart.grid(row=1, column=4, rowspan=3, padx=(0,10), pady=5, sticky="e")
             self.lbl_chart_title = tk.Label(self.metrics_frame, text="Mini-Gráfico (Inativo)", bg=self.bg_frame, fg="#9aa0a6", font=("Segoe UI", 8, "bold"))
             self.lbl_chart_title.grid(row=4, column=4, sticky="e", padx=(0,10))
@@ -134,9 +136,6 @@ class BinanceBotGUI:
         self.process = None
         self.bot_running = False
 
-    # ==========================================
-    # UTILITÁRIOS DE TELA
-    # ==========================================
     def _load_gui_state(self):
         if os.path.exists(self.gui_state_file):
             try:
@@ -152,7 +151,6 @@ class BinanceBotGUI:
         except: pass
 
     def reset_initial_balance(self):
-        """Ao clicar no botão, fixa o saldo atual como novo Inicial"""
         if self.saldo_atual > 0:
             self.saldo_inicial = self.saldo_atual
             self._save_gui_state()
@@ -199,9 +197,6 @@ class BinanceBotGUI:
                     raio = 3
                     self.canvas_chart.create_oval(x_buy-raio, y_buy-raio, x_buy+raio, y_buy+raio, fill="#f2a900", outline="#ffffff", width=1)
 
-    # ==========================================
-    # NÚCLEO DA TELA
-    # ==========================================
     def check_bot_state_json(self):
         if self.bot_running and os.path.exists("bot_status.json"):
             try:
@@ -239,7 +234,6 @@ class BinanceBotGUI:
                                 
                             self.lbl_det_atu.config(text=f"{data.get('detalhe_atual', '--')}")
                             
-                            # LENDO O PLACAR SALVO DO BACKEND
                             tw = data.get("trades_won", 0)
                             tl = data.get("trades_lost", 0)
                             total_t = tw + tl
