@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv("user.cfg")
 
+
 class MarketAnalyzer:
     def __init__(self, system_logger):
         self.system_logger = system_logger
@@ -18,8 +19,9 @@ class MarketAnalyzer:
             self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada no user.cfg! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
             self.language_model = None
         else:
+            # FIX: Adicionado o sufixo '-latest' para evitar o erro 404 NOT_FOUND na API v1beta
             self.language_model = ChatGoogleGenerativeAI(
-                model="gemini-1.5-flash",
+                model="gemini-1.5-flash-latest",
                 google_api_key=google_api_key,
                 temperature=0.1, 
                 response_mime_type="application/json"
