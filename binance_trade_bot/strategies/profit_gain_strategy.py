@@ -95,21 +95,19 @@ class Strategy:
         self._write_json_ui()
 
     # ==========================================
-    # UTILITÁRIOS DA BINANCE & TRATOR DE SALDO
+    # UTILITÁRIOS DA BINANCE & TRATOR
     # ==========================================
     def _desbloquear_saldo(self, symbol):
-        """Cancela qualquer ordem fantasma pendente para liberar o saldo para venda a mercado."""
         try:
             open_orders = self.client.get_open_orders(symbol=symbol)
             for order in open_orders:
                 self.logger.info(f"🚜 Trator: Cancelando ordem pendente antiga ({order['orderId']}) para liberar saldo...")
                 self.client.cancel_order(symbol=symbol, orderId=order['orderId'])
-                time.sleep(0.5) # Dá tempo pra Binance devolver o saldo livre
+                time.sleep(0.5) 
         except Exception as e:
             self.logger.error(f"Erro ao tentar limpar ordens travadas: {e}")
 
     def _get_balance(self, asset, free_only=False):
-        """Agora permite puxar só o saldo livre na hora do aperto"""
         try:
             b = self.client.get_asset_balance(asset=asset)
             if free_only:
@@ -141,8 +139,11 @@ class Strategy:
             klines = self.client.get_klines(symbol=symbol, interval='5m', limit=50)
             df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             df['close'] = pd.to_numeric(df['close'])
+            
+            # Adiciona EMA e agora o poderoso RSI!
             df.ta.ema(length=9, append=True)
             df.ta.ema(length=21, append=True)
+            df.ta.rsi(length=14, append=True)
             
             preco_atual = df['close'].iloc[-1]
             preco_4h_atras = df['close'].iloc[0]
@@ -150,10 +151,11 @@ class Strategy:
             
             ultima_linha = df.iloc[-1]
             uptrend = ultima_linha['EMA_9'] > ultima_linha['EMA_21']
+            rsi_atual = ultima_linha['RSI_14'] if 'RSI_14' in df.columns else 50.0
             
-            return uptrend, preco_atual, var_4h
+            return uptrend, preco_atual, var_4h, rsi_atual
         except Exception:
-            return False, 0.0, 0.0
+            return False, 0.0, 0.0, 50.0
 
     # ==========================================
     # NÚCLEO DE EXECUÇÃO
@@ -200,7 +202,7 @@ class Strategy:
 
     def scan_market(self):
         if not self.em_operacao:
-            self.logger.info("📊 Mapeando gráficos, rodando análise de ativos...")
+            self.logger.info("📊 Mapeando gráficos, rodando análise de ativos e filtros de Momentum (RSI)...")
             
         aptas_temp = []
         geladeira_temp = []
@@ -297,7 +299,7 @@ class Strategy:
                     self.logger.info(f"✅ TAKE PROFIT TRAILING ACIONADO para {self.moeda_atual_operacao}! Pico atingido: {self.peak_profit_perc:.2f}% | Fechando em: {drop_pct:.2f}%")
 
                 if vender_agora:
-                    self._desbloquear_saldo(symbol) # 🚜 Passa o trator antes de vender
+                    self._desbloquear_saldo(symbol) 
                     saldo_livre = self._get_balance(self.moeda_atual_operacao, free_only=True)
                     _, step_size = self.get_precision_filters(symbol)
                     
@@ -318,16 +320,17 @@ class Strategy:
                         nova_cotacao = 0.0
                         for check_coin in self.manager.config.SUPPORTED_COIN_LIST:
                             if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
-                            up, p_atual, _ = self.get_ema_signal(f"{check_coin}{self.base_coin}")
-                            if up:
+                            # Regra de Ouro também usa o filtro RSI para não pular de uma fogueira pra frigideira
+                            up, p_atual, _, rsi = self.get_ema_signal(f"{check_coin}{self.base_coin}")
+                            if up and rsi < 70.0:
                                 nova_moeda = check_coin
                                 nova_cotacao = p_atual
                                 break
                         
                         if nova_moeda:
-                            self.logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda}!")
+                            self.logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda} (RSI Saudável)!")
                             
-                            self._desbloquear_saldo(symbol) # 🚜 Passa o trator!
+                            self._desbloquear_saldo(symbol) 
                             saldo_livre = self._get_balance(self.moeda_atual_operacao, free_only=True)
                             _, step_size = self.get_precision_filters(symbol)
                             
@@ -352,7 +355,7 @@ class Strategy:
         for coin in self.manager.config.SUPPORTED_COIN_LIST:
             if coin == self.base_coin: continue
             symbol = f"{coin}{self.base_coin}"
-            uptrend, preco_atual, var_4h = self.get_ema_signal(symbol)
+            uptrend, preco_atual, var_4h, rsi_atual = self.get_ema_signal(symbol)
             txt_preco = f"${preco_atual:.4f}"
             txt_var = f"4H: {var_4h:+.2f}%"
             
@@ -360,20 +363,26 @@ class Strategy:
             item_linha = f"💼 {coin}: {txt_preco} ({txt_var})" if qtd_moeda > 0.000001 else f"{coin}: {txt_preco} ({txt_var})"
             
             if uptrend:
-                aptas_temp.append(item_linha)
-                if not self.em_operacao:
-                    self.logger.info(f"🟢 {coin} | Análise: Detectada ascensão (EMA 9 > 21)! Preparando bote...")
-                    sucesso = self.execute_real_trade(coin, preco_atual)
-                    if sucesso:
-                        self.em_operacao = True
-                        self.moeda_atual_operacao = coin
+                # O CÉREBRO NOVO: Verifica se esticou demais!
+                if rsi_atual >= 70.0:
+                    geladeira_temp.append(item_linha)
+                    if not self.em_operacao:
+                        self.logger.info(f"⚠️ {coin} | Análise: Falso Positivo. EMA cruzou, mas RSI estourado em {rsi_atual:.2f} (Sobrecomprado). Evitando topo!")
+                else:
+                    aptas_temp.append(item_linha)
+                    if not self.em_operacao:
+                        self.logger.info(f"🟢 {coin} | Análise: Detectada ascensão com RSI saudável ({rsi_atual:.2f}). Preparando bote...")
+                        sucesso = self.execute_real_trade(coin, preco_atual)
+                        if sucesso:
+                            self.em_operacao = True
+                            self.moeda_atual_operacao = coin
             else:
                 geladeira_temp.append(item_linha)
                 if not self.em_operacao:
                     if var_4h < -2.0:
                         self.logger.info(f"❄️ {coin} | Análise: Em geladeira. Ativo sangrando muito ({var_4h:.2f}% nas últimas 4h).")
                     else:
-                        self.logger.info(f"⏸️ {coin} | Análise: Não investido porque está abaixo da curva na regra (EMA 9 < 21).")
+                        self.logger.info(f"⏸️ {coin} | Análise: Não investido. Abaixo da curva de compra (EMA 9 < 21).")
 
         self.aptas_cache = aptas_temp
         self.geladeira_cache = geladeira_temp
@@ -414,3 +423,4 @@ class Strategy:
                 json.dump(status_data, f, ensure_ascii=False, indent=2)
         except Exception:
             pass
+        
