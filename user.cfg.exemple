@@ -6,6 +6,7 @@ api_secret_key=EXEMPLE_KEY
 # api_key=EXEMPLE_KEY
 # api_secret_key=EXEMPLE_KEY
 
+GOOGLE_API_KEY="sua_chave"
 
 # ==============================================================================
 # BINANCE TRADE BOT PRO - CONFIGURACAO E MANUAL DE PARAMETROS
