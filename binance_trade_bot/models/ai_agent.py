@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv("user.cfg")
 
-
 class MarketAnalyzer:
     def __init__(self, system_logger):
         self.system_logger = system_logger
@@ -23,9 +22,8 @@ class MarketAnalyzer:
                 model="gemini-1.5-flash",
                 google_api_key=google_api_key,
                 temperature=0.1, 
-                model_kwargs={"response_mime_type": "application/json"}
+                response_mime_type="application/json"
             )
-            
 
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", """Você é um Trader Institucional Sênior de criptomoedas, especialista em Price Action, microestruturas e análise de momento.
@@ -38,7 +36,7 @@ class MarketAnalyzer:
             4. O 'motivo' deve ter no máximo 2 frases curtas e diretas, explicando a leitura dos candles.
 
             Formato esperado:
-            {"recomendacao": "COMPRAR", "confianca": 85, "motivo": "Candles de força com volume crescente confirmam o rompimento da média. Risco de falso topo é baixo."}"""),
+            {{"recomendacao": "COMPRAR", "confianca": 85, "motivo": "Candles de força com volume crescente confirmam o rompimento da média. Risco de falso topo é baixo."}}"""),
             
             ("human", """Aqui estão os dados técnicos do par {moeda_alvo} (resumo):
             - Preço Atual: {preco_atual}
@@ -81,4 +79,3 @@ class MarketAnalyzer:
         except Exception as erro_execucao:
             self.system_logger.error(f"Erro no Agente IA: {erro_execucao}")
             return {"recomendacao": "AGUARDAR", "confianca": 0, "motivo": "Falha na comunicação com a API."}
-        
