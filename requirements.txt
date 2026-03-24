@@ -7,7 +7,7 @@ flask_cors==6.0.2
 flask_socketio==5.6.1
 python-socketio==5.16.1
 schedule==1.2.2
-SQLAlchemy==2.0.48
+SQLAlchemy==1.4.52
 sqlitedict==2.1.0
 unicorn_binance_websocket_api==2.10.2
 unicorn_binance_rest_api
