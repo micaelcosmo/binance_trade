@@ -1,155 +1,95 @@
-```markdown
-# 📈 Binance Trade Bot Pro
+# 📈 Binance Trade Bot Pro - AI Edition
 
-![Version](https://img.shields.io/badge/version-v2.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+<img src="https://img.shields.io/badge/version-v2.7.7-blue" alt="Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/python-3.9+-yellow" alt="Python">
 
-Um bot de trading algorítmico automatizado para a corretora Binance, focado em acúmulo inteligente de criptoativos 
-(Jumps), gestão de risco automatizada e realização de lucros via Trailing Stop Loss Global.
-
-Este projeto é um *fork* evoluído da arquitetura clássica de trading, aprimorado com uma interface gráfica interativa 
-(Dashboard), proteção dinâmica contra quedas de mercado e um sistema matemático de lucros compostos.
-
-> 🌟 **Novidades da v2.0.0:** Introdução do Cockpit UI em Tkinter, IPC via JSON local para status em tempo real, 
-e o novo motor de Trailing Stop Loss Global para garantir lucros líquidos em USDT.
+Um terminal de trading algorítmico automatizado para a corretora Binance. Originalmente focado em acúmulo de criptomoedas, o projeto evoluiu para uma arquitetura quantitativa completa, unindo **Análise Técnica Clássica** e **Inteligência Artificial (Google Gemini)** para gestão de risco avançada e maximização de lucros.
 
 ---
 
-## 🧠 Como Funciona a Estratégia?
+## ✨ Principais Funcionalidades
 
-O núcleo deste bot opera sob um paradigma de "Fazendeiro" (Acumulação) combinado com um "Caçador" (Trailing Stop). 
-Ele foi desenhado para eliminar o fator emocional das operações de criptomoedas.
-
-### 1. O Motor de Acúmulo (Jumps)
-
-O bot não faz "Buy and Hold" cego. Ele varre o mercado em tempo real através de conexões WebSocket buscando oportunidades 
-de "pulo" (*Jump*). Se você possui a moeda A, e a moeda B apresenta uma variação de preço favorável que cubra as taxas da 
-corretora e garanta um lucro mínimo real (definido pelo parâmetro `scout_margin`), o bot executa a troca. O objetivo 
-primário é **aumentar a quantidade bruta de moedas** na sua carteira.
-
-### 2. Trailing Stop Loss Global (A Máquina de Lucro)
-
-Diferente de estratégias engessadas que ficam presas em moedas desvalorizadas, 
-este bot monitora o **Patrimônio Total em Dólares (USDT)**. 
-
-- **O Gatilho:** Quando o seu saldo total atinge uma meta percentual pré-configurada (`global_take_profit`), o sistema 
-entra em estado de alerta.
-- **O Recuo (Trailing):** O bot passa a perseguir o preço como uma sombra. Se o mercado continuar subindo, ele atualiza o 
-pico máximo de lucro. Se o mercado recuar uma porcentagem específica (`trailing_drop`) a partir desse pico, a "coleira" 
-estica e o bot liquida a posição para USDT. Isso garante o lucro líquido no bolso e reinicia o ciclo com uma banca maior 
-(Juros Compostos).
-
-### 3. O Porteiro do Mercado (Histerese de BTC)
-
-O bot utiliza o Bitcoin (BTC) como termômetro global. Se o BTC apresentar um derretimento brusco (configurável em 
-`btc_crash_limit`), o bot entra instantaneamente em **Modo Sobrevivência**, paralisando compras arriscadas e protegendo o 
-capital em Dólar até que o mercado apresente sinais consistentes de recuperação (`btc_recover_limit`).
-
-### 4. Dashboard Interativo (Cockpit de Operações)
-
-Acompanhe cada cálculo sob o capô através de um painel visual construído nativamente em Python (Tkinter). 
-O painel entrega em tempo real:
-
-- Saldo Base vs. Saldo Atual (P/L Dinâmico).
-- Snapshot visual da moeda Anterior vs. Moeda Atual (Prova matemática do acúmulo).
-- Monitoramento do gatilho e estado do Trailing Stop Global.
-- Radar das Altcoins Aptas (Quentes) e em Cooldown (Geladeira).
+* 🧠 **Oráculo IA (Google Gemini 2.5):** O bot não compra no escuro. Após os filtros matemáticos, os últimos candles são enviados para a IA analisar Price Action, volume e contexto, barrando compras em topos falsos ou exaustão de mercado.
+* 📊 **Filtros Matemáticos (TA):** Varredura de mercado utilizando cruzamento de Médias Móveis Exponenciais (EMA 9x21) e Índice de Força Relativa (RSI < 70) para identificar tendências de alta seguras.
+* 🎯 **Trailing Stop Dinâmico:** Esqueça o "Take Profit" fixo. O bot identifica quando uma operação está lucrando, arma um gatilho invisível e persegue o preço para cima. Ele só vende quando a moeda perde a força, espremendo o máximo de lucro possível de cada pernada de alta.
+* 🛡️ **Regra de Ouro (Auto-Switch):** Se o mercado virar e o bot ficar "preso" em uma moeda lateralizada ou em queda lenta por muito tempo, ele escaneia o mercado no background, encontra uma oportunidade melhor e migra o saldo automaticamente.
+* 💻 **Dashboard Interativo (UI):** Interface gráfica nativa (Tkinter) para visualização em tempo real de P/L, minigráficos de velas (5m), placar de Win/Loss, moedas na "Geladeira" e o veredito ao vivo da IA.
 
 ---
 
-## 💡 Créditos e Origem
+## ⚙️ Pré-requisitos e Instalação
 
-Este projeto iniciou como uma ramificação (fork) inspirado no robusto motor open-source do 
-[binance-trade-bot](https://github.com/edeng23/binance-trade-bot), evoluindo e divergindo para uma 
-arquitetura "Pro" voltada a interfaces gráficas (IPC via JSON local), injeção de lógicas de Stop Móvel em nível de 
-portfólio e otimizações pesadas nas rotinas de requisição.
-
----
-
-## ⚙️ Instalação e Configuração
-
-### Pré-requisitos
-
-- **Python 3.9+** instalado no sistema.
-- Conta na **Binance** com chaves de API geradas (Permissões de `Leitura` e `Trade` habilitadas. 
-Por segurança, **NÃO** habilite permissões de saque).
-```
-
-### Passo a Passo de Setup
-
-**1. Clone o repositório para a sua máquina:**
-
+### 1. Clonando o repositório
 ```bash
-git clone [https://github.com/micaelcosmo/binance_trade.git](https://github.com/micaelcosmo/binance_trade.git)
+git clone https://github.com/micaelcosmo/binance_trade.git
 cd binance_trade
 ```
 
-**2. Crie e ative um Ambiente Virtual (VENV):**
-Isso garante que as bibliotecas do bot não entrem em conflito com o seu sistema.
+### 2. Ambiente Virtual (Recomendado)
+Isole as dependências do projeto para evitar conflitos com o seu sistema operacional:
 ```bash
-# No Windows
 python -m venv venv
+# No Windows:
 venv\Scripts\activate
-
-# No Linux/Mac
-python3 -m venv venv
+# No Linux/Mac:
 source venv/bin/activate
 ```
 
-**3. Instale as dependências do projeto:**
+### 3. Instalando Dependências
+O bot utiliza `pandas` para cálculos técnicos, `langchain` para a IA e exige uma versão específica do ORM do banco de dados para retrocompatibilidade.
 ```bash
 pip install -r requirements.txt
 ```
 
-**4. Arquivos de Configuração:**
-- Faça uma cópia do arquivo de manifesto para criar a sua configuração local:
-  ```bash
-  # Windows
-  copy user.cfg.example user.cfg
-  
-  # Linux/Mac
-  cp user.cfg.example user.cfg
-  ```
-- Abra o novo arquivo `user.cfg` em qualquer editor de código. Ele possui um manual completo 
-e comentado em cada linha para você definir o seu nível de risco (margens de Jump, timeouts, gatilhos de Trailing).
-- Configure as suas Chaves de API da Binance conforme a estrutura do arquivo base do ambiente (`app.json` ou `.env`).
+### 4. Configuração do Bot (`.cfg` e `.txt`)
+O bot precisa de dois arquivos de configuração para rodar. Você deve criar cópias dos templates disponibilizados no repositório:
+
+**A. Credenciais e Configurações Globais (`user.cfg`)**
+```bash
+cp user.cfg.example user.cfg
+```
+Abra o `user.cfg` recém-criado e configure:
+* **Binance API Keys:** Suas chaves de leitura e trade (⚠️ *Recomendação de segurança: Desative a permissão de saque na Binance*).
+* **GOOGLE_API_KEY:** Gere uma chave gratuita no [Google AI Studio](https://aistudio.google.com/) para habilitar o Oráculo de IA. Sem ela, o bot rodará em modo "cego" (apenas matemática).
+
+**B. Lista de Ativos (`supported_coin_list.txt`)**
+```bash
+cp supported_coin_list.example supported_coin_list.txt
+```
+Abra o `supported_coin_list.txt` e liste os tokens que o bot deve monitorar. Adicione apenas o nome da moeda (uma por linha), sem o par da base (USDT). Exemplo: `BTC`, `CFG`, `SOL`.
 
 ---
 
 ## 🚀 Como Executar
 
-Com o ambiente virtual ativado e as chaves devidamente inseridas, inicie o Cockpit (Dashboard):
-
+Com o ambiente ativado e os arquivos configurados, inicie a interface gráfica do painel:
 ```bash
 python painel.py
 ```
-
-A interface gráfica será renderizada. Clique no botão **RUN > Iniciar Bot** no topo da tela para disparar 
-os processos paralelos em segundo plano. Relaxe e acompanhe a mágica acontecer pelo terminal de logs da UI.
-
----
-> ⚠️ **Aviso Legal:** Este software é fornecido "como está", sem garantias de lucro. Criptomoedas são ativos 
-de altíssima volatilidade. Faça testes com valores baixos (ou na Testnet), opere com responsabilidade e gerencie 
-o seu próprio risco financeiro.
-```
+O Dashboard abrirá. Selecione sua estratégia e clique no botão **"RUN > Iniciar Bot"**. Acompanhe a varredura do mercado, o status do trailing stop e os diagnósticos da IA diretamente na tela.
 
 ---
 
 ## ❓ FAQ & Solução de Problemas (Troubleshooting)
 
-Se você encontrou algum erro ao rodar o bot pela primeira vez, confira as soluções para os problemas mais comuns relatados pela comunidade:
+Se o bot não iniciar ou apresentar erros no console, confira as soluções para os problemas mais comuns relatados pela comunidade:
 
-### 1. Erro de Timestamp (APIError code=-1021)
-**O erro:** `APIError(code=-1021): Timestamp for this request is outside of the recvWindow.`
-**O que significa:** O relógio do seu computador está fora de sincronia com os servidores da Binance em mais de 5 segundos. É uma trava de segurança da corretora contra *replay attacks*.
-**Como resolver:**
-- **No Windows:** Clique com o botão direito no relógio da barra de tarefas > "Ajustar data/hora" > Clique no botão **"Sincronizar agora"**. Reinicie o bot.
-- **No Linux/Mac:** Force a sincronização do NTP (Network Time Protocol) através do terminal ou configurações de sistema.
+### ⏱️ Erro de Timestamp (APIError code=-1021)
+* **O erro:** `APIError(code=-1021): Timestamp for this request is outside of the recvWindow.`
+* **O motivo:** O relógio do seu computador está dessincronizado com os servidores da Binance em mais de 5 segundos. É uma trava de segurança da corretora contra *replay attacks*.
+* **A solução:**
+  * **No Windows:** Clique com o botão direito no relógio da barra de tarefas > "Ajustar data/hora" > Clique no botão **"Sincronizar agora"**.
+  * **No Linux/Mac:** Force a sincronização do NTP (Network Time Protocol) através do terminal.
 
-### 2. Erro de Banco de Dados / ORM (SQLAlchemy ArgumentError)
-**O erro:** `sqlalchemy.exc.ArgumentError: Column expression, FROM clause, or other columns clause element expected...`
-**O que significa:** A versão instalada do SQLAlchemy no seu ambiente (`v2.0+`) sofreu mudanças de sintaxe (`breaking changes`) e não suporta mais o formato de `select([])` utilizado nativamente pelo motor base do bot.
-**Como resolver:**
-Faça o downgrade da biblioteca para a última versão estável da família 1.4.x rodando o comando abaixo com o seu ambiente virtual (VENV) ativado:
-```bash
-pip install SQLAlchemy==1.4.46
-```
+### 🗄️ Erro de Banco de Dados / ORM (SQLAlchemy ArgumentError)
+* **O erro:** `sqlalchemy.exc.ArgumentError: Column expression, FROM clause, or other columns clause element expected...`
+* **O motivo:** A versão do SQLAlchemy no seu ambiente atualizou acidentalmente para a `v2.0+`, quebrando a compatibilidade de sintaxe (`select([])`) utilizada pelo motor interno do bot.
+* **A solução:** Faça o downgrade da biblioteca para a versão estável da ramificação 1.4 rodando os comandos abaixo com a venv ativada:
+  ```bash
+  pip uninstall SQLAlchemy -y
+  pip install SQLAlchemy==1.4.52
+  ```
+
+---
+
+## ⚠️ Disclaimer (Aviso Legal)
+Este software é um projeto de código aberto com fins educacionais e experimentais. **Não é um conselho financeiro.** O mercado de criptomoedas é altamente volátil. Os desenvolvedores não se responsabilizam por perdas financeiras. Utilize por sua conta e risco, e teste exaustivamente com quantias pequenas antes de alocar capital significativo.
