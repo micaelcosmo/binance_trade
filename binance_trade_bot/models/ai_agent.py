@@ -5,7 +5,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 
-load_dotenv()
+
+load_dotenv("user.cfg")
+
 
 class MarketAnalyzer:
     def __init__(self, system_logger):
@@ -14,7 +16,7 @@ class MarketAnalyzer:
         google_api_key = os.getenv('GOOGLE_API_KEY')
 
         if not google_api_key:
-            self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
+            self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada no user.cfg! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
             self.language_model = None
         else:
             self.language_model = ChatGoogleGenerativeAI(
@@ -23,6 +25,7 @@ class MarketAnalyzer:
                 temperature=0.1, 
                 model_kwargs={"response_mime_type": "application/json"}
             )
+            
 
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", """Você é um Trader Institucional Sênior de criptomoedas, especialista em Price Action, microestruturas e análise de momento.
