@@ -94,9 +94,26 @@ class Strategy:
     def update_values(self):
         self._write_json_ui()
 
-    def _get_balance(self, asset):
+    # ==========================================
+    # UTILITÁRIOS DA BINANCE & TRATOR DE SALDO
+    # ==========================================
+    def _desbloquear_saldo(self, symbol):
+        """Cancela qualquer ordem fantasma pendente para liberar o saldo para venda a mercado."""
+        try:
+            open_orders = self.client.get_open_orders(symbol=symbol)
+            for order in open_orders:
+                self.logger.info(f"🚜 Trator: Cancelando ordem pendente antiga ({order['orderId']}) para liberar saldo...")
+                self.client.cancel_order(symbol=symbol, orderId=order['orderId'])
+                time.sleep(0.5) # Dá tempo pra Binance devolver o saldo livre
+        except Exception as e:
+            self.logger.error(f"Erro ao tentar limpar ordens travadas: {e}")
+
+    def _get_balance(self, asset, free_only=False):
+        """Agora permite puxar só o saldo livre na hora do aperto"""
         try:
             b = self.client.get_asset_balance(asset=asset)
+            if free_only:
+                return float(b['free'])
             return float(b['free']) + float(b['locked'])
         except Exception:
             return 0.0
@@ -138,6 +155,9 @@ class Strategy:
         except Exception:
             return False, 0.0, 0.0
 
+    # ==========================================
+    # NÚCLEO DE EXECUÇÃO
+    # ==========================================
     def execute_real_trade(self, coin, preco_atual):
         symbol = f"{coin}{self.base_coin}"
         saldo_base = self._get_balance(self.base_coin)
@@ -277,8 +297,11 @@ class Strategy:
                     self.logger.info(f"✅ TAKE PROFIT TRAILING ACIONADO para {self.moeda_atual_operacao}! Pico atingido: {self.peak_profit_perc:.2f}% | Fechando em: {drop_pct:.2f}%")
 
                 if vender_agora:
+                    self._desbloquear_saldo(symbol) # 🚜 Passa o trator antes de vender
+                    saldo_livre = self._get_balance(self.moeda_atual_operacao, free_only=True)
                     _, step_size = self.get_precision_filters(symbol)
-                    self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_moeda, step_size))
+                    
+                    self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre, step_size))
                     
                     if motivo_venda == "STOP_LOSS": self.trades_lost += 1
                     else: self.trades_won += 1
@@ -303,9 +326,14 @@ class Strategy:
                         
                         if nova_moeda:
                             self.logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda}!")
+                            
+                            self._desbloquear_saldo(symbol) # 🚜 Passa o trator!
+                            saldo_livre = self._get_balance(self.moeda_atual_operacao, free_only=True)
                             _, step_size = self.get_precision_filters(symbol)
-                            self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_moeda, step_size))
+                            
+                            self.client.create_order(symbol=symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre, step_size))
                             time.sleep(2)
+                            
                             self.trades_lost += 1 
                             self.last_switch_time = time.time()
                             self.em_operacao = False 
@@ -341,7 +369,6 @@ class Strategy:
                         self.moeda_atual_operacao = coin
             else:
                 geladeira_temp.append(item_linha)
-                # Só imprime a análise verbosa se não estivermos em operação
                 if not self.em_operacao:
                     if var_4h < -2.0:
                         self.logger.info(f"❄️ {coin} | Análise: Em geladeira. Ativo sangrando muito ({var_4h:.2f}% nas últimas 4h).")
