@@ -5,8 +5,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 
-# Forçando o dotenv a ler o seu arquivo de configuração central
+
 load_dotenv("user.cfg")
+
 
 class MarketAnalyzer:
     def __init__(self, system_logger):
@@ -18,9 +19,8 @@ class MarketAnalyzer:
             self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada no user.cfg! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
             self.language_model = None
         else:
-            # FIX: Usando a string universal e estável do modelo para evitar 404 de região/versão
             self.language_model = ChatGoogleGenerativeAI(
-                model="gemini-pro",
+                model="gemini-2.5-flash", 
                 google_api_key=google_api_key,
                 temperature=0.1
             )
@@ -71,7 +71,7 @@ class MarketAnalyzer:
                 "dados_candles": candles_string_format
             })
 
-            # Limpeza reforçada para garantir o parse do JSON caso a IA mande blocos de markdown
+            # Limpeza reforçada para garantir o parse do JSON
             resposta_limpa = resposta_bruta.strip('`').replace('json\n', '').strip()
             resposta_json = json.loads(resposta_limpa)
             
@@ -80,4 +80,4 @@ class MarketAnalyzer:
         except Exception as erro_execucao:
             self.system_logger.error(f"Erro no Agente IA: {erro_execucao}")
             return {"recomendacao": "AGUARDAR", "confianca": 0, "motivo": "Falha na comunicação com a API."}
-            
+    
