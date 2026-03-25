@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Trade Bot Pro - AI Edition</title>
+    <style>
+        :root {
+            --bg-dark: #0b0e11;
+            --bg-card: #1e2329;
+            --primary-yellow: #fcd535;
+            --text-main: #eaecef;
+            --text-muted: #848e9c;
+            --accent-green: #0ecb81;
+            --accent-red: #f6465d;
+            --border-color: #2b3139;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.6; }
+
+        /* Header / Hero */
+        header { padding: 80px 20px; text-align: center; border-bottom: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(30,35,41,1) 0%, rgba(11,14,17,1) 100%); }
+        header h1 { font-size: 3rem; color: var(--primary-yellow); margin-bottom: 15px; }
+        header p { font-size: 1.2rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 30px; }
+        .hero-badges span { display: inline-block; padding: 5px 12px; margin: 0 5px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; font-family: monospace; }
+
+        /* Features Section */
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        .feature-card { background: var(--bg-card); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); transition: transform 0.2s; }
+        .feature-card:hover { transform: translateY(-5px); border-color: var(--primary-yellow); }
+        .feature-card h3 { color: var(--primary-yellow); margin-bottom: 15px; font-size: 1.2rem; }
+
+        /* Tabs System */
+        .manual-section { max-width: 1200px; margin: 50px auto; padding: 0 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); }
+        .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 15px 30px; font-size: 1.1rem; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { color: var(--primary-yellow); border-bottom: 3px solid var(--primary-yellow); margin-bottom: -2px; }
+
+        .tab-content { display: none; background: var(--bg-card); padding: 40px; border-radius: 0 8px 8px 8px; border: 1px solid var(--border-color); }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Typography & Elements inside Tabs */
+        .tab-content h2 { color: var(--primary-yellow); margin-top: 30px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .tab-content h2:first-child { margin-top: 0; }
+        .tab-content h3 { color: var(--text-main); margin: 25px 0 10px 0; }
+        .tab-content p, .tab-content ul { margin-bottom: 15px; color: var(--text-muted); }
+        .tab-content ul { margin-left: 20px; }
+        .tab-content li { margin-bottom: 8px; }
+
+        code { background: #000; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; color: #a6e22e; font-size: 0.9em; }
+        pre { background: #000; padding: 15px; border-radius: 8px; overflow-x: auto; margin-bottom: 20px; border: 1px solid var(--border-color); }
+        pre code { background: none; padding: 0; color: #e6db74; }
+
+        .alert { padding: 15px; border-left: 4px solid var(--accent-red); background: rgba(246, 70, 93, 0.1); margin-bottom: 20px; border-radius: 0 4px 4px 0; }
+        .success { border-left-color: var(--accent-green); background: rgba(14, 203, 129, 0.1); }
+        .warning { border-left-color: var(--primary-yellow); background: rgba(252, 213, 53, 0.1); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Binance Trade Bot Pro <span style="color: #fff; font-size: 1.5rem; vertical-align: middle;">🤖 AI Edition</span></h1>
+        <p>Terminal quantitativo automatizado com análise técnica, trailing stop dinâmico e gestão de risco validada por Inteligência Artificial (Google Gemini).</p>
+        <div class="hero-badges">
+            <span>v2.8.0</span>
+            <span>Python 3.9+</span>
+            <span>Tkinter UI</span>
+            <span>Gemini 2.5 Flash</span>
+        </div>
+    </header>
+
+    <section class="features">
+        <div class="feature-card">
+            <h3>🧠 Oráculo de IA</h3>
+            <p>Integração com Gemini 2.5 Flash. O bot submete os últimos 5 candles (5m) para a IA analisar a microestrutura, barrando compras em topos falsos ou exaustão de volume.</p>
+        </div>
+        <div class="feature-card">
+            <h3>📈 Trailing Stop Dinâmico</h3>
+            <p>Adeus Take Profit fixo. O motor detecta o lucro, arma um gatilho invisível e persegue a alta da moeda. Só vende quando o ativo recua sua força de tendência.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🛡️ Auto-Healing de Rede</h3>
+            <p>Armadura contra timeouts. Se a internet cair, o bot congela a operação. Se reiniciar, ele consulta o histórico da corretora para restaurar a memória do trade.</p>
+        </div>
+        <div class="feature-card">
+            <h3>👑 Regra de Ouro (Auto-Switch)</h3>
+            <p>Trava de capital preso. Se a moeda lateralizar por mais de 1 hora, o bot caça oportunidades melhores, pede aval da IA e migra o saldo automaticamente.</p>
+        </div>
+    </section>
+
+    <section class="manual-section">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('user')">📖 Manual do Usuário</button>
+            <button class="tab-btn" onclick="switchTab('dev')">⚙️ Manual do Desenvolvedor</button>
+        </div>
+
+        <div id="user" class="tab-content active">
+            <h2>Bem-vindo ao Bot</h2>
+            <p>Este manual guiará você desde a instalação até a sua primeira operação automatizada.</p>
+
+            <h2>1. Instalação e Preparação</h2>
+            <p>Clone o repositório, crie um ambiente virtual e instale as dependências. As bibliotecas foram fixadas para garantir compatibilidade (ex: SQLAlchemy 1.4).</p>
+            <pre><code>git clone https://github.com/micaelcosmo/binance_trade.git
+cd binance_trade
+python -m venv venv
+venv\Scripts\activate  # Windows
+pip install -r requirements.txt</code></pre>
+
+            <h2>2. Configurando suas Credenciais</h2>
+            <div class="warning alert">
+                <strong>Aviso de Segurança:</strong> Nunca ative a permissão de "Saques" (Withdrawals) na sua API da Binance. O bot precisa apenas de permissão de Leitura e Spot Trading.
+            </div>
+            <p>Você precisa de dois arquivos cruciais para o bot rodar. Faça cópias dos exemplos fornecidos:</p>
+            <ul>
+                <li>Copie <code>user.cfg.example</code> para <code>user.cfg</code></li>
+                <li>Copie <code>supported_coin_list.example</code> para <code>supported_coin_list.txt</code></li>
+            </ul>
+            <p>Abra o <code>user.cfg</code> e insira:</p>
+            <ul>
+                <li><strong>BINANCE_API_KEY</strong> e <strong>BINANCE_SECRET:</strong> Geradas na sua conta Binance.</li>
+                <li><strong>GOOGLE_API_KEY:</strong> Gerada no Google AI Studio. Sem ela, a IA fica em bypass (cega).</li>
+            </ul>
+
+            <h2>3. Lista de Moedas (Watchlist)</h2>
+            <p>Abra o arquivo <code>supported_coin_list.txt</code>. Adicione o símbolo das moedas que deseja que o bot vigie, <strong>uma por linha</strong>, sem o par USDT. Exemplo:</p>
+            <pre><code>BTC
+CFG
+SOL
+PEPE</code></pre>
+
+            <h2>4. Iniciando o Painel</h2>
+            <p>Com tudo configurado, inicie o Dashboard gráfico:</p>
+            <pre><code>python painel.py</code></pre>
+            <p>No painel, clique em <strong>RUN > Iniciar Bot</strong>. Você verá no log o bot analisando a matemática (EMA/RSI) e as mensagens do <em>Oráculo IA</em> aprovando ou vetando a entrada.</p>
+
+            <h2>5. Troubleshooting Comum</h2>
+            <ul>
+                <li><strong>Erro -1021 (Timestamp outside recvWindow):</strong> O relógio do Windows está atrasado. Vá nas configurações de Data/Hora do Windows e clique em "Sincronizar Agora".</li>
+                <li><strong>Erro SQLAlchemy ArgumentError:</strong> Acontece se o Pip instalou o SQLAlchemy 2.0. Resolva rodando: <code>pip install SQLAlchemy==1.4.52</code>.</li>
+            </ul>
+        </div>
+
+        <div id="dev" class="tab-content">
+            <h2>Arquitetura do Sistema</h2>
+            <p>O <strong>Binance Trade Bot Pro</strong> é estruturado em duas camadas principais: O Motor de Execução (Estratégia) e o Agente de Inteligência Artificial.</p>
+
+            <h2>1. Classe Principal: Strategy (<code>profit_gain_strategy.py</code>)</h2>
+            <p>Coração lógico do bot. Ele gerencia o ciclo de vida (Scout, Monitor, Trade). O fluxo de varredura (<code>scan_market</code>) atua em dois modos independentes:</p>
+            <ul>
+                <li><strong>Modo Caça (Desposicionado):</strong> Calcula a EMA (9x21) e o RSI (14) no timeframe de 5m. Se for tendência de alta e RSI &lt; 70, envia o dataframe para validação do <code>ai_agent</code>.</li>
+                <li><strong>Modo Monitoramento (Posicionado):</strong> Ignora as outras moedas e foca na matemática do Trailing Stop e do Stop Loss. Calcula a <code>peak_profit_percentage</code> e recuo de 0.20%.</li>
+            </ul>
+
+            <h2>2. Agente de IA: MarketAnalyzer (<code>ai_agent.py</code>)</h2>
+            <p>Utiliza o framework <code>LangChain</code> para conectar com o <strong>Gemini 2.5 Flash</strong> via API v1beta do Google Generative AI.</p>
+            <ul>
+                <li><strong>O Payload:</strong> Formata os últimos 5 candles (Timestamp, Open, High, Low, Close, Vol) em string e injeta num <code>ChatPromptTemplate</code> contendo persona institucional.</li>
+                <li><strong>Output Parsing:</strong> A IA é forçada a responder um JSON puro com as chaves <code>{"recomendacao", "confianca", "motivo"}</code>. O código possui um parser (`replace`) para limpar escapes markdown que a IA ocasionalmente insere.</li>
+            </ul>
+
+            <h2>3. Resiliência: Error State & Auto-Healing</h2>
+            <p>Adicionado na v2.8.0, impede que o bot quebre ou perca o P/L em anomalias de hardware/rede.</p>
+            <ul>
+                <li><strong>Network Shield:</strong> A função <code>_get_balance()</code> agora possui tratamento de <em>Timeout</em>, retornando <code>-1.0</code>. O <code>scan_market()</code> lê o número negativo, detecta a falha e dá um <code>return</code> antecipado, congelando o estado (memória).</li>
+                <li><strong>Single Source of Truth:</strong> Se a variável <code>self.preco_compra_ativo</code> for perdida (ex: bot reiniciado com saldo pendente), a função <code>_recuperar_dados_compra_real()</code> faz um request no endpoint <code>get_my_trades</code> da Binance, filtra por <code>isBuyer=True</code>, extrai o preço e o <em>timestamp</em> exato, e refaz o estado interno (Auto-Healing).</li>
+            </ul>
+
+            <h2>4. Roadmap Dev (O que vem na v3.0)</h2>
+            <div class="success alert">
+                <strong>Próxima Evolução: Batch Analysis (Gestor de Portfólio MTF)</strong><br>
+                Substituir o modelo "Caçador Solitário" (1 req/moeda) pelo "Comitê de IA". Enviar o lote inteiro das moedas via Pandas para a IA fazer uma Análise Macro (1h/24h) cruzada com a Micro (5m/4h) consumindo apenas 3 RPMs, elegendo a moeda com maior <em>score</em> de confluência do dia.
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function switchTab(tabId) {
+            // Remove active classes
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Add active classes to the target
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
