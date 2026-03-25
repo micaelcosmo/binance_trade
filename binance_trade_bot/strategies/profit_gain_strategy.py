@@ -112,8 +112,27 @@ class Strategy:
             if free_only:
                 return float(balance_data['free'])
             return float(balance_data['free']) + float(balance_data['locked'])
-        except Exception:
-            return 0.0
+        except Exception as e:
+            # FIX: Escudo contra queda de internet. Retorna -1.0 em vez de 0.0
+            self.system_logger.error(f"⚠️ Timeout de rede ao buscar saldo de {asset_symbol}: {e}")
+            return -1.0
+
+    def _recuperar_dados_compra_real(self, market_symbol):
+        # NOVO: Função que investiga o banco da Binance para reconstruir a memória do bot
+        try:
+            self.system_logger.info(f"🔎 Consultando livros da Binance para histórico de {market_symbol}...")
+            trades_recentes = self.binance_client.get_my_trades(symbol=market_symbol, limit=5)
+            
+            if trades_recentes:
+                ultimo_trade = trades_recentes[-1]
+                if ultimo_trade['isBuyer']:
+                    preco_real = float(ultimo_trade['price'])
+                    tempo_real = int(ultimo_trade['time']) / 1000.0
+                    return preco_real, tempo_real
+        except Exception as erro_historico:
+            self.system_logger.error(f"Erro ao buscar histórico: {erro_historico}")
+            
+        return 0.0, 0.0
 
     def get_precision_filters(self, target_symbol):
         try:
@@ -230,7 +249,7 @@ class Strategy:
                                 self.em_operacao = True
                                 self.moeda_atual_operacao = check_coin
                                 self.quantidade_altcoin_ativa = quantidade_moeda
-                                if self.operation_start_time == 0.0:
+                                if getattr(self, 'operation_start_time', 0.0) == 0.0:
                                     self.operation_start_time = time.time()
                                 self._save_state()
                                 break
@@ -249,6 +268,13 @@ class Strategy:
                 self.preco_atual_ativo = float(ticker_info['price'])
                 
                 saldo_moeda_operada = self._get_balance(self.moeda_atual_operacao)
+
+                # --- 1. APLICAÇÃO DO ESCUDO DE REDE ---
+                if saldo_moeda_operada < 0:
+                    self.system_logger.warning("⏳ Conexão perdida: Congelando estado da operação até a internet voltar...")
+                    return # Pula este ciclo e preserva todas as variáveis
+                # --------------------------------------
+
                 if (saldo_moeda_operada * self.preco_atual_ativo) < 5.0:
                     self.system_logger.info(f"✅ Saldo esgotado em {self.moeda_atual_operacao}. Operação finalizada.")
                     self.em_operacao = False
@@ -258,9 +284,21 @@ class Strategy:
                     self._save_state()
                     return
 
+                # --- 2. AUTO-HEALING: RECONSTRUÇÃO DE ESTADO ---
                 if self.preco_compra_ativo <= 0:
-                    self.preco_compra_ativo = self.preco_atual_ativo
+                    preco_real, tempo_real = self._recuperar_dados_compra_real(market_symbol)
+                    
+                    if preco_real > 0:
+                        self.preco_compra_ativo = preco_real
+                        if getattr(self, 'operation_start_time', 0) <= 0:
+                            self.operation_start_time = tempo_real
+                        self.system_logger.warning(f"✅ Memória Restaurada! Preço real de compra: ${preco_real:.6f}")
+                    else:
+                        self.preco_compra_ativo = self.preco_atual_ativo
+                        self.system_logger.warning("⚠️ Histórico não encontrado. Assumindo preço atual.")
+                        
                     self._save_state()
+                # -----------------------------------------------
 
                 drop_percentage = ((self.preco_atual_ativo - self.preco_compra_ativo) / self.preco_compra_ativo) * 100
                 self.stop_loss_monitor_drop = drop_percentage
@@ -353,7 +391,7 @@ class Strategy:
                                 self.moeda_atual_operacao = nova_moeda_promissora
                             return
 
-                    self._write_json_ui() 
+                self._write_json_ui() 
             except Exception as erro_monitoramento:
                 self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")
 

@@ -5,9 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 
-
 load_dotenv("user.cfg")
-
 
 class MarketAnalyzer:
     def __init__(self, system_logger):
@@ -80,4 +78,3 @@ class MarketAnalyzer:
         except Exception as erro_execucao:
             self.system_logger.error(f"Erro no Agente IA: {erro_execucao}")
             return {"recomendacao": "AGUARDAR", "confianca": 0, "motivo": "Falha na comunicação com a API."}
-    
