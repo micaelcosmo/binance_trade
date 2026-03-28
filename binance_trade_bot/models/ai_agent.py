@@ -16,7 +16,6 @@ class MarketAnalyzer:
             self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada no user.cfg! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
             self.client = None
         else:
-            # NOVO SDK OFICIAL DO GOOGLE (Adeus LangChain e Warnings!)
             self.client = genai.Client(api_key=google_api_key)
 
         self.system_instruction = """Você é um Gestor de Portfólio Institucional e Analista Quantitativo Sênior.
@@ -28,7 +27,7 @@ O SEU FLUXO DE TRABALHO OBRIGATÓRIO É (Chain of Thought):
 3º Passo: Escolha a melhor oportunidade ou, se o mercado estiver ruim, fique de fora.
 
 REGRAS DE VETO ABSOLUTO (NÃO COMPRE SE):
-- Filtro Anti-Faca Caindo: VETE sumariamente moedas com preço abaixo das EMAs principais, com tendência de volume de venda ou próximas da mínima das últimas 24h. Não tente adivinhar o fundo do poço.
+- Filtro Anti-Faca Caindo: VETE sumariamente moedas em QUEDA LIVRE (Volume forte de venda e rompendo fundos). Moedas em leve baixa (pullback) ou acumulando no fundo podem ser consideradas se houver suporte forte, mas exija altíssima confiança para tentar pegar reversão.
 - Filtro Anti-FOMO (Fear Of Missing Out): VETE sumariamente moedas com RSI estourado (ex: acima de 70) ou que já estão coladas na máxima das últimas 24h. Se o lucro de 2% já foi precificado, descarte a moeda.
 
 Regras estritas:
@@ -60,7 +59,6 @@ FORMATO DE SAÍDA JSON ESPERADO:
             lote_json_string = json.dumps(lote_dados, indent=2)
             prompt_texto = f"Por favor, analise o lote de dados quantitativos abaixo, compare os ativos e retorne a sua decisão final de alocação em formato JSON puro.\n\nLOTE DE DADOS DE HOJE:\n{lote_json_string}"
             
-            # Usando o Flash-Lite para ter acesso a mais de 1000 requisições diárias no Free Tier
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
                 contents=prompt_texto,
@@ -72,7 +70,6 @@ FORMATO DE SAÍDA JSON ESPERADO:
                 )
             )
 
-            # Auditoria de Tokens via novo SDK
             usage = response.usage_metadata
             if usage:
                 tokens_in = getattr(usage, 'prompt_token_count', 0)
@@ -82,7 +79,6 @@ FORMATO DE SAÍDA JSON ESPERADO:
             
             resposta_bruta = response.text
 
-            # Limpeza cirúrgica
             resposta_limpa = resposta_bruta.strip('`').replace('json\n', '').strip()
             resposta_json = json.loads(resposta_limpa)
             

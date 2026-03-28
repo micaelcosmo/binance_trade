@@ -90,6 +90,17 @@ class Strategy:
         self._write_json_ui()
 
     def scout(self):
+        # NOVO: Checagem de comando do UI para zerar placar
+        if os.path.exists("reset_trades.flag"):
+            self.trades_won = 0
+            self.trades_lost = 0
+            self._save_state()
+            try:
+                os.remove("reset_trades.flag")
+                self.system_logger.info("♻️ Placar de Trades zerado com sucesso!")
+            except Exception:
+                pass
+
         self.system_logger.info(f"[HEARTBEAT] 💓 Motor executando varredura. Base oficial: {self.base_coin}")
         self.scan_market()
         self._write_json_ui()
@@ -152,7 +163,6 @@ class Strategy:
         return f"{truncated_value:.{precision_level}f}"
 
     def get_enriched_data(self, target_symbol):
-        # NOVO: Analisador Quântico (1 Hora) - Prepara os dados mastigados para a IA
         try:
             klines_data = self.binance_client.get_klines(symbol=target_symbol, interval='1h', limit=60)
             dataframe_klines = pandas.DataFrame(klines_data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
@@ -394,7 +404,8 @@ class Strategy:
                             if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
                             dados_swap, is_uptrend_swap = self.get_enriched_data(f"{check_coin}{self.base_coin}")
                             
-                            if dados_swap and is_uptrend_swap and dados_swap['rsi_14_periodos'] < 75.0:
+                            # Regra de Ouro continua filtrando o básico antes do Swap
+                            if dados_swap and dados_swap['rsi_14_periodos'] < 75.0:
                                 lote_dados_swap.append(dados_swap)
                                 
                         if lote_dados_swap:
@@ -447,10 +458,12 @@ class Strategy:
                 if dados_enriquecidos:
                     texto_linha_lateral = f"💼 {check_coin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
                     
-                    # Filtros matemáticos pré-IA
-                    if is_uptrend and dados_enriquecidos['rsi_14_periodos'] < 75.0:
+                    # NOVO: TODAS as moedas (alta ou baixa) vão para a IA analisar
+                    lote_dados_ia.append(dados_enriquecidos)
+
+                    # Separação estritamente visual no painel
+                    if is_uptrend:
                         aptas_temporary_list.append(texto_linha_lateral)
-                        lote_dados_ia.append(dados_enriquecidos)
                     else:
                         geladeira_temporary_list.append(texto_linha_lateral)
 
@@ -458,7 +471,7 @@ class Strategy:
             self.geladeira_cache = geladeira_temporary_list
 
             if lote_dados_ia:
-                self.system_logger.info(f"🟢 Submetendo Dossiê com {len(lote_dados_ia)} ativos ao Comitê Quantitativo IA...")
+                self.system_logger.info(f"🟢 Submetendo Dossiê completo com {len(lote_dados_ia)} ativos ao Comitê Quantitativo IA...")
                 analise_agente_ia = self.ai_agent.analisar_lote(lote_dados_ia)
                 
                 moeda_vencedora = analise_agente_ia.get("moeda_vencedora", "NENHUMA")

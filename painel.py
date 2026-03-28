@@ -49,6 +49,8 @@ class BinanceBotGUI:
         
         tk.Button(self.top_frame, text="CLR > Limpar Log", command=self.clear_log, bg="#3c4043", fg="white", font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.RIGHT, padx=15)
         tk.Button(self.top_frame, text="♻ Atualizar Inicial", command=self.reset_initial_balance, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=18).pack(side=tk.RIGHT, padx=5)
+        # NOVO: Botão de zerar placar
+        tk.Button(self.top_frame, text="0️⃣ Zerar Placar", command=self.reset_scoreboard, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.RIGHT, padx=5)
         
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
         self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=15)
@@ -121,12 +123,13 @@ class BinanceBotGUI:
         self.right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         self.right_panel.pack_propagate(False)
 
-        titulo_lista_aptas = "🔥 APTAS (>= 2%)" if self.current_strategy == 'default' else "🟢 SINAIS H4 CONFIRMADOS"
+        # NOVO: Títulos adaptados para as listas visuais
+        titulo_lista_aptas = "🔥 APTAS (>= 2%)" if self.current_strategy == 'default' else "🟢 TENDÊNCIA DE ALTA (Analisadas)"
         tk.Label(self.right_panel, text=titulo_lista_aptas, bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold")).pack(pady=(10,5))
         self.list_hot = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_green, font=("Consolas", 9), selectbackground=self.bg_frame, highlightthickness=0)
         self.list_hot.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
 
-        titulo_lista_geladeira = "❄️ GELADEIRA (< 2%)" if self.current_strategy == 'default' else "❄️ GELADEIRA (QUEDA)"
+        titulo_lista_geladeira = "❄️ GELADEIRA (< 2%)" if self.current_strategy == 'default' else "❄️ TENDÊNCIA DE BAIXA (Analisadas)"
         tk.Label(self.right_panel, text=titulo_lista_geladeira, bg=self.bg_frame, fg=self.accent_red, font=("Segoe UI", 10, "bold")).pack(pady=(5,5))
         self.list_cold = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_red, font=("Consolas", 9), selectbackground=self.bg_frame, highlightthickness=0)
         self.list_cold.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
@@ -154,6 +157,15 @@ class BinanceBotGUI:
             self._save_gui_state()
             self.lbl_inicial.config(text=f"[S] Inicial: ${self.saldo_inicial:.2f}")
             self.log_message("\n[✓] ♻️ Saldo Inicial sincronizado com sucesso!\n")
+
+    # NOVO: Método disparado pelo botão de zerar placar
+    def reset_scoreboard(self):
+        try:
+            with open("reset_trades.flag", "w") as f:
+                f.write("reset")
+            self.log_message("\n[✓] ♻️ Comando para zerar o placar de Trades enviado ao motor!\n")
+        except Exception as e:
+            self.log_message(f"\n[X] Erro ao enviar comando: {e}\n")
 
     def draw_mini_chart(self, chart_data_points, coin_symbol, buy_price_value=0.0, buy_time_stamp=0.0):
         self.canvas_chart.delete("all")
