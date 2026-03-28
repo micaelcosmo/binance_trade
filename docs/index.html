@@ -65,31 +65,31 @@
 
     <header>
         <h1>Binance Trade Bot Pro <span style="color: #fff; font-size: 1.5rem; vertical-align: middle;">🤖 AI Edition</span></h1>
-        <p>Terminal quantitativo automatizado com análise técnica, trailing stop dinâmico e gestão de risco validada por Inteligência Artificial (Google Gemini).</p>
+        <p>Terminal quantitativo automatizado com análise técnica, trailing stop dinâmico e gestão de risco institucional em lote validada pelo Google Gemini.</p>
         <div class="hero-badges">
-            <span>v2.8.0</span>
+            <span>v3.1.0</span>
             <span>Python 3.9+</span>
             <span>Tkinter UI</span>
-            <span>Gemini 2.5 Flash</span>
+            <span>Gemini 2.5 Flash-Lite</span>
         </div>
     </header>
 
     <section class="features">
         <div class="feature-card">
-            <h3>🧠 Oráculo de IA</h3>
-            <p>Integração com Gemini 2.5 Flash. O bot submete os últimos 5 candles (5m) para a IA analisar a microestrutura, barrando compras em topos falsos ou exaustão de volume.</p>
+            <h3>🧠 Comitê IA (Get Smart Once)</h3>
+            <p>Integração com Gemini 2.5 Flash-Lite via SDK nativo. O motor Python calcula EMAs e RSI (1H) de todas as moedas e submete um único Dossiê Quantitativo para a IA escolher a campeã do lote.</p>
         </div>
         <div class="feature-card">
             <h3>📈 Trailing Stop Dinâmico</h3>
-            <p>Adeus Take Profit fixo. O motor detecta o lucro, arma um gatilho invisível e persegue a alta da moeda. Só vende quando o ativo recua sua força de tendência.</p>
+            <p>Adeus Take Profit fixo. O motor detecta o lucro, arma um gatilho invisível e persegue a alta da moeda. Só vende quando o ativo perde sua força de tendência.</p>
         </div>
         <div class="feature-card">
-            <h3>🛡️ Auto-Healing de Rede</h3>
-            <p>Armadura contra timeouts. Se a internet cair, o bot congela a operação. Se reiniciar, ele consulta o histórico da corretora para restaurar a memória do trade.</p>
+            <h3>🛡️ Cooldown de Proteção</h3>
+            <p>Se a IA vetar o mercado com regras Anti-FOMO ou Anti-Faca Caindo, o bot entra em silêncio de rede por 30 minutos. Economia brutal de tokens e segurança contra falsos rompimentos.</p>
         </div>
         <div class="feature-card">
             <h3>👑 Regra de Ouro (Auto-Switch)</h3>
-            <p>Trava de capital preso. Se a moeda lateralizar por mais de 1 hora, o bot caça oportunidades melhores, pede aval da IA e migra o saldo automaticamente.</p>
+            <p>Trava de capital preso. Se a moeda lateralizar por mais de 1 hora, o bot compila um novo dossiê de Swap, pede aval institucional da IA e migra o saldo automaticamente.</p>
         </div>
     </section>
 
@@ -104,7 +104,7 @@
             <p>Este manual guiará você desde a instalação até a sua primeira operação automatizada.</p>
 
             <h2>1. Instalação e Preparação</h2>
-            <p>Clone o repositório, crie um ambiente virtual e instale as dependências. As bibliotecas foram fixadas para garantir compatibilidade (ex: SQLAlchemy 1.4).</p>
+            <p>Clone o repositório, crie um ambiente virtual e instale as dependências. O projeto não usa mais LangChain, garantindo uma instalação leve via <code>google-genai</code> nativo.</p>
             <pre><code>git clone https://github.com/micaelcosmo/binance_trade.git
 cd binance_trade
 python -m venv venv
@@ -127,53 +127,55 @@ pip install -r requirements.txt</code></pre>
             </ul>
 
             <h2>3. Lista de Moedas (Watchlist)</h2>
-            <p>Abra o arquivo <code>supported_coin_list.txt</code>. Adicione o símbolo das moedas que deseja que o bot vigie, <strong>uma por linha</strong>, sem o par USDT. Exemplo:</p>
+            <p>Abra o arquivo <code>supported_coin_list.txt</code>. Adicione o símbolo das moedas que deseja que a IA avalie no Dossiê Quantitativo, <strong>uma por linha</strong>, sem o par USDT. Exemplo:</p>
             <pre><code>BTC
 CFG
 SOL
-PEPE</code></pre>
+POL</code></pre>
 
-            <h2>4. Iniciando o Painel</h2>
+            <h2>4. Iniciando o Painel UI</h2>
             <p>Com tudo configurado, inicie o Dashboard gráfico:</p>
             <pre><code>python painel.py</code></pre>
-            <p>No painel, clique em <strong>RUN > Iniciar Bot</strong>. Você verá no log o bot analisando a matemática (EMA/RSI) e as mensagens do <em>Oráculo IA</em> aprovando ou vetando a entrada.</p>
+            <p>No painel, clique em <strong>RUN > Iniciar Bot</strong>. Você pode acompanhar a auditoria de tokens consumidos pela IA direto nos logs. Para reiniciar a contagem estatística, utilize o botão <strong>0️⃣ Zerar Placar</strong>.</p>
 
             <h2>5. Troubleshooting Comum</h2>
             <ul>
                 <li><strong>Erro -1021 (Timestamp outside recvWindow):</strong> O relógio do Windows está atrasado. Vá nas configurações de Data/Hora do Windows e clique em "Sincronizar Agora".</li>
-                <li><strong>Erro SQLAlchemy ArgumentError:</strong> Acontece se o Pip instalou o SQLAlchemy 2.0. Resolva rodando: <code>pip install SQLAlchemy==1.4.52</code>.</li>
+                <li><strong>Erro de Conflito websockets:</strong> Se a API da Binance acusar conflito de pacote de rede, rode <code>pip install websockets==11.0.3</code> para forçar o downgrade seguro exigido pela corretora.</li>
             </ul>
         </div>
 
         <div id="dev" class="tab-content">
-            <h2>Arquitetura do Sistema</h2>
-            <p>O <strong>Binance Trade Bot Pro</strong> é estruturado em duas camadas principais: O Motor de Execução (Estratégia) e o Agente de Inteligência Artificial.</p>
+            <h2>Arquitetura do Sistema (v3.1.0)</h2>
+            <p>O <strong>Binance Trade Bot Pro</strong> atingiu um nível Felipe Faria de engenharia. Ele abandonou a verificação estática de múltiplos <em>requests</em> por minuto e adotou o conceito de <strong>Batch Analysis</strong> (Análise em Lote).</p>
 
             <h2>1. Classe Principal: Strategy (<code>profit_gain_strategy.py</code>)</h2>
-            <p>Coração lógico do bot. Ele gerencia o ciclo de vida (Scout, Monitor, Trade). O fluxo de varredura (<code>scan_market</code>) atua em dois modos independentes:</p>
+            <p>O motor de execução calcula a matemática pesada usando <code>pandas-ta</code> para poupar o processamento da IA. O fluxo atua em dois modos:</p>
             <ul>
-                <li><strong>Modo Caça (Desposicionado):</strong> Calcula a EMA (9x21) e o RSI (14) no timeframe de 5m. Se for tendência de alta e RSI &lt; 70, envia o dataframe para validação do <code>ai_agent</code>.</li>
-                <li><strong>Modo Monitoramento (Posicionado):</strong> Ignora as outras moedas e foca na matemática do Trailing Stop e do Stop Loss. Calcula a <code>peak_profit_percentage</code> e recuo de 0.20%.</li>
+                <li><strong>Modo Dossiê (Desposicionado):</strong> Extrai velas de 1H, calcula EMA (9/21/50), RSI (14) e distância da máxima das últimas 24h para toda a <em>Watchlist</em>. O array JSON completo é submetido em uma única requisição.</li>
+                <li><strong>Modo Monitoramento (Posicionado):</strong> Isola a comunicação com a IA e foca unicamente no processamento de Trailing Stop e Stop Loss, protegendo o patrimônio em quedas bruscas de liquidez.</li>
             </ul>
 
-            <h2>2. Agente de IA: MarketAnalyzer (<code>ai_agent.py</code>)</h2>
-            <p>Utiliza o framework <code>LangChain</code> para conectar com o <strong>Gemini 2.5 Flash</strong> via API v1beta do Google Generative AI.</p>
+            <h2>2. Agente Institucional: MarketAnalyzer (<code>ai_agent.py</code>)</h2>
+            <p>Reescrito utilizando o SDK nativo <code>google-genai</code> apontado para o modelo <strong>gemini-2.5-flash-lite</strong>, garantindo aderência absoluta à cota diária do Free Tier.</p>
             <ul>
-                <li><strong>O Payload:</strong> Formata os últimos 5 candles (Timestamp, Open, High, Low, Close, Vol) em string e injeta num <code>ChatPromptTemplate</code> contendo persona institucional.</li>
-                <li><strong>Output Parsing:</strong> A IA é forçada a responder um JSON puro com as chaves <code>{"recomendacao", "confianca", "motivo"}</code>. O código possui um parser (`replace`) para limpar escapes markdown que a IA ocasionalmente insere.</li>
+                <li><strong>Chain of Thought:</strong> O prompt obriga a IA a escrever análises individuais de cada moeda recebida antes de gerar o veredito final, eliminando alucinações matemáticas.</li>
+                <li><strong>Filtros Dinâmicos:</strong> Implementação estrita de regras Anti-FOMO (vetando topos e RSI sobrecomprado) e Anti-Faca Caindo. A IA possui permissão para caçar suportes em tendência de baixa, mas tem veto absoluto contra quedas livres.</li>
+                <li><strong>API Audit:</strong> O módulo extrai os metadados brutos da resposta da API (Input e Output tokens) e envia para o System Logger em tempo real.</li>
             </ul>
 
-            <h2>3. Resiliência: Error State & Auto-Healing</h2>
-            <p>Adicionado na v2.8.0, impede que o bot quebre ou perca o P/L em anomalias de hardware/rede.</p>
+            <h2>3. Gerenciamento Assíncrono e Resiliência</h2>
+            <p>O projeto garante que anomalias não travem as threads (UI vs. Bot):</p>
             <ul>
-                <li><strong>Network Shield:</strong> A função <code>_get_balance()</code> agora possui tratamento de <em>Timeout</em>, retornando <code>-1.0</code>. O <code>scan_market()</code> lê o número negativo, detecta a falha e dá um <code>return</code> antecipado, congelando o estado (memória).</li>
-                <li><strong>Single Source of Truth:</strong> Se a variável <code>self.preco_compra_ativo</code> for perdida (ex: bot reiniciado com saldo pendente), a função <code>_recuperar_dados_compra_real()</code> faz um request no endpoint <code>get_my_trades</code> da Binance, filtra por <code>isBuyer=True</code>, extrai o preço e o <em>timestamp</em> exato, e refaz o estado interno (Auto-Healing).</li>
+                <li><strong>Cooldown Shield:</strong> Se a IA vetar o mercado inteiro, a variável <code>ai_cooldown_until</code> pausa a geração de novos dossiês por 30 minutos. Proteção automática contra falsos rompimentos e *Rate Limits*.</li>
+                <li><strong>UI Flags:</strong> O reset do placar de Trades é feito através da criação do arquivo fantasma <code>reset_trades.flag</code> pelo painel gráfico (Tkinter), que o motor em background consome e deleta sem travamentos IPC (Inter-Process Communication).</li>
+                <li><strong>Auto-Healing:</strong> Se a internet cair, a função <code>_get_balance()</code> blinda o processo. Ao voltar, o endpoint <code>get_my_trades</code> da Binance varre a memória e restaura as variáveis de compra.</li>
             </ul>
 
-            <h2>4. Roadmap Dev (O que vem na v3.0)</h2>
+            <h2>4. Roadmap Dev (O que vem na v4.0)</h2>
             <div class="success alert">
-                <strong>Próxima Evolução: Batch Analysis (Gestor de Portfólio MTF)</strong><br>
-                Substituir o modelo "Caçador Solitário" (1 req/moeda) pelo "Comitê de IA". Enviar o lote inteiro das moedas via Pandas para a IA fazer uma Análise Macro (1h/24h) cruzada com a Micro (5m/4h) consumindo apenas 3 RPMs, elegendo a moeda com maior <em>score</em> de confluência do dia.
+                <strong>Próxima Evolução: Webhooks & Multi-Agentes</strong><br>
+                Substituição do modelo CLI centralizado por uma arquitetura distribuída. Implementação de Webhooks diretos do TradingView para gatilho secundário e divisão do Comitê de IA em multi-agentes (Um focado em Análise Macro-Econômica do BTC e outro em Scalping de Altcoins).
             </div>
         </div>
     </section>
