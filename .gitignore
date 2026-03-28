@@ -18,3 +18,4 @@ data/*.db
 logs/*.log
 supported_coin_list
 *.json
+*.flag
