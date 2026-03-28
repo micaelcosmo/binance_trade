@@ -1,8 +1,7 @@
 import os
 import json
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv("user.cfg")
@@ -15,66 +14,80 @@ class MarketAnalyzer:
 
         if not google_api_key:
             self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada no user.cfg! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
-            self.language_model = None
+            self.client = None
         else:
-            self.language_model = ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash", 
-                google_api_key=google_api_key,
-                temperature=0.1
-            )
+            # NOVO SDK OFICIAL DO GOOGLE (Adeus LangChain e Warnings!)
+            self.client = genai.Client(api_key=google_api_key)
 
-        self.prompt_template = ChatPromptTemplate.from_messages([
-            ("system", """Você é um Trader Institucional Sênior de criptomoedas, especialista em Price Action, microestruturas e análise de momento.
-            Sua missão é analisar dados técnicos recentes e prever a probabilidade de um falso rompimento (topo) ou de uma reversão de tendência.
+        self.system_instruction = """Você é um Gestor de Portfólio Institucional e Analista Quantitativo Sênior.
+Sua função é receber um lote de dados técnicos pré-processados de MÚLTIPLAS criptomoedas e identificar a ÚNICA melhor oportunidade de Swing Trade. O objetivo é buscar um lucro seguro de pelo menos +2.00%.
 
-            REGRAS RÍGIDAS:
-            1. Responda EXCLUSIVAMENTE em formato JSON válido. Sem formatação markdown ou textos extras.
-            2. A 'recomendacao' deve ser estritamente: "COMPRAR" ou "AGUARDAR".
-            3. A 'confianca' deve ser um inteiro de 0 a 100.
-            4. O 'motivo' deve ter no máximo 2 frases curtas e diretas, explicando a leitura dos candles.
+O SEU FLUXO DE TRABALHO OBRIGATÓRIO É (Chain of Thought):
+1º Passo: Analise os indicadores pré-calculados (RSI, EMAs, Volume e Variações) de CADA moeda individualmente.
+2º Passo: Compare as moedas entre si, avaliando qual tem a melhor estrutura de alta e relação risco/retorno.
+3º Passo: Escolha a melhor oportunidade ou, se o mercado estiver ruim, fique de fora.
 
-            Formato esperado:
-            {{"recomendacao": "COMPRAR", "confianca": 85, "motivo": "Candles de força com volume crescente confirmam o rompimento da média. Risco de falso topo é baixo."}}"""),
-            
-            ("human", """Aqui estão os dados técnicos do par {moeda_alvo} (resumo):
-            - Preço Atual: {preco_atual}
-            - RSI Atual (14): {rsi_atual}
-            - Variação 4H: {variacao_4h}%
-            - Tendência EMA (9x21): Confirmada Alta
+REGRAS DE VETO ABSOLUTO (NÃO COMPRE SE):
+- Filtro Anti-Faca Caindo: VETE sumariamente moedas com preço abaixo das EMAs principais, com tendência de volume de venda ou próximas da mínima das últimas 24h. Não tente adivinhar o fundo do poço.
+- Filtro Anti-FOMO (Fear Of Missing Out): VETE sumariamente moedas com RSI estourado (ex: acima de 70) ou que já estão coladas na máxima das últimas 24h. Se o lucro de 2% já foi precificado, descarte a moeda.
 
-            Dados brutos dos últimos 5 candles (Timestamp, Open, High, Low, Close, Volume):
-            {dados_candles}
+Regras estritas:
+1. Baseie-se APENAS na matemática e nos dados fornecidos.
+2. Seja extremamente frio e institucional. Se todas as moedas caírem nos "Vetores Absolutos" ou não apresentarem um setup claríssimo, a moeda vencedora DEVE ser "NENHUMA".
+3. A sua resposta SERÁ PARSEADA POR UM SISTEMA. Retorne APENAS o JSON válido, sem markdown ou explicações externas.
 
-            Analise a ação de preço destes últimos candles. O mercado demonstra força real de compra ou é um topo de exaustão? Qual a sua recomendação de ação agora?""")
-        ])
+FORMATO DE SAÍDA JSON ESPERADO:
+{
+  "analises_individuais": [
+    {
+      "moeda": "string",
+      "leitura_tecnica": "string",
+      "potencial_alta": "string (BAIXO, MEDIO, ALTO)"
+    }
+  ],
+  "resumo_comparativo": "string",
+  "moeda_vencedora": "string (Símbolo da moeda ou 'NENHUMA')",
+  "confianca_setup": 0,
+  "motivo_investimento": "string",
+  "alertas_risco": "string"
+}"""
 
-        if self.language_model:
-            self.processing_chain = self.prompt_template | self.language_model | StrOutputParser()
-
-    def analisar(self, moeda_alvo, preco_atual, rsi_atual, variacao_4h, dataframe_candles):
-        if not self.language_model:
-            return {"recomendacao": "COMPRAR", "confianca": 100, "motivo": "Modo Bypass (Sem API Key configurada)"}
+    def analisar_lote(self, lote_dados):
+        if not self.client:
+            return {"moeda_vencedora": "COMPRA_TESTE", "confianca_setup": 100, "motivo_investimento": "Modo Bypass (Sem API Key configurada)"}
 
         try:
-            dataframe_recent_candles = dataframe_candles.tail(5)[['timestamp', 'open', 'high', 'low', 'close', 'vol']]
-            candles_string_format = dataframe_recent_candles.to_string(index=False)
-
-            self.system_logger.info(f"🧠 Consultando Oráculo IA (Gemini) para {moeda_alvo}...")
+            lote_json_string = json.dumps(lote_dados, indent=2)
+            prompt_texto = f"Por favor, analise o lote de dados quantitativos abaixo, compare os ativos e retorne a sua decisão final de alocação em formato JSON puro.\n\nLOTE DE DADOS DE HOJE:\n{lote_json_string}"
             
-            resposta_bruta = self.processing_chain.invoke({
-                "moeda_alvo": moeda_alvo,
-                "preco_atual": preco_atual,
-                "rsi_atual": f"{rsi_atual:.2f}",
-                "variacao_4h": f"{variacao_4h:.2f}",
-                "dados_candles": candles_string_format
-            })
+            # Usando o Flash-Lite para ter acesso a mais de 1000 requisições diárias no Free Tier
+            response = self.client.models.generate_content(
+                model='gemini-2.5-flash-lite',
+                contents=prompt_texto,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_instruction,
+                    temperature=0.1,
+                    max_output_tokens=8192,
+                    response_mime_type="application/json",
+                )
+            )
 
-            # Limpeza reforçada para garantir o parse do JSON
+            # Auditoria de Tokens via novo SDK
+            usage = response.usage_metadata
+            if usage:
+                tokens_in = getattr(usage, 'prompt_token_count', 0)
+                tokens_out = getattr(usage, 'candidates_token_count', 0)
+                total_tokens = getattr(usage, 'total_token_count', 0)
+                self.system_logger.info(f"📊 [API AUDIT] Tokens consumidos neste lote -> Input: {tokens_in} | Output: {tokens_out} | Total: {total_tokens}")
+            
+            resposta_bruta = response.text
+
+            # Limpeza cirúrgica
             resposta_limpa = resposta_bruta.strip('`').replace('json\n', '').strip()
             resposta_json = json.loads(resposta_limpa)
             
             return resposta_json
 
         except Exception as erro_execucao:
-            self.system_logger.error(f"Erro no Agente IA: {erro_execucao}")
-            return {"recomendacao": "AGUARDAR", "confianca": 0, "motivo": "Falha na comunicação com a API."}
+            self.system_logger.error(f"Erro Crítico no Parser JSON/API da IA: {erro_execucao}")
+            return {"moeda_vencedora": "NENHUMA", "confianca_setup": 0, "motivo_investimento": "Falha na comunicação ou conversão da resposta da IA."}

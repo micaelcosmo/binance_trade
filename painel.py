@@ -323,7 +323,7 @@ class BinanceBotGUI:
         if self.process:
             for log_line in iter(self.process.stdout.readline, ''):
                 if self.current_strategy == 'profit_gain':
-                    if "Mapeando EMA" in log_line:
+                    if "Mapeando EMA" in log_line or "Compilando Dossiê" in log_line:
                         self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Escaneando o Mercado...", fg=self.accent_blue))
                     elif "LIMIT em" in log_line or "ENTRADA REAL" in log_line:
                         self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Operação Executada!", fg=self.accent_green))
@@ -438,6 +438,7 @@ class BinanceBotGUI:
             total_linhas_log = int(self.log_area.index('end-1c').split('.')[0])
             if total_linhas_log > 1500: self.log_area.delete('1.0', '500.0')
         self.root.after(0, _append_and_clean)
+
 
 if __name__ == "__main__":
     if sys.platform == 'win32':

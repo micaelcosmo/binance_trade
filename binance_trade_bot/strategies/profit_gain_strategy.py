@@ -21,7 +21,8 @@ class Strategy:
         self.base_coin = getattr(bridge_attribute, 'symbol', bridge_attribute)
         
         self.ai_agent = MarketAnalyzer(self.system_logger)
-        self.ultimo_veredito_ia = "Aguardando sinal verde matemático..."
+        self.ultimo_veredito_ia = "Aguardando lote de dados..."
+        self.ai_cooldown_until = 0.0
         
         self.taxa_maker = 0.10
         self.margem_poeira = 0.80
@@ -85,7 +86,7 @@ class Strategy:
             self.system_logger.error(f"Erro ao salvar estado local: {erro_escrita}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA (MODO PRODUÇÃO)...")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA LOTE V3.0...")
         self._write_json_ui()
 
     def scout(self):
@@ -113,12 +114,10 @@ class Strategy:
                 return float(balance_data['free'])
             return float(balance_data['free']) + float(balance_data['locked'])
         except Exception as e:
-            # FIX: Escudo contra queda de internet. Retorna -1.0 em vez de 0.0
             self.system_logger.error(f"⚠️ Timeout de rede ao buscar saldo de {asset_symbol}: {e}")
             return -1.0
 
     def _recuperar_dados_compra_real(self, market_symbol):
-        # NOVO: Função que investiga o banco da Binance para reconstruir a memória do bot
         try:
             self.system_logger.info(f"🔎 Consultando livros da Binance para histórico de {market_symbol}...")
             trades_recentes = self.binance_client.get_my_trades(symbol=market_symbol, limit=5)
@@ -152,9 +151,10 @@ class Strategy:
         if precision_level == 0: return str(int(truncated_value))
         return f"{truncated_value:.{precision_level}f}"
 
-    def get_ema_signal(self, target_symbol):
+    def get_enriched_data(self, target_symbol):
+        # NOVO: Analisador Quântico (1 Hora) - Prepara os dados mastigados para a IA
         try:
-            klines_data = self.binance_client.get_klines(symbol=target_symbol, interval='5m', limit=50)
+            klines_data = self.binance_client.get_klines(symbol=target_symbol, interval='1h', limit=60)
             dataframe_klines = pandas.DataFrame(klines_data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             
             column_names_to_convert = ['open', 'high', 'low', 'close', 'vol']
@@ -163,19 +163,58 @@ class Strategy:
             
             dataframe_klines.ta.ema(length=9, append=True)
             dataframe_klines.ta.ema(length=21, append=True)
+            dataframe_klines.ta.ema(length=50, append=True)
             dataframe_klines.ta.rsi(length=14, append=True)
             
-            preco_atual_fechamento = dataframe_klines['close'].iloc[-1]
-            preco_fechamento_4h_atras = dataframe_klines['close'].iloc[0]
-            variacao_percentual_4h = ((preco_atual_fechamento - preco_fechamento_4h_atras) / preco_fechamento_4h_atras) * 100 if preco_fechamento_4h_atras > 0 else 0.0
+            ultima_linha = dataframe_klines.iloc[-1]
+            preco_atual = float(ultima_linha['close'])
+            rsi_atual = float(ultima_linha.get('RSI_14', 50.0))
+            ema9 = float(ultima_linha.get('EMA_9', 0.0))
+            ema21 = float(ultima_linha.get('EMA_21', 0.0))
             
-            ultima_linha_dataframe = dataframe_klines.iloc[-1]
-            is_uptrend = ultima_linha_dataframe['EMA_9'] > ultima_linha_dataframe['EMA_21']
-            rsi_atual = ultima_linha_dataframe['RSI_14'] if 'RSI_14' in dataframe_klines.columns else 50.0
+            if pandas.isna(rsi_atual): rsi_atual = 50.0
+            if pandas.isna(ema9): ema9 = 0.0
+            if pandas.isna(ema21): ema21 = 0.0
             
-            return is_uptrend, preco_atual_fechamento, variacao_percentual_4h, rsi_atual, dataframe_klines
-        except Exception:
-            return False, 0.0, 0.0, 50.0, None
+            try:
+                ticker_info = self.binance_client.get_ticker(symbol=target_symbol)
+                variacao_24h = float(ticker_info['priceChangePercent'])
+                maxima_24h = float(ticker_info['highPrice'])
+            except Exception:
+                variacao_24h = 0.0
+                maxima_24h = preco_atual
+
+            distancia_max = ((preco_atual - maxima_24h) / maxima_24h) * 100 if maxima_24h > 0 else 0.0
+            
+            if preco_atual > ema9 and ema9 > ema21:
+                status_emas = "Preço ACIMA da EMA 9 e 21 (Tendência de Alta)."
+            elif preco_atual < ema21:
+                status_emas = "Preço ABAIXO da EMA 21 (Tendência de Baixa)."
+            else:
+                status_emas = "Preço Consolidando entre EMA 9 e 21."
+                
+            try:
+                vol_recente = dataframe_klines['vol'].iloc[-4:-1].mean()
+                vol_passado = dataframe_klines['vol'].iloc[-7:-4].mean()
+                tendencia_vol = "CRESCENTE" if vol_recente > vol_passado else "SECANDO"
+            except Exception:
+                tendencia_vol = "ESTÁVEL"
+                
+            is_uptrend = preco_atual > ema21
+            
+            dados_montados = {
+                "moeda": target_symbol.replace(self.base_coin, ""),
+                "preco_atual": preco_atual,
+                "rsi_14_periodos": round(rsi_atual, 2),
+                "status_emas": status_emas,
+                "tendencia_volume": tendencia_vol,
+                "variacao_24h_pct": f"{variacao_24h:+.2f}%",
+                "distancia_maxima_24h": f"{distancia_max:+.2f}%"
+            }
+            return dados_montados, is_uptrend
+        except Exception as erro:
+            self.system_logger.error(f"Erro ao enriquecer dados de {target_symbol}: {erro}")
+            return None, False
 
     def execute_real_trade(self, coin_symbol, preco_atual):
         market_symbol = f"{coin_symbol}{self.base_coin}"
@@ -219,7 +258,7 @@ class Strategy:
 
     def scan_market(self):
         if not self.em_operacao:
-            self.system_logger.info("📊 Mapeando gráficos e aguardando Validação da IA (Gemini)...")
+            self.system_logger.info("📊 Compilando Dossiê Quantitativo 1H...")
             
         aptas_temporary_list = []
         geladeira_temporary_list = []
@@ -253,7 +292,7 @@ class Strategy:
                                     self.operation_start_time = time.time()
                                 self._save_state()
                                 break
-                        except: pass
+                        except Exception: pass
 
         if self.em_operacao:
             market_symbol = f"{self.moeda_atual_operacao}{self.base_coin}"
@@ -261,7 +300,7 @@ class Strategy:
             try:
                 klines_history = self.binance_client.get_klines(symbol=market_symbol, interval='5m', limit=30)
                 self.chart_data_cache = [float(kline_item[4]) for kline_item in klines_history]
-            except: pass
+            except Exception: pass
 
             try:
                 ticker_info = self.binance_client.get_symbol_ticker(symbol=market_symbol)
@@ -269,11 +308,9 @@ class Strategy:
                 
                 saldo_moeda_operada = self._get_balance(self.moeda_atual_operacao)
 
-                # --- 1. APLICAÇÃO DO ESCUDO DE REDE ---
                 if saldo_moeda_operada < 0:
                     self.system_logger.warning("⏳ Conexão perdida: Congelando estado da operação até a internet voltar...")
-                    return # Pula este ciclo e preserva todas as variáveis
-                # --------------------------------------
+                    return 
 
                 if (saldo_moeda_operada * self.preco_atual_ativo) < 5.0:
                     self.system_logger.info(f"✅ Saldo esgotado em {self.moeda_atual_operacao}. Operação finalizada.")
@@ -284,7 +321,6 @@ class Strategy:
                     self._save_state()
                     return
 
-                # --- 2. AUTO-HEALING: RECONSTRUÇÃO DE ESTADO ---
                 if self.preco_compra_ativo <= 0:
                     preco_real, tempo_real = self._recuperar_dados_compra_real(market_symbol)
                     
@@ -298,7 +334,6 @@ class Strategy:
                         self.system_logger.warning("⚠️ Histórico não encontrado. Assumindo preço atual.")
                         
                     self._save_state()
-                # -----------------------------------------------
 
                 drop_percentage = ((self.preco_atual_ativo - self.preco_compra_ativo) / self.preco_compra_ativo) * 100
                 self.stop_loss_monitor_drop = drop_percentage
@@ -352,97 +387,99 @@ class Strategy:
                     self._save_state()
                 else:
                     if segundos_ativos_operacao > self.maximum_hold_time_seconds and (-1.0 <= drop_percentage <= -0.15) and cooldown_restante_segundos <= 0:
-                        self.system_logger.info("⏳ Bot preso. Caçando nova oportunidade...")
-                        nova_moeda_promissora = None
-                        nova_cotacao_promissora = 0.0
+                        self.system_logger.info("⏳ Bot preso. Regra de Ouro: Coletando lote para Swap...")
+                        lote_dados_swap = []
                         
                         for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
                             if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
-                            is_uptrend, preco_atual, variacao_4h, rsi_atual, dataframe_candles = self.get_ema_signal(f"{check_coin}{self.base_coin}")
+                            dados_swap, is_uptrend_swap = self.get_enriched_data(f"{check_coin}{self.base_coin}")
                             
-                            if is_uptrend and rsi_atual < 70.0:
-                                self.system_logger.info(f"🔎 Regra de Ouro: Validando {check_coin} com a IA...")
-                                analise_agente_ia = self.ai_agent.analisar(check_coin, preco_atual, rsi_atual, variacao_4h, dataframe_candles)
+                            if dados_swap and is_uptrend_swap and dados_swap['rsi_14_periodos'] < 75.0:
+                                lote_dados_swap.append(dados_swap)
                                 
-                                if analise_agente_ia.get("recomendacao") == "COMPRAR" and analise_agente_ia.get("confianca", 0) >= 70:
-                                    self.system_logger.warning(f"🤖 IA APROVOU TROCA ({analise_agente_ia.get('confianca')}%): {analise_agente_ia.get('motivo')}")
-                                    nova_moeda_promissora = check_coin
-                                    nova_cotacao_promissora = preco_atual
-                                    break
-                                else:
-                                    self.system_logger.info(f"🛑 IA VETOU TROCA para {check_coin}: {analise_agente_ia.get('motivo')}")
-                        
-                        if nova_moeda_promissora:
-                            self.system_logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda_promissora} com aval da IA!")
-                            self._desbloquear_saldo(market_symbol) 
-                            saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
-                            ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
+                        if lote_dados_swap:
+                            self.system_logger.info(f"🔎 Submetendo {len(lote_dados_swap)} opções ao Comitê IA...")
+                            analise_agente_ia = self.ai_agent.analisar_lote(lote_dados_swap)
+                            nova_moeda_promissora = analise_agente_ia.get("moeda_vencedora", "NENHUMA")
+                            confianca = analise_agente_ia.get("confianca_setup", 0)
                             
-                            self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
-                            time.sleep(2)
-                            
-                            self.trades_lost += 1 
-                            self.last_switch_time = time.time()
-                            self.em_operacao = False 
-                            self._save_state()
-                            
-                            if self.execute_real_trade(nova_moeda_promissora, nova_cotacao_promissora):
-                                self.em_operacao = True
-                                self.moeda_atual_operacao = nova_moeda_promissora
-                            return
+                            if nova_moeda_promissora != "NENHUMA" and confianca >= 70:
+                                preco_alvo_swap = next((item['preco_atual'] for item in lote_dados_swap if item['moeda'] == nova_moeda_promissora), 0.0)
+                                self.system_logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda_promissora} com aval da IA! Motivo: {analise_agente_ia.get('motivo_investimento')}")
+                                
+                                self._desbloquear_saldo(market_symbol) 
+                                saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
+                                ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
+                                
+                                self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
+                                time.sleep(2)
+                                
+                                self.trades_lost += 1 
+                                self.last_switch_time = time.time()
+                                self.em_operacao = False 
+                                self._save_state()
+                                
+                                if preco_alvo_swap > 0 and self.execute_real_trade(nova_moeda_promissora, preco_alvo_swap):
+                                    self.em_operacao = True
+                                    self.moeda_atual_operacao = nova_moeda_promissora
+                                return
 
                 self._write_json_ui() 
             except Exception as erro_monitoramento:
                 self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")
 
-        # ---------------- VARREDURA GRÁFICA & ANÁLISE IA ----------------
-        for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
-            if check_coin == self.base_coin: continue
-            market_symbol = f"{check_coin}{self.base_coin}"
-            
-            is_uptrend, preco_atual, variacao_4h, rsi_atual, dataframe_candles = self.get_ema_signal(market_symbol)
-            texto_preco = f"${preco_atual:.4f}"
-            texto_variacao = f"4H: {variacao_4h:+.2f}%"
-            
-            quantidade_moeda_carteira = saldos_dicionario.get(check_coin, 0.0)
-            texto_linha_lateral = f"💼 {check_coin}: {texto_preco} ({texto_variacao})" if quantidade_moeda_carteira > 0.000001 else f"{check_coin}: {texto_preco} ({texto_variacao})"
-            
-            if is_uptrend:
-                if rsi_atual >= 70.0:
-                    geladeira_temporary_list.append(texto_linha_lateral)
-                    if not self.em_operacao:
-                        self.system_logger.info(f"⚠️ {check_coin} | Filtro Matemático: EMA cruzou, mas RSI estourado em {rsi_atual:.2f}. Evitando topo!")
-                else:
-                    aptas_temporary_list.append(texto_linha_lateral)
-                    if not self.em_operacao:
-                        self.system_logger.info(f"🟢 {check_coin} | Matemática OK (EMA Alta, RSI {rsi_atual:.2f}). Solicitando aval da IA...")
-                        
-                        analise_agente_ia = self.ai_agent.analisar(check_coin, preco_atual, rsi_atual, variacao_4h, dataframe_candles)
+        # ---------------- VARREDURA GRÁFICA & ANÁLISE IA (EM LOTE) ----------------
+        if not self.em_operacao:
+            tempo_atual = time.time()
+            if tempo_atual < self.ai_cooldown_until:
+                minutos_restantes = int((self.ai_cooldown_until - tempo_atual) / 60)
+                self.system_logger.info(f"⏳ IA em Cooldown de Proteção. Aguardando {minutos_restantes}m para próxima varredura...")
+                return
 
-                        if analise_agente_ia.get("recomendacao") == "COMPRAR" and analise_agente_ia.get("confianca", 0) >= 70:
-                            self.system_logger.warning(f"🤖 IA APROVOU ({analise_agente_ia.get('confianca')}%): {analise_agente_ia.get('motivo')}")
-                            self.ultimo_veredito_ia = f"✅ COMPRA {check_coin} APROVADA ({analise_agente_ia.get('confianca')}%)"
-                            
-                            compra_realizada_com_sucesso = self.execute_real_trade(check_coin, preco_atual)
-                            if compra_realizada_com_sucesso:
-                                self.em_operacao = True
-                                self.moeda_atual_operacao = check_coin
-                        else:
-                            motivo_recusa_texto = analise_agente_ia.get('motivo', 'Sem motivo detalhado')
-                            veredito_texto = f"🛑 {check_coin} VETADA ({analise_agente_ia.get('confianca', 0)}%): {motivo_recusa_texto}"
-                            self.system_logger.info(veredito_texto)
-                            self.ultimo_veredito_ia = veredito_texto
-                            
-            else:
-                geladeira_temporary_list.append(texto_linha_lateral)
-                if not self.em_operacao:
-                    if variacao_4h < -2.0:
-                        self.system_logger.info(f"❄️ {check_coin} | Análise: Em geladeira. Ativo sangrando ({variacao_4h:.2f}% nas últimas 4h).")
+            lote_dados_ia = []
+            
+            for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
+                if check_coin == self.base_coin: continue
+                market_symbol = f"{check_coin}{self.base_coin}"
+                
+                dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
+                
+                if dados_enriquecidos:
+                    texto_linha_lateral = f"💼 {check_coin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
+                    
+                    # Filtros matemáticos pré-IA
+                    if is_uptrend and dados_enriquecidos['rsi_14_periodos'] < 75.0:
+                        aptas_temporary_list.append(texto_linha_lateral)
+                        lote_dados_ia.append(dados_enriquecidos)
                     else:
-                        self.system_logger.info(f"⏸️ {check_coin} | Análise: Abaixo da curva (EMA 9 < 21).")
+                        geladeira_temporary_list.append(texto_linha_lateral)
 
-        self.aptas_cache = aptas_temporary_list
-        self.geladeira_cache = geladeira_temporary_list
+            self.aptas_cache = aptas_temporary_list
+            self.geladeira_cache = geladeira_temporary_list
+
+            if lote_dados_ia:
+                self.system_logger.info(f"🟢 Submetendo Dossiê com {len(lote_dados_ia)} ativos ao Comitê Quantitativo IA...")
+                analise_agente_ia = self.ai_agent.analisar_lote(lote_dados_ia)
+                
+                moeda_vencedora = analise_agente_ia.get("moeda_vencedora", "NENHUMA")
+                confianca_setup = analise_agente_ia.get("confianca_setup", 0)
+                motivo_investimento = analise_agente_ia.get("motivo_investimento", "Sem motivo específico.")
+
+                if moeda_vencedora != "NENHUMA" and confianca_setup >= 70:
+                    self.system_logger.warning(f"🤖 IA ESCOLHEU A CAMPEÃ ({confianca_setup}%): {moeda_vencedora} - {motivo_investimento}")
+                    self.ultimo_veredito_ia = f"✅ COMPRA {moeda_vencedora} ({confianca_setup}%): {motivo_investimento}"
+                    
+                    preco_alvo = next((item['preco_atual'] for item in lote_dados_ia if item['moeda'] == moeda_vencedora), 0.0)
+                    if preco_alvo > 0:
+                        compra_realizada = self.execute_real_trade(moeda_vencedora, preco_alvo)
+                        if compra_realizada:
+                            self.em_operacao = True
+                            self.moeda_atual_operacao = moeda_vencedora
+                else:
+                    self.system_logger.info(f"🛑 IA VETOU O LOTE INTEIRO: {motivo_investimento}")
+                    self.ultimo_veredito_ia = f"🛑 MERCADO VETADO: {motivo_investimento}"
+                    self.system_logger.warning("⏳ Proteção Anti-Loss Ativada: Pausando a IA por 30 minutos.")
+                    self.ai_cooldown_until = time.time() + 1800
 
     def _write_json_ui(self):
         try:
