@@ -51,7 +51,6 @@ class BinanceBotGUI:
         
         tk.Button(self.top_frame, text="CLR > Limpar Log", command=self.clear_log, bg="#3c4043", fg="white", font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.RIGHT, padx=15)
         tk.Button(self.top_frame, text="♻ Atualizar Inicial", command=self.reset_initial_balance, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=18).pack(side=tk.RIGHT, padx=5)
-        # FIX: Substituído o emoji composto por texto puro para evitar falha de renderização do Tkinter
         tk.Button(self.top_frame, text="[ 0 ] Zerar Placar", command=self.reset_scoreboard, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=16).pack(side=tk.RIGHT, padx=5)
         
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
@@ -159,11 +158,34 @@ class BinanceBotGUI:
 
     def reset_scoreboard(self):
         try:
+            # 1. Cria a flag para o motor do bot (sincronização de backend)
             with open("reset_trades.flag", "w") as f:
                 f.write("reset")
-            self.log_message("\n[✓] ♻️ Comando para zerar o placar de Trades enviado ao motor!\n")
+            
+            # 2. Atualização imediata do painel visual
+            self.lbl_trades.config(text="TRADES: 0 | W: 0 | L: 0 (0.0%)")
+            
+            # 3. Limpeza do JSON temporário para o loop do painel não buscar dados velhos
+            if os.path.exists("bot_status.json"):
+                with open("bot_status.json", "r", encoding="utf-8") as f:
+                    state_data = json.load(f)
+                state_data["trades_won"] = 0
+                state_data["trades_lost"] = 0
+                with open("bot_status.json", "w", encoding="utf-8") as f:
+                    json.dump(state_data, f, ensure_ascii=False, indent=2)
+
+            # 4. Limpeza do arquivo de memória do motor (útil se o bot estiver parado no momento)
+            if os.path.exists("profit_gain_state.json"):
+                with open("profit_gain_state.json", "r") as f:
+                    pg_state = json.load(f)
+                pg_state["trades_won"] = 0
+                pg_state["trades_lost"] = 0
+                with open("profit_gain_state.json", "w") as f:
+                    json.dump(pg_state, f)
+
+            self.log_message("\n[✓] ♻️ Placar de trades zerado com sucesso!\n")
         except Exception as e:
-            self.log_message(f"\n[X] Erro ao enviar comando: {e}\n")
+            self.log_message(f"\n[X] Erro ao zerar placar: {e}\n")
 
     def draw_mini_chart(self, chart_data_points, coin_symbol, buy_price_value=0.0, buy_time_stamp=0.0):
         self.canvas_chart.delete("all")

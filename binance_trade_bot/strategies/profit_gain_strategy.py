@@ -85,26 +85,29 @@ class Strategy:
         except Exception as erro_escrita:
             self.system_logger.error(f"Erro ao salvar estado local: {erro_escrita}")
 
-    def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA...")
-        self._write_json_ui()
-
-    def scout(self):
+    def _check_reset_flag(self):
         if os.path.exists("reset_trades.flag"):
             self.trades_won = 0
             self.trades_lost = 0
             self._save_state()
             try:
                 os.remove("reset_trades.flag")
-                self.system_logger.info("♻️ Placar de Trades zerado com sucesso!")
+                self.system_logger.info("♻️ Placar de Trades sincronizado com zero no motor!")
             except Exception:
                 pass
 
+    def initialize(self):
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA LOTE V3.1.2...")
+        self._write_json_ui()
+
+    def scout(self):
+        self._check_reset_flag()
         self.system_logger.info(f"[HEARTBEAT] 💓 Motor executando varredura. Base oficial: {self.base_coin}")
         self.scan_market()
         self._write_json_ui()
 
     def update_values(self):
+        self._check_reset_flag()
         self._write_json_ui()
 
     def _desbloquear_saldo(self, target_symbol):
@@ -462,7 +465,6 @@ class Strategy:
                     else:
                         geladeira_temporary_list.append(texto_linha_lateral)
 
-            # Ordenação alfabética para facilitar a leitura visual no painel
             self.aptas_cache = sorted(aptas_temporary_list)
             self.geladeira_cache = sorted(geladeira_temporary_list)
 
