@@ -28,14 +28,16 @@ class BinanceBotGUI:
         self.saldo_atual = 0.0
         self._load_gui_state()
         
-        self.bg_main = "#121212"
-        self.bg_frame = "#1e1e1e"
-        self.fg_text = "#e8eaed"
+        self.bg_main = "#0b0e11" 
+        self.bg_frame = "#1e2329" 
+        self.fg_text = "#eaecef" 
         self.accent_blue = "#8ab4f8"
-        self.accent_green = "#81c995"
-        self.accent_red = "#f28b82"
-        self.accent_yellow = "#fde293"
+        self.accent_green = "#0ecb81" 
+        self.accent_red = "#f6465d" 
+        self.accent_yellow = "#fcd535" 
         self.btc_gold = "#f2a900"
+        self.neutral_obs = "#eaecef"
+        self.geladeira_dark = "#5f6368"
         
         self.root.configure(bg=self.bg_main)
         
@@ -49,8 +51,8 @@ class BinanceBotGUI:
         
         tk.Button(self.top_frame, text="CLR > Limpar Log", command=self.clear_log, bg="#3c4043", fg="white", font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.RIGHT, padx=15)
         tk.Button(self.top_frame, text="♻ Atualizar Inicial", command=self.reset_initial_balance, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=18).pack(side=tk.RIGHT, padx=5)
-        # NOVO: Botão de zerar placar
-        tk.Button(self.top_frame, text="0️⃣ Zerar Placar", command=self.reset_scoreboard, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.RIGHT, padx=5)
+        # FIX: Substituído o emoji composto por texto puro para evitar falha de renderização do Tkinter
+        tk.Button(self.top_frame, text="[ 0 ] Zerar Placar", command=self.reset_scoreboard, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=16).pack(side=tk.RIGHT, padx=5)
         
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
         self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=15)
@@ -123,15 +125,12 @@ class BinanceBotGUI:
         self.right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         self.right_panel.pack_propagate(False)
 
-        # NOVO: Títulos adaptados para as listas visuais
-        titulo_lista_aptas = "🔥 APTAS (>= 2%)" if self.current_strategy == 'default' else "🟢 TENDÊNCIA DE ALTA (Analisadas)"
-        tk.Label(self.right_panel, text=titulo_lista_aptas, bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold")).pack(pady=(10,5))
-        self.list_hot = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_green, font=("Consolas", 9), selectbackground=self.bg_frame, highlightthickness=0)
+        tk.Label(self.right_panel, text="🟢 TENDÊNCIA DE ALTA", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 9, "bold")).pack(pady=(10,5))
+        self.list_hot = tk.Listbox(self.right_panel, bg="#000000", fg=self.neutral_obs, font=("Consolas", 9), selectbackground="#3c4043", highlightthickness=0, borderwidth=0)
         self.list_hot.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
 
-        titulo_lista_geladeira = "❄️ GELADEIRA (< 2%)" if self.current_strategy == 'default' else "❄️ TENDÊNCIA DE BAIXA (Analisadas)"
-        tk.Label(self.right_panel, text=titulo_lista_geladeira, bg=self.bg_frame, fg=self.accent_red, font=("Segoe UI", 10, "bold")).pack(pady=(5,5))
-        self.list_cold = tk.Listbox(self.right_panel, bg="#000000", fg=self.accent_red, font=("Consolas", 9), selectbackground=self.bg_frame, highlightthickness=0)
+        tk.Label(self.right_panel, text="❄️ TENDÊNCIA DE BAIXA", bg=self.bg_frame, fg=self.geladeira_dark, font=("Segoe UI", 9, "bold")).pack(pady=(5,5))
+        self.list_cold = tk.Listbox(self.right_panel, bg="#000000", fg=self.geladeira_dark, font=("Consolas", 9), selectbackground="#3c4043", highlightthickness=0, borderwidth=0)
         self.list_cold.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
 
         self.process = None
@@ -158,7 +157,6 @@ class BinanceBotGUI:
             self.lbl_inicial.config(text=f"[S] Inicial: ${self.saldo_inicial:.2f}")
             self.log_message("\n[✓] ♻️ Saldo Inicial sincronizado com sucesso!\n")
 
-    # NOVO: Método disparado pelo botão de zerar placar
     def reset_scoreboard(self):
         try:
             with open("reset_trades.flag", "w") as f:
@@ -264,8 +262,10 @@ class BinanceBotGUI:
 
                             aptas_list = state_data.get('aptas', [])
                             geladeira_list = state_data.get('geladeira', [])
+                            
                             self.list_hot.delete(0, tk.END)
                             for item in aptas_list: self.list_hot.insert(tk.END, item)
+                            
                             self.list_cold.delete(0, tk.END)
                             for item in geladeira_list: self.list_cold.insert(tk.END, item)
                             
@@ -334,19 +334,6 @@ class BinanceBotGUI:
     def read_output(self):
         if self.process:
             for log_line in iter(self.process.stdout.readline, ''):
-                if self.current_strategy == 'profit_gain':
-                    if "Mapeando EMA" in log_line or "Compilando Dossiê" in log_line:
-                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Escaneando o Mercado...", fg=self.accent_blue))
-                    elif "LIMIT em" in log_line or "ENTRADA REAL" in log_line:
-                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Operação Executada!", fg=self.accent_green))
-                    if "TAKE PROFIT" in log_line:
-                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Vendendo (Lucro)!", fg=self.accent_green))
-                    if "STOP LOSS" in log_line or "TIMEOUT!" in log_line:
-                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Vendendo (Loss/Timeout)!", fg=self.accent_red))
-                else:
-                    if "jumping from" in log_line or "Jumping from" in log_line:
-                        self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Realizando Salto (Jump)...", fg=self.accent_green))
-
                 self.log_message(log_line)
             
             self.process.stdout.close()

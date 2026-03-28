@@ -86,11 +86,10 @@ class Strategy:
             self.system_logger.error(f"Erro ao salvar estado local: {erro_escrita}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA LOTE V3.0...")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA...")
         self._write_json_ui()
 
     def scout(self):
-        # NOVO: Checagem de comando do UI para zerar placar
         if os.path.exists("reset_trades.flag"):
             self.trades_won = 0
             self.trades_lost = 0
@@ -130,7 +129,6 @@ class Strategy:
 
     def _recuperar_dados_compra_real(self, market_symbol):
         try:
-            self.system_logger.info(f"🔎 Consultando livros da Binance para histórico de {market_symbol}...")
             trades_recentes = self.binance_client.get_my_trades(symbol=market_symbol, limit=5)
             
             if trades_recentes:
@@ -364,7 +362,7 @@ class Strategy:
                 
                 segundos_desde_switch_regra = time.time() - self.last_switch_time
                 cooldown_restante_segundos = self.golden_rule_cooldown_seconds - segundos_desde_switch_regra
-                status_cooldown_string = f" (Regra de Ouro em: {int(cooldown_restante_segundos//3600)}h {int((cooldown_restante_segundos%3600)//60)}m)" if cooldown_restante_segundos > 0 else " (Regra de Ouro: Pronta)"
+                status_cooldown_string = f" (Ouro: {int(cooldown_restante_segundos//3600)}h {int((cooldown_restante_segundos%3600)//60)}m)" if cooldown_restante_segundos > 0 else " (Ouro: Pronta)"
                 self.tempo_operacao_string = f"{horas_ativas}h {minutos_ativos}m{status_cooldown_string}"
 
                 is_selling_now = False
@@ -404,7 +402,6 @@ class Strategy:
                             if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
                             dados_swap, is_uptrend_swap = self.get_enriched_data(f"{check_coin}{self.base_coin}")
                             
-                            # Regra de Ouro continua filtrando o básico antes do Swap
                             if dados_swap and dados_swap['rsi_14_periodos'] < 75.0:
                                 lote_dados_swap.append(dados_swap)
                                 
@@ -439,7 +436,6 @@ class Strategy:
             except Exception as erro_monitoramento:
                 self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")
 
-        # ---------------- VARREDURA GRÁFICA & ANÁLISE IA (EM LOTE) ----------------
         if not self.em_operacao:
             tempo_atual = time.time()
             if tempo_atual < self.ai_cooldown_until:
@@ -456,19 +452,19 @@ class Strategy:
                 dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
                 
                 if dados_enriquecidos:
-                    texto_linha_lateral = f"💼 {check_coin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
+                    moeda_alin = f"{check_coin: <7}"
+                    texto_linha_lateral = f"💼 {moeda_alin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
                     
-                    # NOVO: TODAS as moedas (alta ou baixa) vão para a IA analisar
                     lote_dados_ia.append(dados_enriquecidos)
 
-                    # Separação estritamente visual no painel
                     if is_uptrend:
                         aptas_temporary_list.append(texto_linha_lateral)
                     else:
                         geladeira_temporary_list.append(texto_linha_lateral)
 
-            self.aptas_cache = aptas_temporary_list
-            self.geladeira_cache = geladeira_temporary_list
+            # Ordenação alfabética para facilitar a leitura visual no painel
+            self.aptas_cache = sorted(aptas_temporary_list)
+            self.geladeira_cache = sorted(geladeira_temporary_list)
 
             if lote_dados_ia:
                 self.system_logger.info(f"🟢 Submetendo Dossiê completo com {len(lote_dados_ia)} ativos ao Comitê Quantitativo IA...")
@@ -479,7 +475,9 @@ class Strategy:
                 motivo_investimento = analise_agente_ia.get("motivo_investimento", "Sem motivo específico.")
 
                 if moeda_vencedora != "NENHUMA" and confianca_setup >= 70:
-                    self.system_logger.warning(f"🤖 IA ESCOLHEU A CAMPEÃ ({confianca_setup}%): {moeda_vencedora} - {motivo_investimento}")
+                    self.system_logger.warning(f"🤖 IA ESCOLHEU A CAMPEÃ DA RODADA ({confianca_setup}% de Confiança)!")
+                    self.system_logger.warning(f"🎯 SÍMBOLO: {moeda_vencedora} | TESE: {motivo_investimento}")
+                    
                     self.ultimo_veredito_ia = f"✅ COMPRA {moeda_vencedora} ({confianca_setup}%): {motivo_investimento}"
                     
                     preco_alvo = next((item['preco_atual'] for item in lote_dados_ia if item['moeda'] == moeda_vencedora), 0.0)
