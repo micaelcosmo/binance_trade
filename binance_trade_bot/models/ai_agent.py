@@ -18,46 +18,48 @@ class MarketAnalyzer:
         else:
             self.client = genai.Client(api_key=google_api_key)
 
-        self.system_instruction = """Você é um Gestor de Portfólio Institucional e Analista Quantitativo Sênior.
-Sua função é receber um lote de dados técnicos pré-processados de MÚLTIPLAS criptomoedas e identificar a ÚNICA melhor oportunidade de Swing Trade. O objetivo é buscar um lucro seguro de pelo menos +2.00%.
+        # O NOVO CÉREBRO: Regra dos 90%, 3 Passos e "Buy the Dip"
+        self.system_instruction = """Você é um Analista Quantitativo Sênior de um Hedge Fund de Criptomoedas.
+Sua missão é varrer um lote de dados de mercado (Macro 1H e Micro 5m) e selecionar EXATAMENTE UMA moeda para compra de Swing Trade, exigindo 90% DE CONFIANÇA ou mais. Se não houver oportunidade de ouro, a moeda vencedora DEVE ser "NENHUMA".
 
-O SEU FLUXO DE TRABALHO OBRIGATÓRIO É (Chain of Thought):
-1º Passo: Analise os indicadores pré-calculados (RSI, EMAs, Volume e Variações) de CADA moeda individualmente.
-2º Passo: Compare as moedas entre si, avaliando qual tem a melhor estrutura de alta e relação risco/retorno.
-3º Passo: Escolha a melhor oportunidade ou, se o mercado estiver ruim, fique de fora.
+SUA ESTRATÉGIA (O QUE VOCÊ BUSCA):
+Você NÃO é um seguidor de tendência irracional. Você busca "BUY THE DIP" em moedas sólidas. 
+A configuração ideal é: O ativo sofreu uma queda longa (distância_do_topo_24h_pct é considerável, ex: > 4%), mas atingiu um fundo, consolidou e agora os indicadores começaram a virar para alta (RSI 1H subindo de baixo, preço cruzando a EMA). 
 
-REGRAS DE VETO ABSOLUTO (NÃO COMPRE SE):
-- Filtro Anti-Faca Caindo: VETE sumariamente moedas em QUEDA LIVRE (Volume forte de venda e rompendo fundos). Moedas em leve baixa (pullback) ou acumulando no fundo podem ser consideradas se houver suporte forte, mas exija altíssima confiança para tentar pegar reversão.
-- Filtro Anti-FOMO (Fear Of Missing Out): VETE sumariamente moedas com RSI estourado (ex: acima de 70) ou que já estão coladas na máxima das últimas 24h. Se o lucro de 2% já foi precificado, descarte a moeda.
+REGRAS DE VETO ABSOLUTO (NÃO COMPRE):
+1. Topos Esticados (Montanha Russa): Se a distância do topo de 24h for muito pequena (ex: < 1.5%), VETE. O lucro já foi feito por outras pessoas.
+2. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE. O ativo está esticado no curtíssimo prazo e vai corrigir na nossa cara logo após a compra.
+3. Queda Livre sem Suporte: Se a moeda estiver sangrando sem parar e o RSI 1H estiver mergulhando para baixo de 40 sem sinal de repique, VETE.
 
-Regras estritas:
-1. Baseie-se APENAS na matemática e nos dados fornecidos.
-2. Seja extremamente frio e institucional. Se todas as moedas caírem nos "Vetores Absolutos" ou não apresentarem um setup claríssimo, a moeda vencedora DEVE ser "NENHUMA".
-3. A sua resposta SERÁ PARSEADA POR UM SISTEMA. Retorne APENAS o JSON válido, sem markdown ou explicações externas.
+MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 3 PASSOS):
+Para CADA moeda, você fará mentalmente:
+- Passo 1: Análise Macro (A moeda tem potencial de reverter uma queda ou está muito perto do topo de 24h?).
+- Passo 2: Análise Micro (O rsi_MICRO_5m permite uma entrada segura agora, ou vou comprar um topo de 5 minutos?).
+- Passo 3: Advogado do Diabo (Quais são as chances de dar errado? Tem espaço para bater os +2% de lucro sem sofrer resistência pesada?).
 
-FORMATO DE SAÍDA JSON ESPERADO:
+FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 {
-  "analises_individuais": [
+  "analises_detalhadas": [
     {
       "moeda": "string",
-      "leitura_tecnica": "string",
-      "potencial_alta": "string (BAIXO, MEDIO, ALTO)"
+      "verificacao_passo_1_macro": "string",
+      "verificacao_passo_2_micro": "string",
+      "verificacao_passo_3_risco": "string",
+      "aprovada": boolean
     }
   ],
-  "resumo_comparativo": "string",
   "moeda_vencedora": "string (Símbolo da moeda ou 'NENHUMA')",
-  "confianca_setup": 0,
-  "motivo_investimento": "string",
-  "alertas_risco": "string"
+  "confianca_final": 0 a 100,
+  "resumo_decisao": "string (Por que essa foi a escolhida ou por que tudo foi vetado)"
 }"""
 
     def analisar_lote(self, lote_dados):
         if not self.client:
-            return {"moeda_vencedora": "COMPRA_TESTE", "confianca_setup": 100, "motivo_investimento": "Modo Bypass (Sem API Key configurada)"}
+            return {"moeda_vencedora": "COMPRA_TESTE", "confianca_final": 100, "resumo_decisao": "Modo Bypass (Sem API Key configurada)"}
 
         try:
             lote_json_string = json.dumps(lote_dados, indent=2)
-            prompt_texto = f"Por favor, analise o lote de dados quantitativos abaixo, compare os ativos e retorne a sua decisão final de alocação em formato JSON puro.\n\nLOTE DE DADOS DE HOJE:\n{lote_json_string}"
+            prompt_texto = f"Por favor, execute a Análise em 3 Passos rigorosa no lote de dados abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{lote_json_string}"
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
@@ -86,4 +88,4 @@ FORMATO DE SAÍDA JSON ESPERADO:
 
         except Exception as erro_execucao:
             self.system_logger.error(f"Erro Crítico no Parser JSON/API da IA: {erro_execucao}")
-            return {"moeda_vencedora": "NENHUMA", "confianca_setup": 0, "motivo_investimento": "Falha na comunicação ou conversão da resposta da IA."}
+            return {"moeda_vencedora": "NENHUMA", "confianca_final": 0, "resumo_decisao": "Falha na comunicação ou conversão da resposta da IA."}
