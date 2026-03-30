@@ -32,17 +32,19 @@ class Strategy:
         self.trailing_activation_percentage = self.taxa_maker * 2 + self.margem_poeira + self.lucro_liquido 
         self.trailing_drop_percentage = 0.20
         
-        self.stop_loss_percentage_base = 3.5 
+        self.stop_loss_percentage_base = 4.0 
         self.stop_loss_dinamico_ativo = 0.0
         self.stop_loss_monitor_drop = 0.0 
         
         self.maximum_hold_time_seconds = 7200      
         self.golden_rule_cooldown_seconds = 10800   
         
-        # GERENCIADOR DE METAS DIÁRIAS
         self.data_atual = datetime.now().strftime("%Y-%m-%d")
         self.lucro_diario_pct = 0.0
         self.trades_no_dia = 0
+        self.max_trades_diario = 3
+        self.historico_diario = []
+        self.relatorio_ia_completo = "Aguardando primeira análise detalhada da IA..."
         
         self.operation_start_time = 0.0
         self.last_switch_time = 0.0
@@ -77,12 +79,14 @@ class Strategy:
                     self.peak_profit_percentage = state_data.get("peak_profit_percentage", 0.0)
                     self.stop_loss_dinamico_ativo = state_data.get("stop_loss_dinamico_ativo", 0.0)
                     
-                    # Carrega as metas do dia se a data bater
                     data_salva = state_data.get("data_atual", "")
                     if data_salva == datetime.now().strftime("%Y-%m-%d"):
                         self.data_atual = data_salva
                         self.lucro_diario_pct = state_data.get("lucro_diario_pct", 0.0)
                         self.trades_no_dia = state_data.get("trades_no_dia", 0)
+                        self.max_trades_diario = state_data.get("max_trades_diario", 3)
+                        self.historico_diario = state_data.get("historico_diario", [])
+                        self.relatorio_ia_completo = state_data.get("relatorio_ia_completo", "Aguardando primeira análise detalhada da IA...")
             except Exception:
                 pass
 
@@ -100,7 +104,10 @@ class Strategy:
                     "stop_loss_dinamico_ativo": self.stop_loss_dinamico_ativo,
                     "data_atual": self.data_atual,
                     "lucro_diario_pct": self.lucro_diario_pct,
-                    "trades_no_dia": self.trades_no_dia
+                    "trades_no_dia": self.trades_no_dia,
+                    "max_trades_diario": self.max_trades_diario,
+                    "historico_diario": self.historico_diario,
+                    "relatorio_ia_completo": self.relatorio_ia_completo
                 }, file_handler)
         except Exception as erro_escrita:
             self.system_logger.error(f"Erro ao salvar estado local: {erro_escrita}")
@@ -111,36 +118,51 @@ class Strategy:
             self.data_atual = hoje
             self.lucro_diario_pct = 0.0
             self.trades_no_dia = 0
+            self.max_trades_diario = 3
+            self.historico_diario = []
+            self.relatorio_ia_completo = "Aguardando primeira análise do novo dia..."
             if not self.em_operacao:
-                self.system_logger.info("🌅 NOVO DIA: Metas e contadores diários foram zerados. Que comecem as análises!")
+                self.system_logger.info("🌅 NOVO DIA: Metas, Histórico e Limites foram zerados.")
             self._save_state()
 
-    def _check_reset_flag(self):
+    def _check_ui_flags(self):
         if os.path.exists("reset_trades.flag"):
             self.trades_won = 0
             self.trades_lost = 0
             self.lucro_diario_pct = 0.0
             self.trades_no_dia = 0
+            self.max_trades_diario = 3
+            self.historico_diario = []
+            self.relatorio_ia_completo = "Placar zerado. Aguardando nova análise..."
             self._save_state()
             try:
                 os.remove("reset_trades.flag")
-                self.system_logger.info("♻️ Placar de Trades sincronizado com zero no motor!")
+                self.system_logger.info("♻️ Placar sincronizado com zero no motor!")
+            except Exception:
+                pass
+                
+        if os.path.exists("add_trade.flag"):
+            self.max_trades_diario += 1
+            self.system_logger.warning(f"🟢 [UI OVERRIDE] Limite de trades de hoje aumentado para {self.max_trades_diario}!")
+            self._save_state()
+            try:
+                os.remove("add_trade.flag")
             except Exception:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro com IA LOTE V3.2.1 (Meta Diária & Relatório)...")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.3 (UI Avançada & Histórico)...")
         self._write_json_ui()
 
     def scout(self):
-        self._check_reset_flag()
+        self._check_ui_flags()
         self._check_daily_reset()
-        self.system_logger.info(f"[HEARTBEAT] 💓 Motor executando varredura. Base oficial: {self.base_coin}")
+        self.system_logger.info(f"[HEARTBEAT] Base oficial: {self.base_coin}")
         self.scan_market()
         self._write_json_ui()
 
     def update_values(self):
-        self._check_reset_flag()
+        self._check_ui_flags()
         self._check_daily_reset()
         self._write_json_ui()
 
@@ -148,11 +170,11 @@ class Strategy:
         try:
             open_orders_list = self.binance_client.get_open_orders(symbol=target_symbol)
             for order_info in open_orders_list:
-                self.system_logger.info(f"🚜 Trator: Cancelando ordem pendente antiga ({order_info['orderId']}) para liberar saldo...")
+                self.system_logger.info(f"🚜 Trator: Cancelando ordem ({order_info['orderId']})...")
                 self.binance_client.cancel_order(symbol=target_symbol, orderId=order_info['orderId'])
                 time.sleep(0.5) 
         except Exception as erro_desbloqueio:
-            self.system_logger.error(f"Erro ao tentar limpar ordens travadas: {erro_desbloqueio}")
+            self.system_logger.error(f"Erro ao limpar ordens travadas: {erro_desbloqueio}")
 
     def _get_balance(self, asset_symbol, free_only=False):
         try:
@@ -208,7 +230,7 @@ class Strategy:
             
             klines_5m = self.binance_client.get_klines(symbol=target_symbol, interval='5m', limit=30)
             df_5m = pandas.DataFrame(klines_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
-            df_5m['close'] = pandas.to_numeric(df_5m['close'])
+            for col in ['open', 'high', 'low', 'close', 'vol']: df_5m[col] = pandas.to_numeric(df_5m[col])
             df_5m.ta.rsi(length=14, append=True)
             
             ultima_linha_1h = df_1h.iloc[-1]
@@ -223,6 +245,7 @@ class Strategy:
             if pandas.isna(rsi_1h): rsi_1h = 50.0
             if pandas.isna(rsi_5m): rsi_5m = 50.0
             
+            micro_candle_fecha_em_alta = ultima_linha_5m['close'] > ultima_linha_5m['open']
             maxima_recente = df_1h['high'].tail(24).max() 
             queda_da_maxima_pct = ((maxima_recente - preco_atual) / maxima_recente) * 100 if maxima_recente > 0 else 0.0
             
@@ -232,8 +255,8 @@ class Strategy:
             except Exception:
                 variacao_24h = 0.0
 
-            stop_dinamico = ((atr_1h * 2) / preco_atual) * 100 if preco_atual > 0 else self.stop_loss_percentage_base
-            stop_dinamico = max(2.5, min(stop_dinamico, 6.0)) 
+            stop_dinamico = ((atr_1h * 3) / preco_atual) * 100 if preco_atual > 0 else self.stop_loss_percentage_base
+            stop_dinamico = max(2.5, min(stop_dinamico, 8.0)) 
             
             dados_montados = {
                 "moeda": target_symbol.replace(self.base_coin, ""),
@@ -242,6 +265,7 @@ class Strategy:
                 "rsi_MICRO_5m": round(rsi_5m, 2), 
                 "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2),
                 "variacao_24h_pct": f"{variacao_24h:+.2f}%",
+                "micro_candle_confirmacao_alta": micro_candle_fecha_em_alta,
                 "sugestao_stop_loss_atr": round(stop_dinamico, 2)
             }
             
@@ -272,7 +296,7 @@ class Strategy:
             
             if float(quantidade_vender_string) == 0: return True
 
-            self.system_logger.info(f"✅ Compra confirmada! Armando Trailing Stop invisível (+{self.trailing_activation_percentage:.2f}%) | Stop Dinâmico: -{stop_calculado_atr:.2f}%")
+            self.system_logger.info(f"✅ Compra confirmada! Armando Trailing Stop invisível (+{self.trailing_activation_percentage:.2f}%) | Stop: -{stop_calculado_atr:.2f}%")
             
             self.operation_start_time = time.time()
             self.quantidade_altcoin_ativa = float(quantidade_vender_string)
@@ -294,22 +318,21 @@ class Strategy:
 
     def scan_market(self):
         if not self.em_operacao:
-            # TRAVA DE HIBERNAÇÃO (META BATIDA OU OVERTRADING)
-            if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= 3:
+            if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
                 agora = datetime.now()
                 amanha = agora + timedelta(days=1)
                 meia_noite = datetime(amanha.year, amanha.month, amanha.day, 0, 0, 0)
                 segundos_ate_meia_noite = (meia_noite - agora).total_seconds()
                 
-                self.system_logger.warning(f"🏆 META BATIDA OU LIMITE DE TRADES! Lucro Diário: +{self.lucro_diario_pct:.2f}% | Trades: {self.trades_no_dia}")
-                self.system_logger.info("💤 Bot entrando em hibernação institucional para proteger ganhos. Retorno amanhã.")
+                self.system_logger.warning(f"🏆 META BATIDA OU LIMITE DE TRADES! Lucro: +{self.lucro_diario_pct:.2f}% | Trades: {self.trades_no_dia}/{self.max_trades_diario}")
+                self.system_logger.info("💤 Bot entrando em hibernação institucional.")
                 self.ai_cooldown_until = time.time() + segundos_ate_meia_noite
                 return
 
             tempo_atual = time.time()
             if tempo_atual < self.ai_cooldown_until:
                 minutos_restantes = int((self.ai_cooldown_until - tempo_atual) / 60)
-                self.system_logger.info(f"⏳ Bot em Cooldown (Sleep Mode). Aguardando {minutos_restantes}m para acordar e faturar...")
+                self.system_logger.info(f"⏳ Bot em Cooldown. Aguardando {minutos_restantes}m para acordar...")
                 return
 
             self.system_logger.info("📊 Compilando Dossiê Quantitativo Híbrido (1H + 5M)...")
@@ -344,8 +367,6 @@ class Strategy:
                                 self.quantidade_altcoin_ativa = quantidade_moeda
                                 if getattr(self, 'operation_start_time', 0.0) == 0.0:
                                     self.operation_start_time = time.time()
-                                if getattr(self, 'stop_loss_dinamico_ativo', 0.0) == 0.0:
-                                    self.stop_loss_dinamico_ativo = self.stop_loss_percentage_base
                                 self._save_state()
                                 break
                         except Exception: pass
@@ -379,14 +400,12 @@ class Strategy:
 
                 if self.preco_compra_ativo <= 0:
                     preco_real, tempo_real = self._recuperar_dados_compra_real(market_symbol)
-                    
                     if preco_real > 0:
                         self.preco_compra_ativo = preco_real
                         if getattr(self, 'operation_start_time', 0) <= 0:
                             self.operation_start_time = tempo_real
                     else:
                         self.preco_compra_ativo = self.preco_atual_ativo
-                        
                     self._save_state()
 
                 drop_percentage = ((self.preco_atual_ativo - self.preco_compra_ativo) / self.preco_compra_ativo) * 100
@@ -423,8 +442,8 @@ class Strategy:
                 
                 elif self.peak_profit_percentage >= self.trailing_activation_percentage and (self.peak_profit_percentage - drop_percentage) >= self.trailing_drop_percentage:
                     is_selling_now = True
-                    motivo_venda_executada = "TRAILING_STOP"
-                    self.system_logger.info(f"✅ TAKE PROFIT TRAILING ACIONADO para {self.moeda_atual_operacao}! Pico: {self.peak_profit_percentage:.2f}% | Fechado em: {drop_percentage:.2f}%")
+                    motivo_venda_executada = "TAKE_PROFIT"
+                    self.system_logger.info(f"✅ TAKE PROFIT TRAILING ACIONADO for {self.moeda_atual_operacao}! Pico: {self.peak_profit_percentage:.2f}% | Fechado em: {drop_percentage:.2f}%")
 
                 if is_selling_now:
                     self._desbloquear_saldo(market_symbol) 
@@ -433,14 +452,19 @@ class Strategy:
                     
                     self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
                     
-                    if motivo_venda_executada == "STOP_LOSS": 
-                        self.trades_lost += 1
-                    else: 
-                        self.trades_won += 1
+                    if motivo_venda_executada == "STOP_LOSS": self.trades_lost += 1
+                    else: self.trades_won += 1
                     
-                    # REGISTRO DE META DIÁRIA
                     self.lucro_diario_pct += drop_percentage
                     self.trades_no_dia += 1
+                    
+                    # REGISTRO NO HISTÓRICO DA UI
+                    self.historico_diario.append({
+                        "hora": datetime.now().strftime("%H:%M:%S"),
+                        "moeda": self.moeda_atual_operacao,
+                        "resultado": f"{drop_percentage:+.2f}%",
+                        "motivo": motivo_venda_executada
+                    })
                     
                     self.em_operacao = False
                     self.moeda_atual_operacao = None
@@ -456,9 +480,7 @@ class Strategy:
                         for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
                             if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
                             dados_swap, is_uptrend_swap = self.get_enriched_data(f"{check_coin}{self.base_coin}")
-                            
-                            if dados_swap:
-                                lote_dados_swap.append(dados_swap)
+                            if dados_swap: lote_dados_swap.append(dados_swap)
                                 
                         if lote_dados_swap:
                             analise_agente_ia = self.ai_agent.analisar_lote(lote_dados_swap)
@@ -481,8 +503,16 @@ class Strategy:
                                     time.sleep(2)
                                     
                                     self.trades_lost += 1 
-                                    self.lucro_diario_pct += drop_percentage # Assume a perda na troca no painel
+                                    self.lucro_diario_pct += drop_percentage 
                                     self.trades_no_dia += 1
+                                    
+                                    # REGISTRO NO HISTÓRICO DA UI
+                                    self.historico_diario.append({
+                                        "hora": datetime.now().strftime("%H:%M:%S"),
+                                        "moeda": self.moeda_atual_operacao,
+                                        "resultado": f"{drop_percentage:+.2f}%",
+                                        "motivo": "SWAP_REGRA_OURO"
+                                    })
                                     
                                     self.last_switch_time = time.time()
                                     self.em_operacao = False 
@@ -499,23 +529,16 @@ class Strategy:
 
         if not self.em_operacao:
             lote_dados_ia = []
-            
             for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
                 if check_coin == self.base_coin: continue
                 market_symbol = f"{check_coin}{self.base_coin}"
-                
                 dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
-                
                 if dados_enriquecidos:
                     moeda_alin = f"{check_coin: <7}"
                     texto_linha_lateral = f"💼 {moeda_alin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
-                    
                     lote_dados_ia.append(dados_enriquecidos)
-
-                    if is_uptrend:
-                        aptas_temporary_list.append(texto_linha_lateral)
-                    else:
-                        geladeira_temporary_list.append(texto_linha_lateral)
+                    if is_uptrend: aptas_temporary_list.append(texto_linha_lateral)
+                    else: geladeira_temporary_list.append(texto_linha_lateral)
 
             self.aptas_cache = sorted(aptas_temporary_list)
             self.geladeira_cache = sorted(geladeira_temporary_list)
@@ -527,12 +550,14 @@ class Strategy:
                 confianca_final = analise_agente_ia.get("confianca_final", 0)
                 resumo_decisao = analise_agente_ia.get("resumo_decisao", "Sem motivo específico.")
 
-                # RELATÓRIO EXECUTIVO DA HORA (Formatado Limpo)
                 self.system_logger.info("================ RELATÓRIO DA HORA ===================")
                 self.system_logger.info(f"📋 Ativos Analisados : {len(lote_dados_ia)} moedas")
                 self.system_logger.info(f"🏆 Vencedor Avaliado: {moeda_vencedora} (Confiança: {confianca_final}%)")
                 self.system_logger.info(f"🧠 Parecer da IA    : {resumo_decisao}")
                 self.system_logger.info("======================================================")
+
+                # SALVA O RELATÓRIO PARA O POPUP DO PAINEL
+                self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🏆 Vencedora Avaliada: {moeda_vencedora} ({confianca_final}%)\n\n🧠 Parecer Detalhado Institucional:\n{resumo_decisao}"
 
                 if moeda_vencedora != "NENHUMA" and confianca_final >= 90:
                     self.ultimo_veredito_ia = f"✅ COMPRA {moeda_vencedora} ({confianca_final}%): {resumo_decisao}"
@@ -558,17 +583,17 @@ class Strategy:
         except Exception:
             btc_price_value, btc_change_value = 0.0, 0.0
             
-        texto_metas = f" | 📅 Diário: {self.lucro_diario_pct:+.2f}% ({self.trades_no_dia}/3 Trades)"
+        texto_metas = f" | 📅 Diário: {self.lucro_diario_pct:+.2f}% ({self.trades_no_dia}/{self.max_trades_diario} Trades)"
         
         if self.em_operacao:
             stop_atual_exibir = self.stop_loss_dinamico_ativo if self.stop_loss_dinamico_ativo > 0 else self.stop_loss_percentage_base
             if self.peak_profit_percentage >= self.trailing_activation_percentage:
                 detalhe_centralizado = f"[⏳] Duração: {self.tempo_operacao_string} | 🚀 TRAILING ATIVO! Pico: {self.peak_profit_percentage:.2f}% | Trava: {self.peak_profit_percentage - self.trailing_drop_percentage:.2f}%{texto_metas}"
             else:
-                detalhe_centralizado = f"[⏳] Duração: {self.tempo_operacao_string} | [🎯] Gatilho Trailing: {self.trailing_activation_percentage:.2f}% | [🛑] SL Dinâmico: -{stop_atual_exibir:.2f}% (Var: {self.stop_loss_monitor_drop:+.2f}%){texto_metas}"
+                detalhe_centralizado = f"[⏳] Duração: {self.tempo_operacao_string} | [🎯] Gatilho Trailing: {self.trailing_activation_percentage:.2f}% | [🛑] SL: -{stop_atual_exibir:.2f}% (Var: {self.stop_loss_monitor_drop:+.2f}%){texto_metas}"
         else:
-            if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= 3:
-                detalhe_centralizado = f"💤 HIBERNAÇÃO ATIVA: Metas do dia atingidas. Retorno à meia-noite.{texto_metas}"
+            if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
+                detalhe_centralizado = f"💤 HIBERNAÇÃO ATIVA: Metas ou limites atingidos. Retorno à meia-noite.{texto_metas}"
             else:
                 detalhe_centralizado = f"🧠 ÚLTIMO VEREDITO: {self.ultimo_veredito_ia}{texto_metas}"
             
@@ -587,7 +612,11 @@ class Strategy:
             "trades_lost": self.trades_lost,   
             "detalhe_atual": detalhe_centralizado,
             "aptas": self.aptas_cache,
-            "geladeira": self.geladeira_cache
+            "geladeira": self.geladeira_cache,
+            "trades_no_dia": self.trades_no_dia,
+            "max_trades": self.max_trades_diario,
+            "ai_report": self.relatorio_ia_completo,
+            "daily_history": self.historico_diario
         }
 
         try:

@@ -15,7 +15,12 @@ class BinanceBotGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Binance Trade Bot Pro - Dashboard")
-        self.root.geometry("1300x850") 
+        self.root.geometry("1200x800")
+        
+        try:
+            self.root.state('zoomed')
+        except Exception:
+            pass
         
         try:
             self.bot_config = Config()
@@ -26,6 +31,7 @@ class BinanceBotGUI:
         self.gui_state_file = "gui_state.json"
         self.saldo_inicial = 0.0
         self.saldo_atual = 0.0
+        self.locked_at_trade_count = -1
         self._load_gui_state()
         
         self.bg_main = "#0b0e11" 
@@ -52,43 +58,60 @@ class BinanceBotGUI:
         tk.Button(self.top_frame, text="CLR > Limpar Log", command=self.clear_log, bg="#3c4043", fg="white", font=("Segoe UI", 10, "bold"), width=15).pack(side=tk.RIGHT, padx=15)
         tk.Button(self.top_frame, text="♻ Atualizar Inicial", command=self.reset_initial_balance, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=18).pack(side=tk.RIGHT, padx=5)
         tk.Button(self.top_frame, text="[ 0 ] Zerar Placar", command=self.reset_scoreboard, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=16).pack(side=tk.RIGHT, padx=5)
+
+        # BARRA DE FERRAMENTAS INSTITUCIONAIS (NOVA)
+        self.tools_frame = tk.Frame(root, bg=self.bg_main, pady=5)
+        self.tools_frame.pack(fill=tk.X, side=tk.TOP, padx=15)
+        
+        self.btn_ai = tk.Button(self.tools_frame, text="🧠 Ver Análise da IA", command=self.show_ai_analysis, bg="#2b3139", fg=self.neutral_obs, font=("Segoe UI", 9, "bold"), width=20)
+        self.btn_ai.pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.btn_hist = tk.Button(self.tools_frame, text="📜 Histórico do Dia", command=self.show_daily_history, bg="#2b3139", fg=self.neutral_obs, font=("Segoe UI", 9, "bold"), width=20)
+        self.btn_hist.pack(side=tk.LEFT, padx=5)
+        
+        self.btn_add_trade = tk.Button(self.tools_frame, text="🔋 +1 Tentativa Hoje", command=self.add_trade_chance, bg=self.accent_green, fg="black", font=("Segoe UI", 9, "bold"), width=20)
+        self.btn_add_trade.pack(side=tk.RIGHT, padx=0)
         
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
-        self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=15)
+        self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=10)
+
+        for i in range(4):
+            self.metrics_frame.columnconfigure(i, weight=1)
+        self.metrics_frame.columnconfigure(4, weight=0) 
 
         texto_inicial = f"${self.saldo_inicial:.2f}" if self.saldo_inicial > 0 else "--"
-        self.lbl_inicial = tk.Label(self.metrics_frame, text=f"[S] Inicial: {texto_inicial}", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 11, "bold"), width=25, anchor="w")
+        self.lbl_inicial = tk.Label(self.metrics_frame, text=f"[S] Inicial: {texto_inicial}", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 11, "bold"), anchor="w")
         self.lbl_inicial.grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.lbl_atual = tk.Label(self.metrics_frame, text="[$] Atual: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 11, "bold"), width=25, anchor="w")
+        self.lbl_atual = tk.Label(self.metrics_frame, text="[$] Atual: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 11, "bold"), anchor="w")
         self.lbl_atual.grid(row=0, column=1, padx=10, pady=5, sticky="w")
-        self.lbl_pl = tk.Label(self.metrics_frame, text="[%] P/L Total: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 11, "bold"), width=30, anchor="w")
+        self.lbl_pl = tk.Label(self.metrics_frame, text="[%] P/L Total: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 11, "bold"), anchor="w")
         self.lbl_pl.grid(row=0, column=2, padx=10, pady=5, sticky="w")
 
-        self.lbl_status = tk.Label(self.metrics_frame, text="STATUS: Parado", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), width=35, anchor="w")
+        self.lbl_status = tk.Label(self.metrics_frame, text="STATUS: Parado", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_status.grid(row=1, column=0, padx=10, pady=5, sticky="w")
-        self.lbl_trades = tk.Label(self.metrics_frame, text="TRADES: 0 | W: 0 | L: 0 (0.0%)", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), width=35, anchor="w")
+        self.lbl_trades = tk.Label(self.metrics_frame, text="TRADES: 0 | W: 0 | L: 0 (0.0%)", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_trades.grid(row=1, column=1, padx=10, pady=5, sticky="w")
-        self.lbl_ping = tk.Label(self.metrics_frame, text="PING: -- ms", bg=self.bg_frame, fg="#bdc1c6", font=("Segoe UI", 10), width=30, anchor="w")
+        self.lbl_ping = tk.Label(self.metrics_frame, text="PING: -- ms", bg=self.bg_frame, fg="#bdc1c6", font=("Segoe UI", 10), anchor="w")
         self.lbl_ping.grid(row=1, column=2, padx=10, pady=5, sticky="w")
 
-        self.lbl_cur_coin = tk.Label(self.metrics_frame, text="Current Coin: BUSCANDO...", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 10, "bold"), width=25, anchor="w")
+        self.lbl_cur_coin = tk.Label(self.metrics_frame, text="Current Coin: BUSCANDO...", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_cur_coin.grid(row=2, column=0, padx=10, pady=(15, 5), sticky="w")
         
         if self.current_strategy == 'profit_gain':
-            self.lbl_buy_price = tk.Label(self.metrics_frame, text="[🛒] Compra Est.: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), width=65, anchor="w")
+            self.lbl_buy_price = tk.Label(self.metrics_frame, text="[🛒] Compra Est.: --", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_buy_price.grid(row=2, column=1, columnspan=2, padx=10, pady=(15, 5), sticky="w")
             
-            self.lbl_cur_price = tk.Label(self.metrics_frame, text="[💲] Atual: --", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 10, "bold"), width=65, anchor="w")
+            self.lbl_cur_price = tk.Label(self.metrics_frame, text="[💲] Atual: --", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_cur_price.grid(row=3, column=1, columnspan=2, padx=10, pady=5, sticky="w")
             
-            self.lbl_tgt_price = tk.Label(self.metrics_frame, text="[🎯] Alvo (Venda): --", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), width=65, anchor="w")
+            self.lbl_tgt_price = tk.Label(self.metrics_frame, text="[🎯] Alvo (Venda): --", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_tgt_price.grid(row=4, column=1, columnspan=2, padx=10, pady=5, sticky="w")
             
-            self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), width=40, anchor="w")
+            self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_btc.grid(row=2, column=3, padx=10, pady=(15, 5), sticky="w")
 
-            self.lbl_det_atu = tk.Label(self.metrics_frame, text="Análise: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=130, anchor="w")
-            self.lbl_det_atu.grid(row=5, column=1, columnspan=3, padx=10, pady=5, sticky="w")
+            self.lbl_det_atu = tk.Label(self.metrics_frame, text="Análise: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), anchor="w")
+            self.lbl_det_atu.grid(row=5, column=0, columnspan=4, padx=10, pady=5, sticky="we")
             
             self.canvas_chart = tk.Canvas(self.metrics_frame, bg="#000000", width=280, height=110, highlightthickness=1, highlightbackground="#3c4043")
             self.canvas_chart.grid(row=1, column=4, rowspan=3, padx=(0,10), pady=5, sticky="e")
@@ -96,22 +119,22 @@ class BinanceBotGUI:
             self.lbl_chart_title.grid(row=4, column=4, sticky="e", padx=(0,10))
             
         else:
-            self.lbl_last_jump = tk.Label(self.metrics_frame, text="Último Salto: Nenhum", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), width=45, anchor="w")
+            self.lbl_last_jump = tk.Label(self.metrics_frame, text="Último Salto: Nenhum", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), anchor="w")
             self.lbl_last_jump.grid(row=2, column=1, padx=10, pady=(15, 5), sticky="w")
             
-            self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), width=30, anchor="w")
+            self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_btc.grid(row=2, column=2, padx=10, pady=(15, 5), sticky="w")
             
-            self.lbl_rota = tk.Label(self.metrics_frame, text="Rota: Analisando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), width=35, anchor="nw")
+            self.lbl_rota = tk.Label(self.metrics_frame, text="Rota: Analisando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), anchor="nw")
             self.lbl_rota.grid(row=3, column=0, rowspan=3, padx=10, pady=(5,0), sticky="nw") 
 
-            self.lbl_qtd_prev = tk.Label(self.metrics_frame, text="[⏪] Anterior (--): -- | Venda: -- | Poeira: --", bg=self.bg_frame, fg="#9aa0a6", font=("Segoe UI", 10, "bold"), width=70, anchor="w")
+            self.lbl_qtd_prev = tk.Label(self.metrics_frame, text="[⏪] Anterior (--): -- | Venda: -- | Poeira: --", bg=self.bg_frame, fg="#9aa0a6", font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_qtd_prev.grid(row=3, column=1, columnspan=2, padx=10, pady=(5, 2), sticky="w")
             
-            self.lbl_qtd = tk.Label(self.metrics_frame, text="[📦] Atual (--): -- | Venda: -- | Poeira: --", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), width=70, anchor="w")
+            self.lbl_qtd = tk.Label(self.metrics_frame, text="[📦] Atual (--): -- | Venda: -- | Poeira: --", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_qtd.grid(row=4, column=1, columnspan=2, padx=10, pady=(0, 2), sticky="w")
             
-            self.lbl_trailing = tk.Label(self.metrics_frame, text="🎯 Trailing Global: Aguardando Inicialização...", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), width=70, anchor="w")
+            self.lbl_trailing = tk.Label(self.metrics_frame, text="🎯 Trailing Global: Aguardando Inicialização...", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_trailing.grid(row=5, column=1, columnspan=2, padx=10, pady=(0, 5), sticky="w")
 
         self.content_frame = tk.Frame(root, bg=self.bg_main)
@@ -149,6 +172,67 @@ class BinanceBotGUI:
                 json.dump({"saldo_inicial": self.saldo_inicial}, file_handler)
         except: pass
 
+    # FUNÇÕES DAS MODAIS E DA BATERIA EXTRA DE TRADES
+    def add_trade_chance(self):
+        with open("add_trade.flag", "w") as f:
+            f.write("1")
+        
+        self.btn_add_trade.config(state=tk.DISABLED, bg="#5f6368")
+        
+        current_trades = 0
+        if os.path.exists("bot_status.json"):
+            try:
+                with open("bot_status.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    current_trades = data.get("trades_no_dia", 0)
+            except Exception: pass
+            
+        self.locked_at_trade_count = current_trades
+        self.log_message("\n[+] 🔋 Solicitada +1 tentativa pro dia. Botão bloqueado até a conclusão do próximo trade.\n")
+
+    def show_ai_analysis(self):
+        top = tk.Toplevel(self.root)
+        top.title("🧠 Parecer Analítico da IA")
+        top.geometry("700x450")
+        top.configure(bg=self.bg_frame)
+        top.transient(self.root) 
+        top.grab_set() 
+
+        lbl = tk.Label(top, text="Dossiê Institucional Mais Recente", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 12, "bold"))
+        lbl.pack(pady=(15, 5))
+
+        txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.accent_green, font=("Consolas", 10))
+        txt.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        
+        report = getattr(self, 'current_ai_report', "Nenhum relatório gerado ainda. Aguarde a varredura.")
+        txt.insert(tk.END, report)
+        txt.config(state=tk.DISABLED)
+
+    def show_daily_history(self):
+        top = tk.Toplevel(self.root)
+        top.title("📜 Histórico de Transações (Hoje)")
+        top.geometry("600x350")
+        top.configure(bg=self.bg_frame)
+        top.transient(self.root)
+        top.grab_set()
+
+        lbl = tk.Label(top, text="Extrato de Trades Executados", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
+        lbl.pack(pady=(15, 5))
+
+        txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.fg_text, font=("Consolas", 10))
+        txt.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        
+        hist = getattr(self, 'current_daily_history', [])
+        if not hist:
+            txt.insert(tk.END, "Nenhuma operação foi concluída no dia de hoje ainda.")
+        else:
+            for item in hist:
+                cor_res = "🟢" if "+" in item['resultado'] else "🔴"
+                linha = f"[{item['hora']}] {cor_res} {item['moeda']: <8} -> {item['resultado']} (Gatilho: {item['motivo']})\n\n"
+                txt.insert(tk.END, linha)
+        
+        txt.config(state=tk.DISABLED)
+
     def reset_initial_balance(self):
         if self.saldo_atual > 0:
             self.saldo_inicial = self.saldo_atual
@@ -158,14 +242,11 @@ class BinanceBotGUI:
 
     def reset_scoreboard(self):
         try:
-            # 1. Cria a flag para o motor do bot (sincronização de backend)
             with open("reset_trades.flag", "w") as f:
                 f.write("reset")
             
-            # 2. Atualização imediata do painel visual
             self.lbl_trades.config(text="TRADES: 0 | W: 0 | L: 0 (0.0%)")
             
-            # 3. Limpeza do JSON temporário para o loop do painel não buscar dados velhos
             if os.path.exists("bot_status.json"):
                 with open("bot_status.json", "r", encoding="utf-8") as f:
                     state_data = json.load(f)
@@ -174,7 +255,6 @@ class BinanceBotGUI:
                 with open("bot_status.json", "w", encoding="utf-8") as f:
                     json.dump(state_data, f, ensure_ascii=False, indent=2)
 
-            # 4. Limpeza do arquivo de memória do motor (útil se o bot estiver parado no momento)
             if os.path.exists("profit_gain_state.json"):
                 with open("profit_gain_state.json", "r") as f:
                     pg_state = json.load(f)
@@ -235,6 +315,18 @@ class BinanceBotGUI:
                 
                 if state_data:
                     if self.current_strategy == 'profit_gain':
+                        
+                        # Coleta dados para os Popups UI
+                        self.current_ai_report = state_data.get("ai_report", "Aguardando dados...")
+                        self.current_daily_history = state_data.get("daily_history", [])
+                        trades_no_dia = state_data.get("trades_no_dia", 0)
+                        
+                        # Lógica de Destravamento Inteligente do Botão +1 Tentativa
+                        is_em_operacao = "Em Operação" in state_data.get("status", "")
+                        if self.btn_add_trade['state'] == tk.DISABLED:
+                            if not is_em_operacao and trades_no_dia > self.locked_at_trade_count:
+                                self.btn_add_trade.config(state=tk.NORMAL, bg=self.accent_green)
+                        
                         if "coin" in state_data:
                             coin_symbol = state_data.get('coin', 'BUSCANDO...')
                             self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol}")
@@ -291,64 +383,6 @@ class BinanceBotGUI:
                             self.list_cold.delete(0, tk.END)
                             for item in geladeira_list: self.list_cold.insert(tk.END, item)
                             
-                    else:
-                        if "coin" in state_data:
-                            self.lbl_cur_coin.config(text=f"Current Coin: {state_data.get('coin', 'BUSCANDO...')}")
-                            self.lbl_last_jump.config(text=f"Último Salto: {state_data.get('last_jump', 'Nenhum')}")
-                            
-                            btc_price_value = state_data.get('btc_price', 0.0)
-                            btc_change_value = state_data.get('btc_change', 0.0)
-                            cor_texto_btc = self.accent_green if btc_change_value >= 0 else self.accent_red
-                            self.lbl_btc.config(text=f"BTC: ${btc_price_value:,.2f} | Var: {btc_change_value:+.2f}%", fg=cor_texto_btc)
-                            
-                            self.lbl_rota.config(text=f"Rota: {state_data.get('route', 'Analisando...')}")
-                            
-                            if "status" in state_data:
-                                cor_texto_status = self.accent_yellow if "Segurando" in state_data['status'] else self.accent_blue
-                                if "Crash" in state_data['status']: cor_texto_status = self.accent_red
-                                self.lbl_status.config(text=f"STATUS: {state_data['status']}", fg=cor_texto_status)
-
-                            prev_coin_symbol = state_data.get('prev_coin', 'Nenhuma')
-                            prev_quantity = state_data.get('prev_qty', 0.0)
-                            prev_sell_quantity = state_data.get('prev_sell', 0.0)
-                            prev_dust_amount = state_data.get('prev_dust', 0.0)
-                            
-                            if prev_coin_symbol in ["Nenhuma", "USDT"]:
-                                self.lbl_qtd_prev.config(text=f"[⏪] Anterior ({prev_coin_symbol}): -- | Venda Real: -- | Poeira: --", fg="#9aa0a6")
-                            else:
-                                self.lbl_qtd_prev.config(text=f"[⏪] Anterior ({prev_coin_symbol}): {prev_quantity:.4f} | Venda Real: {prev_sell_quantity:.4f} | Poeira: {prev_dust_amount:.4f}", fg="#9aa0a6")
-                            
-                            current_coin_symbol = state_data.get('coin', 'BUSCANDO...')
-                            current_quantity = state_data.get('current_qty', 0.0)
-                            sell_quantity = state_data.get('sell_qty', 0.0)
-                            dust_amount = state_data.get('dust', 0.0)
-
-                            if current_quantity == 0.0:
-                                self.lbl_qtd.config(text=f"[📦] Atual ({current_coin_symbol}): -- | Venda Real: -- | Poeira: --", fg=self.fg_text)
-                            else:
-                                self.lbl_qtd.config(text=f"[📦] Atual ({current_coin_symbol}): {current_quantity:.4f} | Venda Real: {sell_quantity:.4f} | Poeira: {dust_amount:.4f}", fg=self.accent_green)
-
-                            initial_balance_value = state_data.get("init_bal", 0.0)
-                            peak_profit_value = state_data.get("peak_profit", 0.0)
-                            current_profit_value = state_data.get("curr_profit", 0.0)
-                            target_profit_value = state_data.get("global_tp", 3.5)
-                            trailing_drop_value = state_data.get("trailing_drop", 0.4)
-
-                            if initial_balance_value > 0:
-                                if peak_profit_value > 0:
-                                    self.lbl_trailing.config(text=f"🎯 Trailing [ATIVO]: Gatilho {target_profit_value}% | Pico: {peak_profit_value:.2f}% | Atual: {current_profit_value:.2f}% (Vende se recuar {trailing_drop_value}%)", fg=self.accent_green)
-                                else:
-                                    self.lbl_trailing.config(text=f"🎯 Meta Global: Gatilho em {target_profit_value}% | Lucro Atual: {current_profit_value:.2f}%", fg=self.accent_yellow)
-                            else:
-                                self.lbl_trailing.config(text="🎯 Meta Global: Calculando saldo base...", fg=self.fg_text)
-
-                            hot_coins_list = state_data.get('hot_coins', [])
-                            cold_coins_list = state_data.get('cold_coins', [])
-                            self.list_hot.delete(0, tk.END)
-                            for item in hot_coins_list: self.list_hot.insert(tk.END, item)
-                            self.list_cold.delete(0, tk.END)
-                            for item in cold_coins_list: self.list_cold.insert(tk.END, item)
-
             except Exception: pass 
                 
         self.root.after(2000, self.check_bot_state_json)

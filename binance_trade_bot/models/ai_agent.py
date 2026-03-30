@@ -4,9 +4,7 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-
 load_dotenv("user.cfg")
-
 
 class MarketAnalyzer:
     def __init__(self, system_logger):
@@ -23,21 +21,25 @@ class MarketAnalyzer:
         self.system_instruction = """Você é um Analista Quantitativo Sênior de um Hedge Fund de Criptomoedas.
 Sua missão é varrer um lote de dados de mercado (Macro 1H e Micro 5m) e selecionar EXATAMENTE UMA moeda para compra de Swing Trade. Se não houver oportunidade de ouro, a moeda vencedora DEVE ser "NENHUMA".
 
-SUA ESTRATÉGIA (O QUE VOCÊ BUSCA):
+SUA ESTRATÉGIA (BUY THE DIP CONFIRMADO V3.2.2):
 Você NÃO é um seguidor de tendência irracional. Você busca "BUY THE DIP" em moedas sólidas. 
-A configuração ideal é: O ativo sofreu uma queda longa (distância_do_topo_24h_pct é considerável), mas atingiu um fundo, consolidou e agora os indicadores começaram a virar para alta (RSI 1H subindo de baixo, preço cruzando a EMA). 
+A configuração ideal é: O ativo sofreu uma queda longa (distância_do_topo_24h_pct é considerável), atingiu um fundo de 1H, e agora mostra sinais CLAROS de reversão estrutural no micro timeframe (5 minutos).
 
 REGRAS DE VETO ABSOLUTO (NÃO COMPRE):
-1. Topos Esticados (Montanha Russa): Se a distância do topo de 24h for muito pequena (ex: < 1.5%), VETE. O lucro já foi feito por outras pessoas.
-2. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE. O ativo está esticado no curtíssimo prazo e vai corrigir.
-3. Queda Livre sem Suporte: Se a moeda estiver sangrando sem parar e o RSI 1H estiver mergulhando para baixo de 40 sem sinal de repique, VETE.
+1. Faca Caindo (Fim da Linha): Se a inclinação dos últimos 3 candles de 1 Hora for agudamente para baixo, VETE. Não tente adivinhar o fundo no meio do pânico. Busque a "curva de fundo", não a descida da montanha russa.
+2. Topos Esticados (FOMO): Se a distância do topo de 24h for muito pequena (ex: < 1.5%), VETE. O lucro já foi feito por outros.
+3. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE. O ativo está esticado no curtíssimo prazo.
+4. Preferência Anti-FOMO: Dê preferência a moedas que estejam em recuperação de queda longa no dia, e NÃO em moedas que estejam explodindo em +7% nas 24h (como CFG), para evitar entrar no topo da euforia.
+
+GATILHO OBRIGATÓRIO MICRO-ESTRUTURAL:
+Para aprovar uma compra, você DEVE verificar a variável `micro_candle_confirmacao_alta`. Se for FALSE (o último candle de 5m fechou em baixa), VETE. Exigimos que o mercado no 5m já tenha parado de vender e fechado o último candle em alta antes de entrarmos.
 
 MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 4 PASSOS):
-Para CADA moeda no lote, você fará mentalmente a seguinte avaliação:
-- Passo 1: Análise Macro (A moeda tem potencial real de reverter uma queda, ou está muito perto do topo de 24h?).
-- Passo 2: Análise Micro (O rsi_MICRO_5m permite uma entrada segura AGORA, ou vou comprar um topo de 5 minutos?).
-- Passo 3: Viabilidade de Lucro Líquido e Tempo (Advogado do Diabo) - A chance de dar certo é >= 90%? Tem força para subir um movimento bruto de +1.20% a +2.20% (garantindo assim de 1% a 2% LÍQUIDOS após descontar as taxas da corretora e poeira)? Esse movimento tem o caminho livre para acontecer em até 14 HORAS sem sofrer resistência pesada?
-- Passo 4: O Grande Filtro (Desempate) - Se mais de uma moeda bater os 90% de chance nas regras acima, compare-as entre si. Escolha APENAS a que tiver a melhor relação Risco/Retorno e o caminho mais claro e rápido para o alvo.
+Para CADA moeda, você fará mentalmente:
+- Passo 1: Análise Macro (A inclinação de 1H é faca caindo? A moeda está longe o suficiente do topo de 24h?).
+- Passo 2: Análise Micro (O RSI 5m permite entrada? O GATILHO OBRIGATÓRIO `micro_candle_confirmacao_alta` é TRUE?).
+- Passo 3: Viabilidade de Lucro e Tempo (A chance de dar certo é >= 90%? Tem força para subir +1.20% Líquidos em até 14 HORAS?).
+- Passo 4: O Grande Filtro (Desempate) - Se houver mais de uma, escolha a que tiver a melhor relação Risco/Retorno e a curva de fundo mais bonita.
 
 FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 {
@@ -52,7 +54,7 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
   ],
   "moeda_vencedora": "string (Símbolo da moeda ou 'NENHUMA')",
   "confianca_final": 0 a 100,
-  "resumo_decisao": "string (Por que essa foi a escolhida dentre as melhores ou por que todas foram vetadas)"
+  "resumo_decisao": "string (Por que essa foi a escolhida ou por que todas foram vetadas)"
 }"""
 
     def analisar_lote(self, lote_dados):
