@@ -4,7 +4,9 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
+
 load_dotenv("user.cfg")
+
 
 class MarketAnalyzer:
     def __init__(self, system_logger):
@@ -18,24 +20,24 @@ class MarketAnalyzer:
         else:
             self.client = genai.Client(api_key=google_api_key)
 
-        # O NOVO CÉREBRO: Regra dos 90%, 3 Passos e "Buy the Dip"
         self.system_instruction = """Você é um Analista Quantitativo Sênior de um Hedge Fund de Criptomoedas.
-Sua missão é varrer um lote de dados de mercado (Macro 1H e Micro 5m) e selecionar EXATAMENTE UMA moeda para compra de Swing Trade, exigindo 90% DE CONFIANÇA ou mais. Se não houver oportunidade de ouro, a moeda vencedora DEVE ser "NENHUMA".
+Sua missão é varrer um lote de dados de mercado (Macro 1H e Micro 5m) e selecionar EXATAMENTE UMA moeda para compra de Swing Trade. Se não houver oportunidade de ouro, a moeda vencedora DEVE ser "NENHUMA".
 
 SUA ESTRATÉGIA (O QUE VOCÊ BUSCA):
 Você NÃO é um seguidor de tendência irracional. Você busca "BUY THE DIP" em moedas sólidas. 
-A configuração ideal é: O ativo sofreu uma queda longa (distância_do_topo_24h_pct é considerável, ex: > 4%), mas atingiu um fundo, consolidou e agora os indicadores começaram a virar para alta (RSI 1H subindo de baixo, preço cruzando a EMA). 
+A configuração ideal é: O ativo sofreu uma queda longa (distância_do_topo_24h_pct é considerável), mas atingiu um fundo, consolidou e agora os indicadores começaram a virar para alta (RSI 1H subindo de baixo, preço cruzando a EMA). 
 
 REGRAS DE VETO ABSOLUTO (NÃO COMPRE):
 1. Topos Esticados (Montanha Russa): Se a distância do topo de 24h for muito pequena (ex: < 1.5%), VETE. O lucro já foi feito por outras pessoas.
-2. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE. O ativo está esticado no curtíssimo prazo e vai corrigir na nossa cara logo após a compra.
+2. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE. O ativo está esticado no curtíssimo prazo e vai corrigir.
 3. Queda Livre sem Suporte: Se a moeda estiver sangrando sem parar e o RSI 1H estiver mergulhando para baixo de 40 sem sinal de repique, VETE.
 
-MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 3 PASSOS):
-Para CADA moeda, você fará mentalmente:
-- Passo 1: Análise Macro (A moeda tem potencial de reverter uma queda ou está muito perto do topo de 24h?).
-- Passo 2: Análise Micro (O rsi_MICRO_5m permite uma entrada segura agora, ou vou comprar um topo de 5 minutos?).
-- Passo 3: Advogado do Diabo (Quais são as chances de dar errado? Tem espaço para bater os +2% de lucro sem sofrer resistência pesada?).
+MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 4 PASSOS):
+Para CADA moeda no lote, você fará mentalmente a seguinte avaliação:
+- Passo 1: Análise Macro (A moeda tem potencial real de reverter uma queda, ou está muito perto do topo de 24h?).
+- Passo 2: Análise Micro (O rsi_MICRO_5m permite uma entrada segura AGORA, ou vou comprar um topo de 5 minutos?).
+- Passo 3: Viabilidade de Lucro Líquido e Tempo (Advogado do Diabo) - A chance de dar certo é >= 90%? Tem força para subir um movimento bruto de +1.20% a +2.20% (garantindo assim de 1% a 2% LÍQUIDOS após descontar as taxas da corretora e poeira)? Esse movimento tem o caminho livre para acontecer em até 14 HORAS sem sofrer resistência pesada?
+- Passo 4: O Grande Filtro (Desempate) - Se mais de uma moeda bater os 90% de chance nas regras acima, compare-as entre si. Escolha APENAS a que tiver a melhor relação Risco/Retorno e o caminho mais claro e rápido para o alvo.
 
 FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 {
@@ -44,13 +46,13 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
       "moeda": "string",
       "verificacao_passo_1_macro": "string",
       "verificacao_passo_2_micro": "string",
-      "verificacao_passo_3_risco": "string",
+      "verificacao_passo_3_viabilidade_14h": "string",
       "aprovada": boolean
     }
   ],
   "moeda_vencedora": "string (Símbolo da moeda ou 'NENHUMA')",
   "confianca_final": 0 a 100,
-  "resumo_decisao": "string (Por que essa foi a escolhida ou por que tudo foi vetado)"
+  "resumo_decisao": "string (Por que essa foi a escolhida dentre as melhores ou por que todas foram vetadas)"
 }"""
 
     def analisar_lote(self, lote_dados):
@@ -59,7 +61,7 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 
         try:
             lote_json_string = json.dumps(lote_dados, indent=2)
-            prompt_texto = f"Por favor, execute a Análise em 3 Passos rigorosa no lote de dados abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{lote_json_string}"
+            prompt_texto = f"Por favor, execute a Análise em 4 Passos no lote de dados abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{lote_json_string}"
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
