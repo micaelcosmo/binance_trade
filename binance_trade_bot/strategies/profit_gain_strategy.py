@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.6")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.7")
         self._write_json_ui()
 
     def scout(self):
@@ -164,8 +164,8 @@ class Strategy:
     def update_values(self):
         self._check_ui_flags()
         self._check_daily_reset()
-        self.system_logger.info(f"[HEARTBEAT] ⚡ Monitorando operação ativa. Base oficial: {self.base_coin}")
         self._write_json_ui()
+        # Removido o spam de log de heartbeat daqui!
 
     def _desbloquear_saldo(self, target_symbol):
         try:

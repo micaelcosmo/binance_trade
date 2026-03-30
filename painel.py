@@ -384,16 +384,24 @@ class BinanceBotGUI:
         self.root.after(2000, self.check_bot_state_json)
 
     def read_output(self):
-        if self.process:
-            for log_line in iter(self.process.stdout.readline, ''):
+        process_ref = self.process 
+        if not process_ref: return
+        
+        try:
+            for log_line in iter(process_ref.stdout.readline, ''):
                 self.log_message(log_line)
-            
-            self.process.stdout.close()
-            self.process.wait()
-            
-            if self.bot_running:
-                self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Erro/Crash (Veja o Log)", fg=self.accent_red))
-                self.bot_running = False
+        except Exception:
+            pass
+        
+        try:
+            process_ref.stdout.close()
+            process_ref.wait()
+        except Exception:
+            pass
+        
+        if self.bot_running:
+            self.root.after(0, lambda: self.lbl_status.config(text="STATUS: Erro/Crash (Veja o Log)", fg=self.accent_red))
+            self.bot_running = False
 
     def get_total_usdt_balance(self, binance_client_instance, bridge_symbol):
         try:
@@ -459,7 +467,6 @@ class BinanceBotGUI:
                 time.sleep(15)
         except: pass
 
-    # FIX DO FANTASMA: Lógica de Hard Kill e Prevenção de Multi-Runs
     def start_bot(self):
         if self.bot_running or self.process is not None:
             self.log_message("[!] O motor já está em execução! Clique em STOP antes de iniciar novamente.\n")
@@ -483,8 +490,8 @@ class BinanceBotGUI:
     def stop_bot(self):
         if self.process: 
             try:
-                self.process.kill() # Assassina o processo na raiz do sistema operacional
-            except: pass
+                self.process.kill() 
+            except Exception: pass
             self.process = None
         self.bot_running = False
         self.lbl_status.config(text="STATUS: Parado", fg=self.fg_text)
