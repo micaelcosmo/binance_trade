@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.3 (UI Avançada & Histórico)...")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.3")
         self._write_json_ui()
 
     def scout(self):
@@ -245,8 +245,8 @@ class Strategy:
             if pandas.isna(rsi_1h): rsi_1h = 50.0
             if pandas.isna(rsi_5m): rsi_5m = 50.0
             
-            micro_candle_fecha_em_alta = ultima_linha_5m['close'] > ultima_linha_5m['open']
-            maxima_recente = df_1h['high'].tail(24).max() 
+            micro_candle_fecha_em_alta = bool(ultima_linha_5m['close'] > ultima_linha_5m['open'])
+            maxima_recente = float(df_1h['high'].tail(24).max())
             queda_da_maxima_pct = ((maxima_recente - preco_atual) / maxima_recente) * 100 if maxima_recente > 0 else 0.0
             
             try:
@@ -458,7 +458,6 @@ class Strategy:
                     self.lucro_diario_pct += drop_percentage
                     self.trades_no_dia += 1
                     
-                    # REGISTRO NO HISTÓRICO DA UI
                     self.historico_diario.append({
                         "hora": datetime.now().strftime("%H:%M:%S"),
                         "moeda": self.moeda_atual_operacao,
@@ -506,7 +505,6 @@ class Strategy:
                                     self.lucro_diario_pct += drop_percentage 
                                     self.trades_no_dia += 1
                                     
-                                    # REGISTRO NO HISTÓRICO DA UI
                                     self.historico_diario.append({
                                         "hora": datetime.now().strftime("%H:%M:%S"),
                                         "moeda": self.moeda_atual_operacao,
@@ -556,7 +554,6 @@ class Strategy:
                 self.system_logger.info(f"🧠 Parecer da IA    : {resumo_decisao}")
                 self.system_logger.info("======================================================")
 
-                # SALVA O RELATÓRIO PARA O POPUP DO PAINEL
                 self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🏆 Vencedora Avaliada: {moeda_vencedora} ({confianca_final}%)\n\n🧠 Parecer Detalhado Institucional:\n{resumo_decisao}"
 
                 if moeda_vencedora != "NENHUMA" and confianca_final >= 90:
