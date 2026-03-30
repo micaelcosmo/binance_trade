@@ -151,13 +151,12 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.3")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.5")
         self._write_json_ui()
 
     def scout(self):
         self._check_ui_flags()
         self._check_daily_reset()
-        self.system_logger.info(f"[HEARTBEAT] Base oficial: {self.base_coin}")
         self.scan_market()
         self._write_json_ui()
 
@@ -317,6 +316,7 @@ class Strategy:
             return False
 
     def scan_market(self):
+        # --- 1. VERIFICAÇÃO DE HIBERNAÇÃO (METAS BÁTIDAS) ---
         if not self.em_operacao:
             if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
                 agora = datetime.now()
@@ -329,16 +329,10 @@ class Strategy:
                 self.ai_cooldown_until = time.time() + segundos_ate_meia_noite
                 return
 
-            tempo_atual = time.time()
-            if tempo_atual < self.ai_cooldown_until:
-                minutos_restantes = int((self.ai_cooldown_until - tempo_atual) / 60)
-                self.system_logger.info(f"⏳ Bot em Cooldown. Aguardando {minutos_restantes}m para acordar...")
-                return
-
-            self.system_logger.info("📊 Compilando Dossiê Quantitativo Híbrido (1H + 5M)...")
-            
+        # --- 2. ATUALIZAÇÃO SEMPRE ATIVA DAS LISTAS LATERAIS DO PAINEL ---
         aptas_temporary_list = []
         geladeira_temporary_list = []
+        lote_dados_ia = []
         
         try:
             account_data = self.binance_client.get_account()
@@ -346,6 +340,22 @@ class Strategy:
         except Exception:
             saldos_dicionario = {}
 
+        # Varre sempre, independente do status, para o painel nunca ficar vazio
+        for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
+            if check_coin == self.base_coin: continue
+            market_symbol = f"{check_coin}{self.base_coin}"
+            dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
+            if dados_enriquecidos:
+                moeda_alin = f"{check_coin: <7}"
+                texto_linha_lateral = f"💼 {moeda_alin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
+                lote_dados_ia.append(dados_enriquecidos)
+                if is_uptrend: aptas_temporary_list.append(texto_linha_lateral)
+                else: geladeira_temporary_list.append(texto_linha_lateral)
+
+        self.aptas_cache = sorted(aptas_temporary_list)
+        self.geladeira_cache = sorted(geladeira_temporary_list)
+
+        # --- 3. RECUPERAÇÃO DE ESTADO (Ao reiniciar) ---
         if not self.em_operacao:
             self.preco_atual_ativo, self.preco_alvo_ativo = 0.0, 0.0
             self.chart_data_cache = []
@@ -371,6 +381,7 @@ class Strategy:
                                 break
                         except Exception: pass
 
+        # --- 4. GESTÃO DE OPERAÇÃO ATIVA ---
         if self.em_operacao:
             market_symbol = f"{self.moeda_atual_operacao}{self.base_coin}"
             
@@ -473,18 +484,16 @@ class Strategy:
                     self._save_state()
                 else:
                     if segundos_ativos_operacao > self.maximum_hold_time_seconds and (-stop_loss_atual <= drop_percentage <= -0.15) and cooldown_restante_segundos <= 0:
-                        self.system_logger.info("⏳ Bot preso há mais de 2 Horas. Regra de Ouro Ativada: Coletando lote para Swap...")
-                        lote_dados_swap = []
+                        self.system_logger.info("⏳ Bot preso há mais de 2 Horas. Regra de Ouro Ativada: Reutilizando Dossiê para Swap...")
                         
-                        for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
-                            if check_coin in [self.base_coin, self.moeda_atual_operacao]: continue
-                            dados_swap, is_uptrend_swap = self.get_enriched_data(f"{check_coin}{self.base_coin}")
-                            if dados_swap: lote_dados_swap.append(dados_swap)
-                                
+                        # Usa o lote já extraído no Topo para economizar recursos e agilizar
+                        lote_dados_swap = [d for d in lote_dados_ia if d['moeda'] != self.moeda_atual_operacao]
+                        
                         if lote_dados_swap:
                             analise_agente_ia = self.ai_agent.analisar_lote(lote_dados_swap)
                             nova_moeda_promissora = analise_agente_ia.get("moeda_vencedora", "NENHUMA")
                             confianca = analise_agente_ia.get("confianca_final", 0)
+                            resumo_decisao_swap = analise_agente_ia.get("resumo_decisao", "Sem motivo específico.")
                             
                             if nova_moeda_promissora != "NENHUMA" and confianca >= 90:
                                 item_escolhido = next((item for item in lote_dados_swap if item['moeda'] == nova_moeda_promissora), None)
@@ -493,6 +502,8 @@ class Strategy:
                                     stop_atr_swap = item_escolhido['sugestao_stop_loss_atr']
                                     
                                     self.system_logger.warning(f"👑 REGRA DE OURO! Migrando para {nova_moeda_promissora} com {confianca}% de aval da IA!")
+                                    
+                                    self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n👑 SWAP DE EMERGÊNCIA (Regra de Ouro)\n🏆 Vencedora: {nova_moeda_promissora} ({confianca}%)\n\n🧠 Parecer:\n{resumo_decisao_swap}"
                                     
                                     self._desbloquear_saldo(market_symbol) 
                                     saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
@@ -521,27 +532,19 @@ class Strategy:
                                         self.moeda_atual_operacao = nova_moeda_promissora
                                 return
 
-                self._write_json_ui() 
             except Exception as erro_monitoramento:
                 self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")
 
-        if not self.em_operacao:
-            lote_dados_ia = []
-            for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
-                if check_coin == self.base_coin: continue
-                market_symbol = f"{check_coin}{self.base_coin}"
-                dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
-                if dados_enriquecidos:
-                    moeda_alin = f"{check_coin: <7}"
-                    texto_linha_lateral = f"💼 {moeda_alin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
-                    lote_dados_ia.append(dados_enriquecidos)
-                    if is_uptrend: aptas_temporary_list.append(texto_linha_lateral)
-                    else: geladeira_temporary_list.append(texto_linha_lateral)
-
-            self.aptas_cache = sorted(aptas_temporary_list)
-            self.geladeira_cache = sorted(geladeira_temporary_list)
+        # --- 5. MODO CAÇADOR (Acionando a IA se não estiver operando) ---
+        else:
+            tempo_atual = time.time()
+            if tempo_atual < self.ai_cooldown_until:
+                minutos_restantes = int((self.ai_cooldown_until - tempo_atual) / 60)
+                self.system_logger.info(f"⏳ Bot em Cooldown. Aguardando {minutos_restantes}m para acordar...")
+                return
 
             if lote_dados_ia:
+                self.system_logger.info(f"🟢 Submetendo Dossiê com {len(lote_dados_ia)} ativos ao Comitê IA...")
                 analise_agente_ia = self.ai_agent.analisar_lote(lote_dados_ia)
                 
                 moeda_vencedora = analise_agente_ia.get("moeda_vencedora", "NENHUMA")

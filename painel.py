@@ -59,7 +59,6 @@ class BinanceBotGUI:
         tk.Button(self.top_frame, text="♻ Atualizar Inicial", command=self.reset_initial_balance, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=18).pack(side=tk.RIGHT, padx=5)
         tk.Button(self.top_frame, text="[ 0 ] Zerar Placar", command=self.reset_scoreboard, bg="#5f6368", fg="white", font=("Segoe UI", 10, "bold"), width=16).pack(side=tk.RIGHT, padx=5)
 
-        # BARRA DE FERRAMENTAS INSTITUCIONAIS (NOVA)
         self.tools_frame = tk.Frame(root, bg=self.bg_main, pady=5)
         self.tools_frame.pack(fill=tk.X, side=tk.TOP, padx=15)
         
@@ -172,7 +171,6 @@ class BinanceBotGUI:
                 json.dump({"saldo_inicial": self.saldo_inicial}, file_handler)
         except: pass
 
-    # FUNÇÕES DAS MODAIS E DA BATERIA EXTRA DE TRADES
     def add_trade_chance(self):
         with open("add_trade.flag", "w") as f:
             f.write("1")
@@ -316,12 +314,10 @@ class BinanceBotGUI:
                 if state_data:
                     if self.current_strategy == 'profit_gain':
                         
-                        # Coleta dados para os Popups UI
                         self.current_ai_report = state_data.get("ai_report", "Aguardando dados...")
                         self.current_daily_history = state_data.get("daily_history", [])
                         trades_no_dia = state_data.get("trades_no_dia", 0)
                         
-                        # Lógica de Destravamento Inteligente do Botão +1 Tentativa
                         is_em_operacao = "Em Operação" in state_data.get("status", "")
                         if self.btn_add_trade['state'] == tk.DISABLED:
                             if not is_em_operacao and trades_no_dia > self.locked_at_trade_count:
@@ -463,7 +459,12 @@ class BinanceBotGUI:
                 time.sleep(15)
         except: pass
 
+    # FIX DO FANTASMA: Lógica de Hard Kill e Prevenção de Multi-Runs
     def start_bot(self):
+        if self.bot_running or self.process is not None:
+            self.log_message("[!] O motor já está em execução! Clique em STOP antes de iniciar novamente.\n")
+            return
+            
         self.log_message("[!] Iniciando...\n")
         self.lbl_status.config(text="STATUS: Booting...", fg=self.fg_text)
         with open("bot_status.json", "w") as file_handler: json.dump({}, file_handler)
@@ -480,7 +481,11 @@ class BinanceBotGUI:
         self.check_bot_state_json()
 
     def stop_bot(self):
-        if self.process: self.process.terminate()
+        if self.process: 
+            try:
+                self.process.kill() # Assassina o processo na raiz do sistema operacional
+            except: pass
+            self.process = None
         self.bot_running = False
         self.lbl_status.config(text="STATUS: Parado", fg=self.fg_text)
 
