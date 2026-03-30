@@ -151,18 +151,20 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.5")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.6")
         self._write_json_ui()
 
     def scout(self):
         self._check_ui_flags()
         self._check_daily_reset()
+        self.system_logger.info(f"[HEARTBEAT] 💓 Motor executando varredura. Base oficial: {self.base_coin}")
         self.scan_market()
         self._write_json_ui()
 
     def update_values(self):
         self._check_ui_flags()
         self._check_daily_reset()
+        self.system_logger.info(f"[HEARTBEAT] ⚡ Monitorando operação ativa. Base oficial: {self.base_coin}")
         self._write_json_ui()
 
     def _desbloquear_saldo(self, target_symbol):
@@ -316,7 +318,6 @@ class Strategy:
             return False
 
     def scan_market(self):
-        # --- 1. VERIFICAÇÃO DE HIBERNAÇÃO (METAS BÁTIDAS) ---
         if not self.em_operacao:
             if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
                 agora = datetime.now()
@@ -329,7 +330,6 @@ class Strategy:
                 self.ai_cooldown_until = time.time() + segundos_ate_meia_noite
                 return
 
-        # --- 2. ATUALIZAÇÃO SEMPRE ATIVA DAS LISTAS LATERAIS DO PAINEL ---
         aptas_temporary_list = []
         geladeira_temporary_list = []
         lote_dados_ia = []
@@ -340,7 +340,6 @@ class Strategy:
         except Exception:
             saldos_dicionario = {}
 
-        # Varre sempre, independente do status, para o painel nunca ficar vazio
         for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
             if check_coin == self.base_coin: continue
             market_symbol = f"{check_coin}{self.base_coin}"
@@ -355,7 +354,6 @@ class Strategy:
         self.aptas_cache = sorted(aptas_temporary_list)
         self.geladeira_cache = sorted(geladeira_temporary_list)
 
-        # --- 3. RECUPERAÇÃO DE ESTADO (Ao reiniciar) ---
         if not self.em_operacao:
             self.preco_atual_ativo, self.preco_alvo_ativo = 0.0, 0.0
             self.chart_data_cache = []
@@ -381,7 +379,6 @@ class Strategy:
                                 break
                         except Exception: pass
 
-        # --- 4. GESTÃO DE OPERAÇÃO ATIVA ---
         if self.em_operacao:
             market_symbol = f"{self.moeda_atual_operacao}{self.base_coin}"
             
@@ -486,7 +483,6 @@ class Strategy:
                     if segundos_ativos_operacao > self.maximum_hold_time_seconds and (-stop_loss_atual <= drop_percentage <= -0.15) and cooldown_restante_segundos <= 0:
                         self.system_logger.info("⏳ Bot preso há mais de 2 Horas. Regra de Ouro Ativada: Reutilizando Dossiê para Swap...")
                         
-                        # Usa o lote já extraído no Topo para economizar recursos e agilizar
                         lote_dados_swap = [d for d in lote_dados_ia if d['moeda'] != self.moeda_atual_operacao]
                         
                         if lote_dados_swap:
@@ -535,7 +531,6 @@ class Strategy:
             except Exception as erro_monitoramento:
                 self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")
 
-        # --- 5. MODO CAÇADOR (Acionando a IA se não estiver operando) ---
         else:
             tempo_atual = time.time()
             if tempo_atual < self.ai_cooldown_until:
