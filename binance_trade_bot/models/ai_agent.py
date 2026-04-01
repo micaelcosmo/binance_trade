@@ -38,7 +38,7 @@ MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 4 PASSOS):
 - Passo 1: Análise de Projeção Diária (A moeda comprova que afundou além de -3% e agora está se recuperando dentro da zona de -4.00% a +1.00%?).
 - Passo 2: Análise Macro (É faca caindo ou achou fundo estrutural?).
 - Passo 3: Análise Micro (O RSI 5m permite entrada sem estar esticado? O GATILHO micro_candle_confirmacao_alta é TRUE?).
-- Passo 4: Desempate (Escolha a moeda com o melhor setup de 'Virada do Negativo' para as próximas 24h).
+- Passo 4: Desempate (Escolha a moeda com o melhor setup de 'Virada do Negativo' para as próximas 24h. Atribua a nota de confiança de 0 a 100).
 
 FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
 {
@@ -53,7 +53,7 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
   ],
   "moeda_vencedora": "string (Símbolo ou 'NENHUMA')",
   "confianca_final": 0 a 100,
-  "resumo_decisao": "string"
+  "resumo_decisao": "string (Justifique a escolha. Se a confiança for menor que 90%, OBRIGATORIAMENTE explique qual critério causou a penalidade/insegurança no trade)"
 }"""
 
         self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Hedge Fund Institucional).
@@ -115,7 +115,7 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 
         try:
             lote_json_string = json.dumps(lote_dados, indent=2)
-            prompt_texto = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {moeda_atual}\n- Prejuízo Atual: {prejuizo_atual:.2f}%\n- Tempo na Operação: {tempo_preso_horas:.1f} horas\n\nLOTE DE DADOS DISPONÍVEIS PARA SWAP:\n{lote_json_string}\n\nJulgue aplicando as Regras do Tribunal de Swap e retorne a decisão em JSON."
+            prompt_texto = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {moeda_atual}\n- Prejuízo Atual: {prejuizo_atual:.2f}%\n- Tempo na Operação: {tempo_preso_horas:.1f} horas\n\nLOTE DE DADOS DISPONÍVEIS PARA SWAP:\n{lote_json_string}\n\nJulgue com extrema severidade e retorne a decisão em JSON."
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
