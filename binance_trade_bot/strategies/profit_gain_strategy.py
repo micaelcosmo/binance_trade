@@ -32,12 +32,12 @@ class Strategy:
         self.trailing_activation_percentage = self.taxa_maker * 2 + self.margem_poeira + self.lucro_liquido 
         self.trailing_drop_percentage = 0.20
         
-        self.stop_loss_percentage_base = 10.0 # Alterado para 10% base (Paciência/Desastre)
+        self.stop_loss_percentage_base = 10.0 
         self.stop_loss_dinamico_ativo = 0.0
         self.stop_loss_monitor_drop = 0.0 
         
         self.maximum_hold_time_seconds = 7200      
-        self.golden_rule_cooldown_seconds = 7200 # A cada 2 horas o Tribunal é acordado pra auditar a carteira
+        self.golden_rule_cooldown_seconds = 7200 
         
         self.data_atual = datetime.now().strftime("%Y-%m-%d")
         self.lucro_diario_pct = 0.0
@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.8 (Patience Update)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.9")
         self._write_json_ui()
 
     def scout(self):
@@ -255,7 +255,6 @@ class Strategy:
             except Exception:
                 variacao_24h = 0.0
 
-            # V3.2.8: Stop dinâmico esticado. Dá margem de até 10% pra moeda recuperar sem stopar prematuramente.
             stop_dinamico = ((atr_1h * 3) / preco_atual) * 100 if preco_atual > 0 else self.stop_loss_percentage_base
             stop_dinamico = max(5.0, min(stop_dinamico, 10.0)) 
             
@@ -305,7 +304,7 @@ class Strategy:
             self.peak_profit_percentage = 0.0
             self.preco_alvo_ativo = float(preco_atual) * (1 + (self.trailing_activation_percentage / 100))
             self.stop_loss_dinamico_ativo = float(stop_calculado_atr)
-            self.last_switch_time = time.time() # Inicia o relógio do Tribunal
+            self.last_switch_time = time.time()
             self._save_state()
             
             self.preco_atual_ativo = float(preco_atual)
@@ -435,6 +434,7 @@ class Strategy:
                 segundos_ativos_operacao = time.time() - self.operation_start_time
                 horas_ativas = int(segundos_ativos_operacao // 3600)
                 minutos_ativos = int((segundos_ativos_operacao % 3600) // 60)
+                tempo_preso_horas = segundos_ativos_operacao / 3600.0
                 
                 segundos_desde_switch_regra = time.time() - self.last_switch_time
                 cooldown_restante_segundos = self.golden_rule_cooldown_seconds - segundos_desde_switch_regra
@@ -446,7 +446,6 @@ class Strategy:
                 
                 stop_loss_atual = self.stop_loss_dinamico_ativo if self.stop_loss_dinamico_ativo > 0 else self.stop_loss_percentage_base
 
-                # V3.2.8: Stop Loss Tolerante. Opcão de venda forçada se o mercado virar um desastre real absoluto.
                 if drop_percentage <= -10.0:
                     is_selling_now = True
                     motivo_venda_executada = "STOP_DESASTRE"
@@ -488,59 +487,64 @@ class Strategy:
                     self.stop_loss_dinamico_ativo = 0.0
                     self._save_state()
                 else:
-                    # V3.2.8: TRIBUNAL DE SWAP - Nunca vende no prejuízo só pelo tempo. Invoca a IA para decidir.
                     if drop_percentage < -0.15 and cooldown_restante_segundos <= 0:
-                        self.system_logger.info("⚖️ O tempo passou e o ativo não performou. Convocando o TRIBUNAL DE SWAP da IA...")
                         
-                        lote_dados_swap = [d for d in lote_dados_ia if d['moeda'] != self.moeda_atual_operacao]
-                        
-                        if lote_dados_swap:
-                            analise_swap = self.ai_agent.analisar_swap(lote_dados_swap, self.moeda_atual_operacao, drop_percentage)
-                            nova_moeda_promissora = analise_swap.get("moeda_vencedora", "HOLD")
-                            confianca = analise_swap.get("confianca_final", 0)
-                            resumo_decisao_swap = analise_swap.get("resumo_decisao", "Decisão mantida em HOLD.")
+                        if drop_percentage < -1.50:
+                            self.system_logger.info(f"🛡️ TRIBUNAL BLOQUEADO no código Python: Prejuízo atual ({drop_percentage:.2f}%) excede o limite de -1.50%. HOLD obrigatório até recuperar.")
+                            self.last_switch_time = time.time()
+                            self._save_state()
+                        else:
+                            self.system_logger.info("⚖️ O ativo está na zona de swap segura (>-1.5%). Convocando o TRIBUNAL DE SWAP da IA...")
                             
-                            if nova_moeda_promissora not in ["HOLD", "NENHUMA"] and confianca >= 95:
-                                item_escolhido = next((item for item in lote_dados_swap if item['moeda'] == nova_moeda_promissora), None)
-                                if item_escolhido:
-                                    preco_alvo_swap = item_escolhido['preco_atual']
-                                    stop_atr_swap = item_escolhido['sugestao_stop_loss_atr']
-                                    
-                                    self.system_logger.warning(f"👑 TRIBUNAL APROVOU SWAP! Assumindo prejuízo para migrar com {confianca}% de chance para {nova_moeda_promissora}!")
-                                    
-                                    self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n⚖️ TRIBUNAL DE SWAP APROVADO\n🏆 Vencedora: {nova_moeda_promissora} ({confianca}%)\n\n🧠 Parecer:\n{resumo_decisao_swap}"
-                                    
-                                    self._desbloquear_saldo(market_symbol) 
-                                    saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
-                                    ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
-                                    
-                                    self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
-                                    time.sleep(2)
-                                    
-                                    self.trades_lost += 1 
-                                    self.lucro_diario_pct += drop_percentage 
-                                    self.trades_no_dia += 1
-                                    
-                                    self.historico_diario.append({
-                                        "hora": datetime.now().strftime("%H:%M:%S"),
-                                        "moeda": self.moeda_atual_operacao,
-                                        "resultado": f"{drop_percentage:+.2f}%",
-                                        "motivo": "SWAP_IA_95%"
-                                    })
-                                    
-                                    self.last_switch_time = time.time()
-                                    self.em_operacao = False 
+                            lote_dados_swap = [d for d in lote_dados_ia if d['moeda'] != self.moeda_atual_operacao]
+                            
+                            if lote_dados_swap:
+                                analise_swap = self.ai_agent.analisar_swap(lote_dados_swap, self.moeda_atual_operacao, drop_percentage, tempo_preso_horas)
+                                nova_moeda_promissora = analise_swap.get("moeda_vencedora", "HOLD")
+                                confianca = analise_swap.get("confianca_final", 0)
+                                resumo_decisao_swap = analise_swap.get("resumo_decisao", "Decisão mantida em HOLD.")
+                                
+                                if nova_moeda_promissora not in ["HOLD", "NENHUMA"] and confianca >= 95:
+                                    item_escolhido = next((item for item in lote_dados_swap if item['moeda'] == nova_moeda_promissora), None)
+                                    if item_escolhido:
+                                        preco_alvo_swap = item_escolhido['preco_atual']
+                                        stop_atr_swap = item_escolhido['sugestao_stop_loss_atr']
+                                        
+                                        self.system_logger.warning(f"👑 TRIBUNAL APROVOU SWAP! Assumindo prejuízo para migrar com {confianca}% de chance para {nova_moeda_promissora}!")
+                                        
+                                        self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n⚖️ TRIBUNAL DE SWAP APROVADO\n🏆 Vencedora: {nova_moeda_promissora} ({confianca}%)\n\n🧠 Parecer:\n{resumo_decisao_swap}"
+                                        
+                                        self._desbloquear_saldo(market_symbol) 
+                                        saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
+                                        ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
+                                        
+                                        self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
+                                        time.sleep(2)
+                                        
+                                        self.trades_lost += 1 
+                                        self.lucro_diario_pct += drop_percentage 
+                                        self.trades_no_dia += 1
+                                        
+                                        self.historico_diario.append({
+                                            "hora": datetime.now().strftime("%H:%M:%S"),
+                                            "moeda": self.moeda_atual_operacao,
+                                            "resultado": f"{drop_percentage:+.2f}%",
+                                            "motivo": "SWAP_IA_95%"
+                                        })
+                                        
+                                        self.last_switch_time = time.time()
+                                        self.em_operacao = False 
+                                        self._save_state()
+                                        
+                                        if preco_alvo_swap > 0 and self.execute_real_trade(nova_moeda_promissora, preco_alvo_swap, stop_atr_swap):
+                                            self.em_operacao = True
+                                            self.moeda_atual_operacao = nova_moeda_promissora
+                                    return
+                                else:
+                                    self.system_logger.info(f"🛡️ TRIBUNAL ORDENOU HOLD. O mercado não tem certeza de 95%+. Paciência com a moeda atual.")
+                                    self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛡️ TRIBUNAL DE SWAP RECUSADO (HOLD)\n⚖️ Veredito: Nenhuma moeda com 95%+ de chance detectada. Segurando {self.moeda_atual_operacao}.\n\n🧠 Parecer:\n{resumo_decisao_swap}"
+                                    self.last_switch_time = time.time() 
                                     self._save_state()
-                                    
-                                    if preco_alvo_swap > 0 and self.execute_real_trade(nova_moeda_promissora, preco_alvo_swap, stop_atr_swap):
-                                        self.em_operacao = True
-                                        self.moeda_atual_operacao = nova_moeda_promissora
-                                return
-                            else:
-                                self.system_logger.info(f"🛡️ TRIBUNAL ORDENOU HOLD. O mercado não tem certeza de 95%+. Paciência com a moeda atual.")
-                                self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛡️ TRIBUNAL DE SWAP RECUSADO (HOLD)\n⚖️ Veredito: Nenhuma moeda com 95%+ de chance detectada. Segurando {self.moeda_atual_operacao}.\n\n🧠 Parecer:\n{resumo_decisao_swap}"
-                                self.last_switch_time = time.time() 
-                                self._save_state()
 
             except Exception as erro_monitoramento:
                 self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")

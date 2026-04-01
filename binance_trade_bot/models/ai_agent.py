@@ -23,33 +23,31 @@ class MarketAnalyzer:
         self.system_instruction_normal = """Você é um Analista Quantitativo Sênior de um Hedge Fund de Criptomoedas.
 Sua missão é varrer um lote de dados e selecionar EXATAMENTE UMA moeda para compra. Se não houver oportunidade, a moeda vencedora DEVE ser "NENHUMA".
 
-SUA ESTRATÉGIA (HORIZONTE DE 24 HORAS):
-Seu horizonte de investimento NÃO é de curtíssimo prazo (minutos/poucas horas). Você busca lucros no fechamento do dia (Swing Trade de 24 horas). 
-A configuração ideal é "BUY THE DIP" em moedas sólidas. O ativo deve ter sofrido uma queda longa no dia, atingido um fundo estrutural no gráfico Macro (1H) e confirmado reversão no Micro (5m).
+SUA ESTRATÉGIA (A VIRADA DO NEGATIVO PROFUNDO):
+Seu horizonte de investimento é o fechamento diário (Swing Trade). Você busca capturar moedas que terminaram de sangrar e estão iniciando a subida.
+A configuração OBRIGATÓRIA é: O ativo tem que ter atingido uma queda profunda (obrigatoriamente ter ido abaixo de -3.00% no seu pior momento recente) e AGORA estar em fase clara de recuperação, com o micro de 5m confirmando a reversão de alta.
 
 REGRAS DE VETO ABSOLUTO (NÃO COMPRE):
-1. Faca Caindo: Se a inclinação dos últimos 3 candles de 1 Hora for agudamente para baixo, VETE. Busque a "curva de fundo", não a queda vertical.
-2. Topos Esticados: Se a distância do topo de 24h for muito pequena (ex: < 1.5%), VETE.
-3. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE.
-4. Anti-FOMO: Evite moedas que já explodiram +7% ou mais no dia de hoje.
-
-GATILHO OBRIGATÓRIO MICRO-ESTRUTURAL:
-A variável `micro_candle_confirmacao_alta` DEVE ser TRUE. Se for FALSE (o último candle de 5m fechou em baixa), VETE a moeda.
+1. Faca Caindo: Se a inclinação de 1 Hora for agudamente para baixo, VETE. Busque a curva de fundo consolidada.
+2. Queda Insuficiente: Se a análise não demonstrar que a moeda foi abaixo de -3.00% antes de iniciar a recuperação atual, VETE. Não queremos correções rasas.
+3. Fora da Zona de Virada: VETE qualquer moeda cuja `variacao_24h_pct` atual seja MAIOR que +1.00% (o lucro já foi feito) ou MENOR que -4.00% (ainda está sangrando muito e não confirmou a virada estrutural).
+4. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE.
+5. Confirmação Micro: A variável `micro_candle_confirmacao_alta` DEVE ser TRUE. Se for FALSE, VETE.
 
 MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 4 PASSOS):
-- Passo 1: Análise Macro (É faca caindo? A moeda está longe o suficiente do topo de 24h?).
-- Passo 2: Análise Micro (O RSI 5m permite entrada? O GATILHO micro_candle_confirmacao_alta é TRUE?).
-- Passo 3: Viabilidade (Tem força para subir +1.20 a +2.00% Líquidos ao longo do dia inteiro, sem bater em resistências pesadas?).
-- Passo 4: Desempate (A que tiver a melhor relação Risco/Retorno ao longo das próximas 24h).
+- Passo 1: Análise de Projeção Diária (A moeda comprova que afundou além de -3% e agora está se recuperando dentro da zona de -4.00% a +1.00%?).
+- Passo 2: Análise Macro (É faca caindo ou achou fundo estrutural?).
+- Passo 3: Análise Micro (O RSI 5m permite entrada sem estar esticado? O GATILHO micro_candle_confirmacao_alta é TRUE?).
+- Passo 4: Desempate (Escolha a moeda com o melhor setup de 'Virada do Negativo' para as próximas 24h).
 
 FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
 {
   "analises_detalhadas": [
     {
       "moeda": "string",
-      "verificacao_passo_1_macro": "string",
-      "verificacao_passo_2_micro": "string",
-      "verificacao_passo_3_viabilidade_24h": "string",
+      "verificacao_passo_1_projecao": "string",
+      "verificacao_passo_2_macro": "string",
+      "verificacao_passo_3_micro": "string",
       "aprovada": boolean
     }
   ],
@@ -59,22 +57,22 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
 }"""
 
         self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Hedge Fund Institucional).
-O operador está PRESO em uma operação, segurando uma moeda ('moeda_atual') e acumulando prejuízo ('prejuizo_atual_pct').
-O horizonte de investimento é de 24 HORAS. O robô tem plena paciência matemática para aguardar a recuperação do ativo atual ao longo de todo o dia.
+O operador está PRESO em uma operação, segurando uma moeda e acumulando um prejuízo ao longo do tempo.
+O horizonte de investimento é de 24 HORAS. 
 
 SUA MISSÃO:
-Julgar se o robô deve fazer "HOLD" (ter paciência, segurar o prejuízo temporário e aguardar o ativo recuperar) ou aprovar um "SWAP DE EMERGÊNCIA" (vender assumindo o prejuízo agora e trocar para uma nova moeda do lote).
+Julgar se o robô deve fazer "HOLD" (ter paciência e aguardar a recuperação) ou aprovar um "SWAP DE EMERGÊNCIA" (vender assumindo o pequeno prejuízo agora e trocar para uma nova moeda do lote).
 
-A REGRA DE OURO (O GRANDE FILTRO):
-Você SÓ PODE aprovar o swap se encontrar no lote de dados uma nova moeda com configuração PERFEITA e MATADORA (Certeza Absoluta, confianca_final >= 95).
-A nova moeda deve ter uma probabilidade esmagadora (>= 95%) de explodir nas próximas horas, garantindo não só a recuperação do prejuízo da moeda antiga, como a geração de lucro líquido.
-Se nenhuma moeda do lote for uma oportunidade óbvia de 95%+, a sua decisão DEVE OBRIGATORIAMENTE ser "HOLD". Não troque seis por meia dúzia. O mercado pune os impacientes. Deixe a moeda atual recuperar.
+REGRAS DE VETO DO TRIBUNAL (OBRIGATÓRIAS):
+1. TETO DE PREJUÍZO (O Escudo): Para realizar um Swap, o prejuízo atual NÃO PODE ser pior que -1.50%. Se o Prejuízo Atual for menor que -1.50% (ex: -1.60%, -3.00%, -5.00%), você DEVE OBRIGATORIAMENTE VETAR O SWAP e retornar "HOLD". O robô precisa esperar a moeda recuperar até a faixa permitida (-1.50% a 0.00%) antes de assumir o corte.
+2. A NOVA MOEDA (O Gatilho): Estando na zona permitida de prejuízo (melhor ou igual a -1.50%), você só aprovará a troca se encontrar no lote uma nova moeda MATADORA (Confiança >= 95%).
+3. FATOR TEMPO (Cansaço): Considere o 'Tempo na Operação'. Se a moeda estiver presa há mais de 10h, apenas lateralizando, e já recuperou para a zona segura (ex: -1.00%), a troca passa a ser altamente recomendada caso exista uma boa oportunidade, pois a tese original falhou.
 
 FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 {
   "moeda_vencedora": "string (Símbolo da nova moeda perfeita ou 'HOLD')",
   "confianca_final": 0 a 100,
-  "resumo_decisao": "string (Justificativa detalhada do porquê aprovou o Swap com 95%+ de certeza, ou por que preferiu manter o HOLD por prudência e paciência no mercado)"
+  "resumo_decisao": "string (Justificativa detalhada do porquê aprovou o Swap, ou por que manteve o HOLD - ex: 'HOLD forçado pois o prejuízo atual de -3% excede o teto máximo de swap de -1.50%')"
 }"""
 
     def analisar_lote(self, lote_dados):
@@ -111,13 +109,13 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
             self.system_logger.error(f"Erro no Parser JSON/API da IA: {erro_execucao}")
             return {"moeda_vencedora": "NENHUMA", "confianca_final": 0, "resumo_decisao": "Falha na comunicação."}
 
-    def analisar_swap(self, lote_dados, moeda_atual, prejuizo_atual):
+    def analisar_swap(self, lote_dados, moeda_atual, prejuizo_atual, tempo_preso_horas):
         if not self.client:
             return {"moeda_vencedora": "HOLD", "confianca_final": 0, "resumo_decisao": "Modo Bypass (Sem API Key)"}
 
         try:
             lote_json_string = json.dumps(lote_dados, indent=2)
-            prompt_texto = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {moeda_atual}\n- Prejuízo Atual: {prejuizo_atual:.2f}%\n\nLOTE DE DADOS DISPONÍVEIS PARA SWAP:\n{lote_json_string}\n\nJulgue com extrema severidade e retorne a decisão em JSON."
+            prompt_texto = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {moeda_atual}\n- Prejuízo Atual: {prejuizo_atual:.2f}%\n- Tempo na Operação: {tempo_preso_horas:.1f} horas\n\nLOTE DE DADOS DISPONÍVEIS PARA SWAP:\n{lote_json_string}\n\nJulgue aplicando as Regras do Tribunal de Swap e retorne a decisão em JSON."
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
