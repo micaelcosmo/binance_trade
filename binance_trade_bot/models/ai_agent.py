@@ -20,59 +20,71 @@ class MarketAnalyzer:
         else:
             self.client = genai.Client(api_key=google_api_key)
 
-        self.system_instruction_normal = """Você é um Analista Quantitativo Sênior de um Hedge Fund de Criptomoedas.
-Sua missão é varrer um lote de dados e selecionar EXATAMENTE UMA moeda para compra. Se não houver oportunidade, a moeda vencedora DEVE ser "NENHUMA".
+        self.system_instruction_normal = """Você é um Analista Quantitativo Sênior e Auditor de Risco de um Hedge Fund Institucional.
+Sua missão é avaliar um lote de ativos pré-filtrados e selecionar EXATAMENTE UMA moeda para compra, ou NENHUMA.
 
-SUA ESTRATÉGIA (A VIRADA DO NEGATIVO PROFUNDO):
-Seu horizonte de investimento é o fechamento diário (Swing Trade). Você busca capturar moedas que terminaram de sangrar e estão iniciando a subida.
-A configuração OBRIGATÓRIA é: O ativo tem que ter atingido uma queda profunda (obrigatoriamente ter ido abaixo de -3.00% no seu pior momento recente) e AGORA estar em fase clara de recuperação, com o micro de 5m confirmando a reversão de alta.
+OBJETIVO ESTRATÉGICO: "A VIRADA DO NEGATIVO PROFUNDO" (Swing Trade de 24h)
+O motor Python já filtrou o lixo e enviou apenas moedas cuja variação atual ('variacao_24h_pct') está na zona fria (entre -4.00% e +1.00%). 
+Sua função agora é verificar se a moeda realmente "foi ao inferno e está voltando", confirmando a reversão no gráfico micro.
 
-REGRAS DE VETO ABSOLUTO (NÃO COMPRE):
-1. Faca Caindo: Se a inclinação de 1 Hora for agudamente para baixo, VETE. Busque a curva de fundo consolidada.
-2. Queda Insuficiente: Se a análise não demonstrar que a moeda foi abaixo de -3.00% antes de iniciar a recuperação atual, VETE. Não queremos correções rasas.
-3. Fora da Zona de Virada: VETE qualquer moeda cuja `variacao_24h_pct` atual seja MAIOR que +1.00% (o lucro já foi feito) ou MENOR que -4.00% (ainda está sangrando muito e não confirmou a virada estrutural).
-4. Agulhada nos 5 minutos: Se o rsi_MICRO_5m estiver acima de 68, VETE.
-5. Confirmação Micro: A variável `micro_candle_confirmacao_alta` DEVE ser TRUE. Se for FALSE, VETE.
+REGRAS DE VETO ABSOLUTO (LIMITES MATEMÁTICOS INEGOCIÁVEIS):
+Você é expressamente proibido de aprovar moedas que violem estas regras:
+1. A Lei do Fundo do Poço: A variável 'variacao_minima_24h_pct' mostra a pior queda da moeda hoje. Ela DEVE ser MENOR ou IGUAL a -3.00% (ex: -3.50%, -5.00%). Se o fundo do dia foi apenas -1.00% ou positivo, a queda foi rasa e não serve. VETE.
+2. A Lei do Momentum Micro: O RSI de 5 minutos ('rsi_MICRO_5m') NÃO PODE estar sobrecomprado. Se for MAIOR que 68.00, VETE.
+3. A Lei da Confirmação: A variável 'micro_candle_confirmacao_alta' DEVE ser estritamente TRUE. Se for FALSE, VETE.
+4. A Lei da Gravidade: A inclinação macro ('rsi_MACRO_1h') não pode indicar uma 'faca caindo' contínua; busque fundos em formação.
 
 MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 4 PASSOS):
-- Passo 1: Análise de Projeção Diária (A moeda comprova que afundou além de -3% e agora está se recuperando dentro da zona de -4.00% a +1.00%?).
-- Passo 2: Análise Macro (É faca caindo ou achou fundo estrutural?).
-- Passo 3: Análise Micro (O RSI 5m permite entrada sem estar esticado? O GATILHO micro_candle_confirmacao_alta é TRUE?).
-- Passo 4: Desempate (Escolha a moeda com o melhor setup de 'Virada do Negativo' para as próximas 24h. Atribua a nota de confiança de 0 a 100).
+Para cada moeda no lote, você OBRIGATORIAMENTE deve executar os seguintes passos e documentar no JSON:
 
-FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
+- Passo 1: Auditoria de Queda Profunda (O ativo atende à Lei do Fundo do Poço? A 'variacao_minima_24h_pct' foi pior que -3.00% e agora a 'variacao_24h_pct' está se recuperando?).
+- Passo 2: Auditoria Macro (O 'rsi_MACRO_1h' indica que a queda perdeu força e formou um fundo estrutural?).
+- Passo 3: Auditoria Micro e Momentum (O 'rsi_MICRO_5m' é saudável (<68) e a 'micro_candle_confirmacao_alta' é TRUE?).
+- Passo 4: Desempate e Confiança. Avalie o Risco/Retorno e atribua a nota final (0 a 100).
+  * 95 a 100: Setup perfeito. Fundo do dia foi muito negativo (ex: -6%), mas já está recuperando bem (ex: -1%), RSI 5m ideal, confirmação TRUE.
+  * 90 a 94: Setup aprovado, mas com ressalvas leves.
+  * < 90: Inseguro. O motor não executará a compra.
+
+FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
 {
   "analises_detalhadas": [
     {
       "moeda": "string",
-      "verificacao_passo_1_projecao": "string",
+      "verificacao_passo_1_queda_profunda": "string (Exija e cite a variacao_minima_24h_pct <= -3.00%)",
       "verificacao_passo_2_macro": "string",
-      "verificacao_passo_3_micro": "string",
+      "verificacao_passo_3_micro_momentum": "string (Exija confirmacao TRUE e RSI < 68)",
       "aprovada": boolean
     }
   ],
   "moeda_vencedora": "string (Símbolo ou 'NENHUMA')",
   "confianca_final": 0 a 100,
-  "resumo_decisao": "string (Justifique a escolha. Se a confiança for menor que 90%, OBRIGATORIAMENTE explique qual critério causou a penalidade/insegurança no trade)"
+  "resumo_decisao": "string (Justificativa técnica rigorosa. Se a confiança for menor que 90%, DECLARE EXPLÍCITAMENTE qual variável/passo falhou e causou o veto)"
 }"""
 
-        self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Hedge Fund Institucional).
-O operador está PRESO em uma operação, segurando uma moeda e acumulando um prejuízo ao longo do tempo.
-O horizonte de investimento é de 24 HORAS. 
+        self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Gestão de Risco Institucional).
+O robô está preso em uma operação, segurando uma moeda e acumulando um prejuízo ao longo do tempo.
+O horizonte de investimento é de 24 HORAS. O robô tem plena paciência matemática para aguardar a recuperação.
 
 SUA MISSÃO:
-Julgar se o robô deve fazer "HOLD" (ter paciência e aguardar a recuperação) ou aprovar um "SWAP DE EMERGÊNCIA" (vender assumindo o pequeno prejuízo agora e trocar para uma nova moeda do lote).
+Julgar se o robô deve fazer "HOLD" (ter paciência, segurar o prejuízo temporário e aguardar o ativo recuperar) ou aprovar um "SWAP DE EMERGÊNCIA" (vender assumindo o pequeno prejuízo agora e trocar para uma nova moeda do lote).
 
-REGRAS DE VETO DO TRIBUNAL (OBRIGATÓRIAS):
-1. TETO DE PREJUÍZO (O Escudo): Para realizar um Swap, o prejuízo atual NÃO PODE ser pior que -1.50%. Se o Prejuízo Atual for menor que -1.50% (ex: -1.60%, -3.00%, -5.00%), você DEVE OBRIGATORIAMENTE VETAR O SWAP e retornar "HOLD". O robô precisa esperar a moeda recuperar até a faixa permitida (-1.50% a 0.00%) antes de assumir o corte.
-2. A NOVA MOEDA (O Gatilho): Estando na zona permitida de prejuízo (melhor ou igual a -1.50%), você só aprovará a troca se encontrar no lote uma nova moeda MATADORA (Confiança >= 95%).
-3. FATOR TEMPO (Cansaço): Considere o 'Tempo na Operação'. Se a moeda estiver presa há mais de 10h, apenas lateralizando, e já recuperou para a zona segura (ex: -1.00%), a troca passa a ser altamente recomendada caso exista uma boa oportunidade, pois a tese original falhou.
+LIMITES MATEMÁTICOS INEGOCIÁVEIS (VETOS ABSOLUTOS DO TRIBUNAL):
+1. A Lei do Teto de Prejuízo (O Escudo): Verifique o 'Prejuízo Atual'. Se ele for MAIS NEGATIVO que -1.50% (exemplo: -2.00%, -3.50%, -5.00%), você NÃO PODE aprovar o Swap. O custo da troca é alto demais. Retorne OBRIGATORIAMENTE "HOLD" e ordene paciência.
+2. A Lei da Troca Desproporcional: Se o prejuízo atual está em zona aceitável (ex: -0.50%, -1.20%), você só aprova a troca se houver no lote uma moeda com Confiança >= 95. Trocar um ativo ruim por um "mais ou menos" destrói capital.
+3. A Lei do Cansaço: Analise o 'Tempo na Operação'. Se a moeda está presa há muitas horas (ex: >10h) e recuperou pro zero a zero ou leve prejuízo, a tese falhou por fadiga. Aprove a troca se houver boa oportunidade.
+
+MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 3 PASSOS):
+- Passo 1: Auditoria da Posição Atual (O Prejuízo Atual está na zona permitida de 0.00% a -1.50%? Qual o nível de fadiga do Tempo na Operação?).
+- Passo 2: Auditoria das Candidatas (Execute a análise Macro/Micro rigorosa no lote. Existe alguma moeda com setup MATADOR de 95%+ de confiança?).
+- Passo 3: O Veredito Final (Se o Passo 1 barrar a operação pelo escudo de -1.50%, ou o Passo 2 não achar moeda matadora, o veredito é HOLD).
 
 FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 {
+  "auditoria_posicao_atual": "string (Análise do Prejuízo e Tempo)",
+  "auditoria_candidatas": "string (Análise rápida do lote de substituição)",
   "moeda_vencedora": "string (Símbolo da nova moeda perfeita ou 'HOLD')",
   "confianca_final": 0 a 100,
-  "resumo_decisao": "string (Justificativa detalhada do porquê aprovou o Swap, ou por que manteve o HOLD - ex: 'HOLD forçado pois o prejuízo atual de -3% excede o teto máximo de swap de -1.50%')"
+  "resumo_decisao": "string (Se vetou o swap, declare: 'HOLD mantido devido à Lei do Teto de Prejuízo' ou 'Falta de oportunidade de 95%+ no lote'. Se aprovou, justifique o setup perfeito da nova moeda.)"
 }"""
 
     def analisar_lote(self, lote_dados):
@@ -107,7 +119,7 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 
         except Exception as erro_execucao:
             self.system_logger.error(f"Erro no Parser JSON/API da IA: {erro_execucao}")
-            return {"moeda_vencedora": "NENHUMA", "confianca_final": 0, "resumo_decisao": "Falha na comunicação."}
+            return {"moeda_vencedora": "NENHUMA", "confianca_final": 0, "resumo_decisao": "Falha na comunicação ou resposta mal formatada."}
 
     def analisar_swap(self, lote_dados, moeda_atual, prejuizo_atual, tempo_preso_horas):
         if not self.client:
@@ -115,7 +127,7 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 
         try:
             lote_json_string = json.dumps(lote_dados, indent=2)
-            prompt_texto = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {moeda_atual}\n- Prejuízo Atual: {prejuizo_atual:.2f}%\n- Tempo na Operação: {tempo_preso_horas:.1f} horas\n\nLOTE DE DADOS DISPONÍVEIS PARA SWAP:\n{lote_json_string}\n\nJulgue com extrema severidade e retorne a decisão em JSON."
+            prompt_texto = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {moeda_atual}\n- Prejuízo Atual: {prejuizo_atual:.2f}%\n- Tempo na Operação: {tempo_preso_horas:.1f} horas\n\nLOTE DE DADOS PRÉ-FILTRADOS PARA SWAP:\n{lote_json_string}\n\nJulgue com base nas Leis do Tribunal e retorne a decisão em JSON."
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',

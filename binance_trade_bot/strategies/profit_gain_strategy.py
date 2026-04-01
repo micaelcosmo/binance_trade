@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.9")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.11")
         self._write_json_ui()
 
     def scout(self):
@@ -246,14 +246,22 @@ class Strategy:
             if pandas.isna(rsi_5m): rsi_5m = 50.0
             
             micro_candle_fecha_em_alta = bool(ultima_linha_5m['close'] > ultima_linha_5m['open'])
+            
+            # Cálculo de Queda Real vs Distância
             maxima_recente = float(df_1h['high'].tail(24).max())
             queda_da_maxima_pct = ((maxima_recente - preco_atual) / maxima_recente) * 100 if maxima_recente > 0 else 0.0
             
             try:
                 ticker_info = self.binance_client.get_ticker(symbol=target_symbol)
                 variacao_24h = float(ticker_info['priceChangePercent'])
+                open_price = float(ticker_info['openPrice'])
+                low_price = float(ticker_info['lowPrice'])
+                
+                # V3.2.12: O verdadeiro Fundo do Poço Diário
+                variacao_24h_minima = ((low_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
             except Exception:
                 variacao_24h = 0.0
+                variacao_24h_minima = 0.0
 
             stop_dinamico = ((atr_1h * 3) / preco_atual) * 100 if preco_atual > 0 else self.stop_loss_percentage_base
             stop_dinamico = max(5.0, min(stop_dinamico, 10.0)) 
@@ -263,8 +271,9 @@ class Strategy:
                 "preco_atual": preco_atual,
                 "rsi_MACRO_1h": round(rsi_1h, 2),
                 "rsi_MICRO_5m": round(rsi_5m, 2), 
-                "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2),
+                "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2), # Mantido para contexto
                 "variacao_24h_pct": f"{variacao_24h:+.2f}%",
+                "variacao_minima_24h_pct": f"{variacao_24h_minima:+.2f}%", # Novo Gatilho!
                 "micro_candle_confirmacao_alta": micro_candle_fecha_em_alta,
                 "sugestao_stop_loss_atr": round(stop_dinamico, 2)
             }
@@ -347,9 +356,17 @@ class Strategy:
             if dados_enriquecidos:
                 moeda_alin = f"{check_coin: <7}"
                 texto_linha_lateral = f"💼 {moeda_alin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
-                lote_dados_ia.append(dados_enriquecidos)
+                
                 if is_uptrend: aptas_temporary_list.append(texto_linha_lateral)
                 else: geladeira_temporary_list.append(texto_linha_lateral)
+
+                try:
+                    var_str = str(dados_enriquecidos['variacao_24h_pct']).replace('%', '').replace('+', '')
+                    var_float = float(var_str)
+                    if -4.00 <= var_float <= 1.00:
+                        lote_dados_ia.append(dados_enriquecidos)
+                except Exception:
+                    pass
 
         self.aptas_cache = sorted(aptas_temporary_list)
         self.geladeira_cache = sorted(geladeira_temporary_list)
@@ -496,7 +513,15 @@ class Strategy:
                         else:
                             self.system_logger.info("⚖️ O ativo está na zona de swap segura (>-1.5%). Convocando o TRIBUNAL DE SWAP da IA...")
                             
-                            lote_dados_swap = [d for d in lote_dados_ia if d['moeda'] != self.moeda_atual_operacao]
+                            lote_dados_swap = []
+                            for d in lote_dados_ia:
+                                if d['moeda'] != self.moeda_atual_operacao:
+                                    try:
+                                        var_str = str(d['variacao_24h_pct']).replace('%', '').replace('+', '')
+                                        var_float = float(var_str)
+                                        if -4.00 <= var_float <= 1.00:
+                                            lote_dados_swap.append(d)
+                                    except Exception: pass
                             
                             if lote_dados_swap:
                                 analise_swap = self.ai_agent.analisar_swap(lote_dados_swap, self.moeda_atual_operacao, drop_percentage, tempo_preso_horas)
