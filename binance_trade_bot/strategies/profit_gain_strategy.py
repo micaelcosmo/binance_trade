@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.11")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.12 (UI Fix)")
         self._write_json_ui()
 
     def scout(self):
@@ -246,8 +246,6 @@ class Strategy:
             if pandas.isna(rsi_5m): rsi_5m = 50.0
             
             micro_candle_fecha_em_alta = bool(ultima_linha_5m['close'] > ultima_linha_5m['open'])
-            
-            # Cálculo de Queda Real vs Distância
             maxima_recente = float(df_1h['high'].tail(24).max())
             queda_da_maxima_pct = ((maxima_recente - preco_atual) / maxima_recente) * 100 if maxima_recente > 0 else 0.0
             
@@ -256,8 +254,6 @@ class Strategy:
                 variacao_24h = float(ticker_info['priceChangePercent'])
                 open_price = float(ticker_info['openPrice'])
                 low_price = float(ticker_info['lowPrice'])
-                
-                # V3.2.12: O verdadeiro Fundo do Poço Diário
                 variacao_24h_minima = ((low_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
             except Exception:
                 variacao_24h = 0.0
@@ -271,9 +267,9 @@ class Strategy:
                 "preco_atual": preco_atual,
                 "rsi_MACRO_1h": round(rsi_1h, 2),
                 "rsi_MICRO_5m": round(rsi_5m, 2), 
-                "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2), # Mantido para contexto
+                "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2),
                 "variacao_24h_pct": f"{variacao_24h:+.2f}%",
-                "variacao_minima_24h_pct": f"{variacao_24h_minima:+.2f}%", # Novo Gatilho!
+                "variacao_minima_24h_pct": f"{variacao_24h_minima:+.2f}%",
                 "micro_candle_confirmacao_alta": micro_candle_fecha_em_alta,
                 "sugestao_stop_loss_atr": round(stop_dinamico, 2)
             }
@@ -577,8 +573,7 @@ class Strategy:
         else:
             tempo_atual = time.time()
             if tempo_atual < self.ai_cooldown_until:
-                minutos_restantes = int((self.ai_cooldown_until - tempo_atual) / 60)
-                self.system_logger.info(f"⏳ Bot em Cooldown. Aguardando {minutos_restantes}m para acordar...")
+                # O status do painel vai ser controlado via json
                 return
 
             if lote_dados_ia:
@@ -623,6 +618,14 @@ class Strategy:
             
         texto_metas = f" | 📅 Diário: {self.lucro_diario_pct:+.2f}% ({self.trades_no_dia}/{self.max_trades_diario} Trades)"
         
+        agora = time.time()
+        if self.em_operacao:
+            status_texto = "Em Operação (Alvo/Stop)"
+        elif agora < self.ai_cooldown_until:
+            status_texto = "Aguardando próxima análise"
+        else:
+            status_texto = "Mapeando Tendências"
+        
         if self.em_operacao:
             stop_atual_exibir = self.stop_loss_dinamico_ativo if self.stop_loss_dinamico_ativo > 0 else self.stop_loss_percentage_base
             if self.peak_profit_percentage >= self.trailing_activation_percentage:
@@ -637,7 +640,8 @@ class Strategy:
             
         status_data_dictionary = {
             "coin": self.moeda_atual_operacao if self.em_operacao else self.base_coin,
-            "status": "Em Operação (Alvo/Stop)" if self.em_operacao else "Mapeando Tendências",
+            "status": status_texto,
+            "cooldown_until": self.ai_cooldown_until,
             "btc_price": btc_price_value,
             "btc_change": btc_change_value,
             "buy_price": self.preco_compra_ativo,
