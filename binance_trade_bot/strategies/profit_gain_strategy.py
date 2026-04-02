@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.12 (UI Fix)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.14 (Parameter Tuning)")
         self._write_json_ui()
 
     def scout(self):
@@ -322,6 +322,14 @@ class Strategy:
             self.system_logger.error(f"❌ ERRO CRÍTICO na corretora: {erro_compra}")
             return False
 
+    def _imprimir_parecer_ia(self, resumo_texto):
+        linhas = str(resumo_texto).split('\n')
+        if not linhas: return
+        self.system_logger.info(f"🧠 Parecer da IA    : {linhas[0].strip()}")
+        for linha in linhas[1:]:
+            if linha.strip():
+                self.system_logger.info(f"                      {linha.strip()}")
+
     def scan_market(self):
         if not self.em_operacao:
             if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
@@ -359,7 +367,8 @@ class Strategy:
                 try:
                     var_str = str(dados_enriquecidos['variacao_24h_pct']).replace('%', '').replace('+', '')
                     var_float = float(var_str)
-                    if -4.00 <= var_float <= 1.00:
+                    # V3.2.14: Filtro de Titânio ajustado para -4.00% a -0.50%
+                    if -4.00 <= var_float <= -0.50:
                         lote_dados_ia.append(dados_enriquecidos)
                 except Exception:
                     pass
@@ -502,12 +511,13 @@ class Strategy:
                 else:
                     if drop_percentage < -0.15 and cooldown_restante_segundos <= 0:
                         
-                        if drop_percentage < -1.50:
-                            self.system_logger.info(f"🛡️ TRIBUNAL BLOQUEADO no código Python: Prejuízo atual ({drop_percentage:.2f}%) excede o limite de -1.50%. HOLD obrigatório até recuperar.")
+                        # V3.2.14: Ajuste do teto de swap para -2.50%
+                        if drop_percentage < -2.50:
+                            self.system_logger.info(f"🛡️ TRIBUNAL BLOQUEADO no código Python: Prejuízo atual ({drop_percentage:.2f}%) excede o limite de -2.50%. HOLD obrigatório até recuperar.")
                             self.last_switch_time = time.time()
                             self._save_state()
                         else:
-                            self.system_logger.info("⚖️ O ativo está na zona de swap segura (>-1.5%). Convocando o TRIBUNAL DE SWAP da IA...")
+                            self.system_logger.info("⚖️ O ativo está na zona de swap segura (>-2.50%). Convocando o TRIBUNAL DE SWAP da IA...")
                             
                             lote_dados_swap = []
                             for d in lote_dados_ia:
@@ -515,7 +525,8 @@ class Strategy:
                                     try:
                                         var_str = str(d['variacao_24h_pct']).replace('%', '').replace('+', '')
                                         var_float = float(var_str)
-                                        if -4.00 <= var_float <= 1.00:
+                                        # V3.2.14: Filtro de Titânio do lote de Swap também atualizado
+                                        if -4.00 <= var_float <= -0.50:
                                             lote_dados_swap.append(d)
                                     except Exception: pass
                             
@@ -534,6 +545,7 @@ class Strategy:
                                         self.system_logger.warning(f"👑 TRIBUNAL APROVOU SWAP! Assumindo prejuízo para migrar com {confianca}% de chance para {nova_moeda_promissora}!")
                                         
                                         self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n⚖️ TRIBUNAL DE SWAP APROVADO\n🏆 Vencedora: {nova_moeda_promissora} ({confianca}%)\n\n🧠 Parecer:\n{resumo_decisao_swap}"
+                                        self._imprimir_parecer_ia(resumo_decisao_swap)
                                         
                                         self._desbloquear_saldo(market_symbol) 
                                         saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
@@ -564,6 +576,7 @@ class Strategy:
                                 else:
                                     self.system_logger.info(f"🛡️ TRIBUNAL ORDENOU HOLD. O mercado não tem certeza de 95%+. Paciência com a moeda atual.")
                                     self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛡️ TRIBUNAL DE SWAP RECUSADO (HOLD)\n⚖️ Veredito: Nenhuma moeda com 95%+ de chance detectada. Segurando {self.moeda_atual_operacao}.\n\n🧠 Parecer:\n{resumo_decisao_swap}"
+                                    self._imprimir_parecer_ia(resumo_decisao_swap)
                                     self.last_switch_time = time.time() 
                                     self._save_state()
 
@@ -573,7 +586,6 @@ class Strategy:
         else:
             tempo_atual = time.time()
             if tempo_atual < self.ai_cooldown_until:
-                # O status do painel vai ser controlado via json
                 return
 
             if lote_dados_ia:
@@ -587,13 +599,13 @@ class Strategy:
                 self.system_logger.info("================ RELATÓRIO DA HORA ===================")
                 self.system_logger.info(f"📋 Ativos Analisados : {len(lote_dados_ia)} moedas")
                 self.system_logger.info(f"🏆 Vencedor Avaliado: {moeda_vencedora} (Confiança: {confianca_final}%)")
-                self.system_logger.info(f"🧠 Parecer da IA    : {resumo_decisao}")
+                self._imprimir_parecer_ia(resumo_decisao)
                 self.system_logger.info("======================================================")
 
                 self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🏆 Vencedora Avaliada: {moeda_vencedora} ({confianca_final}%)\n\n🧠 Parecer Detalhado Institucional:\n{resumo_decisao}"
 
                 if moeda_vencedora != "NENHUMA" and confianca_final >= 90:
-                    self.ultimo_veredito_ia = f"✅ COMPRA {moeda_vencedora} ({confianca_final}%): {resumo_decisao}"
+                    self.ultimo_veredito_ia = f"✅ COMPRA {moeda_vencedora} ({confianca_final}%): {resumo_decisao.splitlines()[0]}"
                     
                     item_escolhido = next((item for item in lote_dados_ia if item['moeda'] == moeda_vencedora), None)
                     if item_escolhido:
@@ -605,7 +617,8 @@ class Strategy:
                             self.em_operacao = True
                             self.moeda_atual_operacao = moeda_vencedora
                 else:
-                    self.ultimo_veredito_ia = f"🛑 MERCADO VETADO: {resumo_decisao}"
+                    primeira_linha = resumo_decisao.split('\n')[0] if resumo_decisao else "Sem motivo."
+                    self.ultimo_veredito_ia = f"🛑 MERCADO VETADO: {primeira_linha}"
                     self.ai_cooldown_until = time.time() + 3600
 
     def _write_json_ui(self):
