@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.14 (Parameter Tuning)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.15 (Data Enrichment)")
         self._write_json_ui()
 
     def scout(self):
@@ -249,15 +249,29 @@ class Strategy:
             maxima_recente = float(df_1h['high'].tail(24).max())
             queda_da_maxima_pct = ((maxima_recente - preco_atual) / maxima_recente) * 100 if maxima_recente > 0 else 0.0
             
+            # V3.2.15: Cálculo de Anomalia de Volume no Micro (5m)
+            # Verifica se o volume do candle atual é maior que a média dos últimos 10 candles
+            try:
+                media_volume_10_candles = df_5m['vol'].tail(11).head(10).mean()
+                volume_candle_atual = df_5m['vol'].iloc[-1]
+                volume_micro_acima_media = bool(volume_candle_atual > media_volume_10_candles)
+            except Exception:
+                volume_micro_acima_media = False
+
+            # V3.2.15: Distância percentual do preço atual para a EMA 21 de 1H (Elasticidade)
+            distancia_ema21_1h_pct = ((preco_atual - ema21_1h) / ema21_1h) * 100 if ema21_1h > 0 else 0.0
+            
             try:
                 ticker_info = self.binance_client.get_ticker(symbol=target_symbol)
                 variacao_24h = float(ticker_info['priceChangePercent'])
                 open_price = float(ticker_info['openPrice'])
                 low_price = float(ticker_info['lowPrice'])
                 variacao_24h_minima = ((low_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
+                volume_24h_usdt = float(ticker_info.get('quoteVolume', 0.0)) # V3.2.15: Liquidez diária
             except Exception:
                 variacao_24h = 0.0
                 variacao_24h_minima = 0.0
+                volume_24h_usdt = 0.0
 
             stop_dinamico = ((atr_1h * 3) / preco_atual) * 100 if preco_atual > 0 else self.stop_loss_percentage_base
             stop_dinamico = max(5.0, min(stop_dinamico, 10.0)) 
@@ -271,6 +285,9 @@ class Strategy:
                 "variacao_24h_pct": f"{variacao_24h:+.2f}%",
                 "variacao_minima_24h_pct": f"{variacao_24h_minima:+.2f}%",
                 "micro_candle_confirmacao_alta": micro_candle_fecha_em_alta,
+                "volume_24h_usdt": round(volume_24h_usdt, 2),
+                "volume_micro_acima_media": volume_micro_acima_media,
+                "distancia_ema21_1h_pct": f"{distancia_ema21_1h_pct:+.2f}%",
                 "sugestao_stop_loss_atr": round(stop_dinamico, 2)
             }
             
@@ -367,7 +384,6 @@ class Strategy:
                 try:
                     var_str = str(dados_enriquecidos['variacao_24h_pct']).replace('%', '').replace('+', '')
                     var_float = float(var_str)
-                    # V3.2.14: Filtro de Titânio ajustado para -4.00% a -0.50%
                     if -4.00 <= var_float <= -0.50:
                         lote_dados_ia.append(dados_enriquecidos)
                 except Exception:
@@ -511,7 +527,6 @@ class Strategy:
                 else:
                     if drop_percentage < -0.15 and cooldown_restante_segundos <= 0:
                         
-                        # V3.2.14: Ajuste do teto de swap para -2.50%
                         if drop_percentage < -2.50:
                             self.system_logger.info(f"🛡️ TRIBUNAL BLOQUEADO no código Python: Prejuízo atual ({drop_percentage:.2f}%) excede o limite de -2.50%. HOLD obrigatório até recuperar.")
                             self.last_switch_time = time.time()
@@ -525,7 +540,6 @@ class Strategy:
                                     try:
                                         var_str = str(d['variacao_24h_pct']).replace('%', '').replace('+', '')
                                         var_float = float(var_str)
-                                        # V3.2.14: Filtro de Titânio do lote de Swap também atualizado
                                         if -4.00 <= var_float <= -0.50:
                                             lote_dados_swap.append(d)
                                     except Exception: pass

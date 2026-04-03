@@ -24,8 +24,8 @@ class MarketAnalyzer:
 Sua missão é avaliar um lote de ativos pré-filtrados e selecionar EXATAMENTE UMA moeda para compra, ou NENHUMA.
 
 OBJETIVO ESTRATÉGICO: "A VIRADA DO NEGATIVO PROFUNDO" (Swing Trade de 24h)
-O motor Python já filtrou o lixo e enviou apenas moedas cuja 'variacao_24h_pct' está na zona fria e de recuperação (estritamente entre -4.00% e -0.50%). 
-Sua função agora é encontrar a agulha no palheiro: A moeda que sofreu um sell-off violento, encontrou o fundo do poço e ACABOU de dar o sinal claro de que está revertendo e subindo em direção ao positivo.
+O motor Python já filtrou o lixo e enviou apenas moedas cuja 'variacao_24h_pct' está na zona fria (entre -4.00% e -0.50%). 
+Sua função agora é encontrar a agulha no palheiro: A moeda que sofreu um sell-off violento, encontrou o fundo do poço e ACABOU de dar o sinal claro de que está revertendo com liquidez e volume institucionais.
 
 REGRAS DE VETO ABSOLUTO (LIMITES MATEMÁTICOS INEGOCIÁVEIS):
 Você é expressamente proibido de aprovar moedas que violem estas regras:
@@ -33,16 +33,17 @@ Você é expressamente proibido de aprovar moedas que violem estas regras:
 2. A Lei do Momentum Micro: O RSI de 5 minutos ('rsi_MICRO_5m') NÃO PODE estar sobrecomprado. Se for MAIOR que 68.00, VETE.
 3. A Lei da Confirmação: A variável 'micro_candle_confirmacao_alta' DEVE ser estritamente TRUE. Se for FALSE, VETE.
 4. A Lei da Gravidade: A inclinação macro não pode indicar uma 'faca caindo' contínua; busque fundos em formação.
+5. A Lei da Liquidez: A variável 'volume_24h_usdt' DEVE ser maior que 250000. Se for menor que isso, o ativo não tem liquidez segura para entrada institucional. VETE.
 
 MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 4 PASSOS):
 Para cada moeda no lote, você OBRIGATORIAMENTE deve executar os seguintes passos e documentar no JSON:
 
-- Passo 1: Auditoria de Queda Profunda (O ativo atende à Lei do Fundo? A variacao_minima_24h_pct é efetivamente <= -3.00% e ela está voltando para o positivo?).
-- Passo 2: Auditoria Macro (O 'rsi_MACRO_1h' indica que a queda perdeu força e formou um fundo estrutural?).
-- Passo 3: Auditoria Micro e Momentum (O 'rsi_MICRO_5m' é saudável (<68) e a 'micro_candle_confirmacao_alta' é TRUE?).
-- Passo 4: Desempate e Confiança. Avalie o Risco/Retorno e atribua a nota final (0 a 100).
-  * 95 a 100: Setup perfeito. Fundo muito negativo, recuperando de forma clara, RSI 5m ideal, confirmação TRUE.
-  * 90 a 94: Setup aprovado, mas com ressalvas leves.
+- Passo 1: Auditoria de Queda e Liquidez (O ativo atende à Lei do Fundo e à Lei da Liquidez? O 'volume_24h_usdt' é robusto?).
+- Passo 2: Auditoria Macro (O 'rsi_MACRO_1h' indica fundo estrutural?).
+- Passo 3: Auditoria Micro e Volume (O 'rsi_MICRO_5m' é saudável? A 'micro_candle_confirmacao_alta' é TRUE? A 'volume_micro_acima_media' corrobora o interesse de baleias na reversão?).
+- Passo 4: Desempate e Confiança. Avalie o Risco/Retorno usando a 'distancia_ema21_1h_pct' (quanto mais negativo, maior o potencial elástico) e atribua a nota final (0 a 100).
+  * 95 a 100: Setup perfeito. Fundo muito negativo, volume micro acima da média confirmando a entrada, distanciamento da EMA favorável.
+  * 90 a 94: Setup aprovado, mas sem anomalia de volume a favor ou com distanciamento menor da EMA.
   * < 90: Inseguro. O motor não executará a compra.
 
 FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
@@ -50,15 +51,15 @@ FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
   "analises_detalhadas": [
     {
       "moeda": "string",
-      "verificacao_passo_1_queda_profunda": "string (Exija e cite a variacao_minima_24h_pct <= -3.00%)",
+      "verificacao_passo_1_queda_e_liquidez": "string (Exija variacao_minima <= -3.00% e volume_usdt > 250k)",
       "verificacao_passo_2_macro": "string",
-      "verificacao_passo_3_micro_momentum": "string (Exija confirmacao TRUE e RSI < 68)",
+      "verificacao_passo_3_micro_volume": "string (Analise RSI, confirmacao e volume_micro_acima_media)",
       "aprovada": boolean
     }
   ],
   "moeda_vencedora": "string (Símbolo ou 'NENHUMA')",
   "confianca_final": 0 a 100,
-  "resumo_decisao": "string (OBRIGATÓRIO formatar com quebras de linha '\\n' e tópicos. Exemplo: '🎯 Veredito: ... \\n📉 Fundo: ... \\n⏱️ Momentum: ... \\n⚠️ Motivo do Veto (se houver): ...')"
+  "resumo_decisao": "string (OBRIGATÓRIO formatar com quebras de linha '\\n' e tópicos. Exemplo: '🎯 Veredito: ... \\n📉 Fundo & Liquidez: ... \\n📊 Elasticidade EMA: ... \\n⚠️ Motivo do Veto: ...')"
 }"""
 
         self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Gestão de Risco Institucional).
@@ -75,13 +76,13 @@ LIMITES MATEMÁTICOS INEGOCIÁVEIS (VETOS ABSOLUTOS DO TRIBUNAL):
 
 MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 3 PASSOS):
 - Passo 1: Auditoria da Posição Atual (O Prejuízo Atual está na zona permitida de 0.00% a -2.50%? Qual o nível de fadiga do Tempo na Operação?).
-- Passo 2: Auditoria das Candidatas (Execute a análise Macro/Micro rigorosa no lote. Existe alguma moeda com setup MATADOR de 95%+ de confiança?).
+- Passo 2: Auditoria das Candidatas (Execute a análise Macro/Micro rigorosa no lote, validando volume e distância da EMA. Existe alguma moeda com setup MATADOR de 95%+ de confiança?).
 - Passo 3: O Veredito Final (Se o Passo 1 barrar a operação pelo escudo de -2.50%, ou o Passo 2 não achar moeda matadora, o veredito é HOLD).
 
 FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON, SEM TEXTOS EXTRAS):
 {
   "auditoria_posicao_atual": "string (Análise do Prejuízo e Tempo)",
-  "auditoria_candidatas": "string (Análise rápida do lote de substituição)",
+  "auditoria_candidatas": "string (Análise de liquidez, elasticidade EMA e volume do lote de substituição)",
   "moeda_vencedora": "string (Símbolo da nova moeda perfeita ou 'HOLD')",
   "confianca_final": 0 a 100,
   "resumo_decisao": "string (OBRIGATÓRIO formatar com quebras de linha '\\n'. Exemplo: '⚖️ Veredito: ... \\n🛡️ Posição Atual: ... \\n🎯 Candidatas: ...')"
