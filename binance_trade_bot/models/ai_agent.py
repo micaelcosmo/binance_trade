@@ -33,27 +33,29 @@ Você é expressamente proibido de aprovar moedas que violem estas regras:
 2. A Lei do Momentum Micro: O RSI de 5 minutos ('rsi_MICRO_5m') NÃO PODE estar sobrecomprado. Se for MAIOR que 68.00, VETE.
 3. A Lei da Confirmação: A variável 'micro_candle_confirmacao_alta' DEVE ser estritamente TRUE. Se for FALSE, VETE.
 4. A Lei da Gravidade: A inclinação macro não pode indicar uma 'faca caindo' contínua; busque fundos em formação.
-5. A Lei da Liquidez: A variável 'volume_24h_usdt' DEVE ser maior que 250000. Se for menor que isso, o ativo não tem liquidez segura para entrada institucional. VETE.
+5. A Lei da Liquidez: A variável 'volume_24h_usdt' DEVE ser maior que 250000. Se for menor que isso, VETE.
+6. A Lei do Elástico (Fim da Festa): A 'distancia_ema21_1h_pct' DEVE ser estritamente MAIS NEGATIVA que -1.00% (ex: -1.50%, -4.00%). Se estiver muito próxima de zero ou positiva (ex: -0.06%, -0.50%, +1.00%), significa que o preço já recuperou e bateu na média. O repique acabou. VETE.
 
 MÉTODO DE ANÁLISE OBRIGATÓRIO (CHAIN OF THOUGHT EM 4 PASSOS):
 Para cada moeda no lote, você OBRIGATORIAMENTE deve executar os seguintes passos e documentar no JSON:
 
-- Passo 1: Auditoria de Queda e Liquidez (O ativo atende à Lei do Fundo e à Lei da Liquidez? O 'volume_24h_usdt' é robusto?).
-- Passo 2: Auditoria Macro (O 'rsi_MACRO_1h' indica fundo estrutural?).
-- Passo 3: Auditoria Micro e Volume (O 'rsi_MICRO_5m' é saudável? A 'micro_candle_confirmacao_alta' é TRUE? A 'volume_micro_acima_media' corrobora o interesse de baleias na reversão?).
-- Passo 4: Desempate e Confiança. Avalie o Risco/Retorno usando a 'distancia_ema21_1h_pct' (quanto mais negativo, maior o potencial elástico) e atribua a nota final (0 a 100).
-  * 95 a 100: Setup perfeito. Fundo muito negativo, volume micro acima da média confirmando a entrada, distanciamento da EMA favorável.
-  * 90 a 94: Setup aprovado, mas sem anomalia de volume a favor ou com distanciamento menor da EMA.
-  * < 90: Inseguro. O motor não executará a compra.
+- Passo 1: Auditoria de Queda e Liquidez (A variacao_minima_24h_pct é <= -3.00% e volume_usdt > 250k?).
+- Passo 2: Auditoria Macro e Elasticidade (O 'rsi_MACRO_1h' formou fundo? A distancia_ema21_1h_pct é mais negativa que -1.00% para garantir potencial de alta?).
+- Passo 3: Auditoria Micro e Volume (O 'rsi_MICRO_5m' é < 68? A confirmacao_alta é TRUE?).
+- Passo 4: Desempate e Confiança. Avalie o Risco/Retorno e atribua a nota final (0 a 100).
+  * REGRA DE TRAVA DE VOLUME: Se 'volume_micro_acima_media' for FALSE, a nota MÁXIMA permitida é 89 (Veto da execução). Para dar 90 ou mais, é OBRIGATÓRIO que a moeda tenha anomalia de volume (TRUE).
+  * 95 a 100: Setup perfeito. Fundo muito negativo, volume micro TRUE, EMA bem distante.
+  * 90 a 94: Setup aprovado com volume TRUE.
+  * < 90: Inseguro ou sem volume. O motor não executará a compra.
 
 FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
 {
   "analises_detalhadas": [
     {
       "moeda": "string",
-      "verificacao_passo_1_queda_e_liquidez": "string (Exija variacao_minima <= -3.00% e volume_usdt > 250k)",
-      "verificacao_passo_2_macro": "string",
-      "verificacao_passo_3_micro_volume": "string (Analise RSI, confirmacao e volume_micro_acima_media)",
+      "verificacao_passo_1_queda_e_liquidez": "string",
+      "verificacao_passo_2_macro_elasticidade": "string (Exija distancia EMA mais negativa que -1.00%)",
+      "verificacao_passo_3_micro_volume": "string",
       "aprovada": boolean
     }
   ],
