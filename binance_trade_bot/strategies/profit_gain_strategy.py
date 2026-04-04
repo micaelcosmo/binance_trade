@@ -25,14 +25,11 @@ class Strategy:
         self.ultimo_veredito_ia = "Aguardando lote de dados..."
         self.ai_cooldown_until = 0.0
         
-        self.taxa_maker = 0.10
-        self.margem_poeira = 0.80
-        self.lucro_liquido = 0.10 
+        # Risco/Retorno Ajustado (Alvo de 1.50%, Stop mais curto)
+        self.trailing_activation_percentage = 1.50 
+        self.trailing_drop_percentage = 0.30
         
-        self.trailing_activation_percentage = self.taxa_maker * 2 + self.margem_poeira + self.lucro_liquido 
-        self.trailing_drop_percentage = 0.20
-        
-        self.stop_loss_percentage_base = 10.0 
+        self.stop_loss_percentage_base = 3.00 # Base caso ATR falhe
         self.stop_loss_dinamico_ativo = 0.0
         self.stop_loss_monitor_drop = 0.0 
         
@@ -151,7 +148,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.x (Laboratório Dinâmico ATR)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.18 (R:R Fix + 15m MACD)")
         self._write_json_ui()
 
     def scout(self):
@@ -219,46 +216,61 @@ class Strategy:
 
     def get_enriched_data(self, target_symbol):
         try:
+            # 4H: Visão Macro
+            klines_4h = self.binance_client.get_klines(symbol=target_symbol, interval='4h', limit=30)
+            df_4h = pandas.DataFrame(klines_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
+            for col in ['close']: df_4h[col] = pandas.to_numeric(df_4h[col])
+            df_4h.ta.rsi(length=14, append=True)
+            
+            # 1H: Visão Intermediária e Elasticidade
             klines_1h = self.binance_client.get_klines(symbol=target_symbol, interval='1h', limit=60)
             df_1h = pandas.DataFrame(klines_1h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['open', 'high', 'low', 'close', 'vol']: df_1h[col] = pandas.to_numeric(df_1h[col])
-            
-            df_1h.ta.ema(length=9, append=True)
             df_1h.ta.ema(length=21, append=True)
             df_1h.ta.rsi(length=14, append=True)
             df_1h.ta.atr(length=14, append=True) 
             
-            klines_5m = self.binance_client.get_klines(symbol=target_symbol, interval='5m', limit=30)
-            df_5m = pandas.DataFrame(klines_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
-            for col in ['open', 'high', 'low', 'close', 'vol']: df_5m[col] = pandas.to_numeric(df_5m[col])
-            df_5m.ta.rsi(length=14, append=True)
+            # 15m: O Novo Gatilho Sniper Micro (MACD + Volume)
+            klines_15m = self.binance_client.get_klines(symbol=target_symbol, interval='15m', limit=60)
+            df_15m = pandas.DataFrame(klines_15m, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
+            for col in ['open', 'high', 'low', 'close', 'vol']: df_15m[col] = pandas.to_numeric(df_15m[col])
+            df_15m.ta.macd(fast=12, slow=26, signal=9, append=True)
+            df_15m.ta.rsi(length=14, append=True)
             
+            ultima_linha_4h = df_4h.iloc[-1]
             ultima_linha_1h = df_1h.iloc[-1]
-            ultima_linha_5m = df_5m.iloc[-1]
+            ultima_linha_15m = df_15m.iloc[-1]
             
             preco_atual = float(ultima_linha_1h['close'])
+            
+            # RSIs
+            rsi_4h = float(ultima_linha_4h.get('RSI_14', 50.0))
             rsi_1h = float(ultima_linha_1h.get('RSI_14', 50.0))
-            rsi_5m = float(ultima_linha_5m.get('RSI_14', 50.0))
+            rsi_15m = float(ultima_linha_15m.get('RSI_14', 50.0))
+            if pandas.isna(rsi_4h): rsi_4h = 50.0
+            if pandas.isna(rsi_1h): rsi_1h = 50.0
+            if pandas.isna(rsi_15m): rsi_15m = 50.0
+            
+            # MACD Histogram 15m (A Barriga)
+            macd_hist_15m = float(ultima_linha_15m.get('MACDh_12_26_9', 0.0))
+            macd_histograma_15m_positivo = bool(macd_hist_15m > 0)
+            
             ema21_1h = float(ultima_linha_1h.get('EMA_21', 0.0))
             atr_1h = float(ultima_linha_1h.get('ATRr_14', 0.0))
             
-            if pandas.isna(rsi_1h): rsi_1h = 50.0
-            if pandas.isna(rsi_5m): rsi_5m = 50.0
-            
-            micro_candle_fecha_em_alta = bool(ultima_linha_5m['close'] > ultima_linha_5m['open'])
+            micro_candle_fecha_em_alta = bool(ultima_linha_15m['close'] > ultima_linha_15m['open'])
             maxima_recente = float(df_1h['high'].tail(24).max())
             queda_da_maxima_pct = ((maxima_recente - preco_atual) / maxima_recente) * 100 if maxima_recente > 0 else 0.0
             
             try:
-                media_volume_10_candles = df_5m['vol'].tail(11).head(10).mean()
-                volume_candle_atual = df_5m['vol'].iloc[-1]
-                volume_micro_acima_media = bool(volume_candle_atual > media_volume_10_candles)
+                media_volume_10_candles = df_15m['vol'].tail(11).head(10).mean()
+                volume_candle_atual = df_15m['vol'].iloc[-1]
+                volume_15m_acima_media = bool(volume_candle_atual > media_volume_10_candles)
             except Exception:
-                volume_micro_acima_media = False
+                volume_15m_acima_media = False
 
             distancia_ema21_1h_pct = ((preco_atual - ema21_1h) / ema21_1h) * 100 if ema21_1h > 0 else 0.0
             
-            # Cálculo Quantitativo: Fundo Dinâmico baseado em 2x o ATR
             atr_pct_atual = (atr_1h / preco_atual) * 100 if preco_atual > 0 else 0.0
             fundo_exigido_atr_pct = -(atr_pct_atual * 2.0)
             
@@ -274,21 +286,23 @@ class Strategy:
                 variacao_24h_minima = 0.0
                 volume_24h_usdt = 0.0
 
-            stop_dinamico = ((atr_1h * 3) / preco_atual) * 100 if preco_atual > 0 else self.stop_loss_percentage_base
-            stop_dinamico = max(5.0, min(stop_dinamico, 10.0)) 
+            # V3.2.18: Conserto do Risk/Reward. Stop dinâmico é 2x o ATR (max 3.5%, min 2.0%)
+            stop_dinamico = atr_pct_atual * 2.0
+            stop_dinamico = max(2.0, min(stop_dinamico, 3.50)) 
             
             dados_montados = {
                 "moeda": target_symbol.replace(self.base_coin, ""),
                 "preco_atual": preco_atual,
-                "rsi_MACRO_1h": round(rsi_1h, 2),
-                "rsi_MICRO_5m": round(rsi_5m, 2), 
-                "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2), 
+                "rsi_MACRO_4h": round(rsi_4h, 2),
+                "rsi_INTER_1h": round(rsi_1h, 2),
+                "rsi_MICRO_15m": round(rsi_15m, 2), 
+                "macd_histograma_15m_positivo": macd_histograma_15m_positivo,
                 "variacao_24h_pct": f"{variacao_24h:+.2f}%",
                 "variacao_minima_24h_pct": f"{variacao_24h_minima:+.2f}%",
-                "fundo_exigido_atr_pct": f"{fundo_exigido_atr_pct:+.2f}%", # Novo Gatilho Dinâmico
+                "fundo_exigido_atr_pct": f"{fundo_exigido_atr_pct:+.2f}%",
                 "micro_candle_confirmacao_alta": micro_candle_fecha_em_alta,
                 "volume_24h_usdt": round(volume_24h_usdt, 2),
-                "volume_micro_acima_media": volume_micro_acima_media,
+                "volume_15m_acima_media": volume_15m_acima_media,
                 "distancia_ema21_1h_pct": f"{distancia_ema21_1h_pct:+.2f}%",
                 "sugestao_stop_loss_atr": round(stop_dinamico, 2)
             }
@@ -374,6 +388,7 @@ class Strategy:
 
         for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
             if check_coin == self.base_coin: continue
+            
             market_symbol = f"{check_coin}{self.base_coin}"
             dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
             if dados_enriquecidos:
@@ -383,13 +398,11 @@ class Strategy:
                 if is_uptrend: aptas_temporary_list.append(texto_linha_lateral)
                 else: geladeira_temporary_list.append(texto_linha_lateral)
 
-                # FILTRO DE TITÂNIO DINÂMICO
                 try:
                     var_atual_float = float(str(dados_enriquecidos['variacao_24h_pct']).replace('%', '').replace('+', ''))
                     var_minima_float = float(str(dados_enriquecidos['variacao_minima_24h_pct']).replace('%', '').replace('+', ''))
                     fundo_exigido_float = float(str(dados_enriquecidos['fundo_exigido_atr_pct']).replace('%', '').replace('+', ''))
                     
-                    # O fundo do poço atingiu o alvo do ATR? O preço atual ainda está negativo em no mínimo -0.50%?
                     if var_minima_float <= fundo_exigido_float and var_atual_float <= -0.50:
                         lote_dados_ia.append(dados_enriquecidos)
                 except Exception:
@@ -428,7 +441,8 @@ class Strategy:
             market_symbol = f"{self.moeda_atual_operacao}{self.base_coin}"
             
             try:
-                klines_history = self.binance_client.get_klines(symbol=market_symbol, interval='5m', limit=30)
+                # Modificado para mostrar o gráfico de 15m no painel para corresponder à nova lógica
+                klines_history = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=30)
                 self.chart_data_cache = [float(kline_item[4]) for kline_item in klines_history]
             except Exception: pass
 
@@ -511,8 +525,10 @@ class Strategy:
                     
                     self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
                     
-                    if "STOP" in motivo_venda_executada: self.trades_lost += 1
-                    else: self.trades_won += 1
+                    if "STOP" in motivo_venda_executada: 
+                        self.trades_lost += 1
+                    else: 
+                        self.trades_won += 1
                     
                     self.lucro_diario_pct += drop_percentage
                     self.trades_no_dia += 1
