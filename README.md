@@ -1,7 +1,7 @@
 Markdown
 # 📈 Binance Trade Bot Pro - AI Edition
 
-<img src="https://img.shields.io/badge/version-v3.1.0-blue" alt="Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/python-3.9+-yellow" alt="Python">
+<img src="https://img.shields.io/badge/version-v3.3.0-blue" alt="Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/python-3.9+-yellow" alt="Python">
 
 Um terminal de trading algorítmico automatizado para a corretora Binance. O projeto utiliza uma arquitetura quantitativa avançada focada em Swing Trade, unindo **Matemática de Indicadores (Pandas-TA)** e um **Comitê de Inteligência Artificial Institucional (Google Gemini)** para gestão de risco, análise de lote e maximização de lucros.
 
@@ -9,14 +9,12 @@ Um terminal de trading algorítmico automatizado para a corretora Binance. O pro
 
 ## ✨ Principais Funcionalidades
 
-* 🧠 **Gestor Institucional IA (Get Smart Once):** O bot não gasta tokens analisando moedas uma a uma. Ele compila um *Dossiê Quantitativo* do mercado inteiro (Timeframe de 1H) e envia em lote para o **Gemini 2.5 Flash-Lite**. A IA compara as moedas entre si e escolhe a melhor oportunidade de compra.
-* 🛡️ **Filtros Dinâmicos de Proteção:** A IA opera sob regras estritas de Veto Absoluto:
-  * **Anti-FOMO:** Veta compras em topos esticados ou RSI sobrecomprado.
-  * **Anti-Faca Caindo:** Veta compras em moedas em queda livre ou perdendo suportes importantes.
-* ⏳ **Cooldown Inteligente:** Se o mercado estiver ruim e a IA vetar todas as compras, o bot entra em silêncio de rede por 30 minutos. Isso economiza cotas de API e protege o capital de entradas falsas em mercados consolidados.
-* 🎯 **Trailing Stop Dinâmico:** O bot identifica quando uma operação está lucrando, arma um gatilho invisível e persegue o preço para cima. Ele só vende a mercado quando a moeda perde a força, espremendo o máximo de lucro possível.
-* 👑 **Regra de Ouro (Auto-Switch):** Se o bot ficar "preso" em uma moeda lateralizada ou em queda lenta por muito tempo, ele escaneia o mercado no background, compila um novo Dossiê de Swap, pede aval da IA e migra o saldo automaticamente para um ativo melhor.
-* 💻 **Dashboard Interativo (UI):** Interface gráfica nativa (Tkinter) para visualização em tempo real de P/L, minigráficos de velas, placar de Win/Loss (com reset dinâmico), auditoria de tokens da API e o veredito ao vivo da IA.
+* 🧠 **Gestor Institucional IA (Três Olhos):** O bot não gasta tokens analisando ruídos. Ele compila um *Dossiê Quantitativo* tridimensional (Macro 4H, Elástico 1H, Gatilho 15m com MACD) e envia em lote para o **Gemini 2.5 Flash-Lite**. A IA escolhe a melhor assimetria matemática.
+* 🛡️ **Filtros Dinâmicos de Proteção (ATR):** Fim dos "achismos" de porcentagem. O bot calcula o True Bottom exigindo que a moeda caia mais que 2x o seu próprio ATR (Average True Range).
+* 🎯 **Trailing Stop Dinâmico & R:R Fixo:** O bot arma um gatilho invisível buscando +1.50% de alvo, protegido por um Stop Loss rígido de no máximo -3.50%. Ele persegue o preço para cima e corta as perdas rápido.
+* 🚨 **Manual Override (Panic Button):** Assuma o controle. Um botão de Venda Forçada na interface permite que o usuário feche a operação a mercado instantaneamente, registrando o P/L no histórico de forma transparente.
+* 👑 **Regra de Ouro (Auto-Switch):** Se o bot ficar preso em uma moeda, o Tribunal de Swap da IA avalia se vale a pena assumir um pequeno prejuízo para migrar para um setup com 95%+ de confiança.
+* 💻 **Dashboard Interativo (UI):** Interface nativa (Tkinter) com P/L real, gráficos de velas, placar de Win/Loss, histórico diário e o parecer auditado ao vivo do comitê de Inteligência Artificial.
 
 ---
 
@@ -64,6 +62,7 @@ Abra o `supported_coin_list.txt` e liste os tokens que o bot deve incluir no Dos
 ---
 
 ## 🚀 Como Executar
+
 Com o ambiente ativado e os arquivos configurados, inicie a interface gráfica do painel:
 ```bash
 python painel.py
@@ -88,14 +87,8 @@ Se o bot não iniciar ou apresentar erros no console, confira as soluções para
 ```bash
 pip install websockets==11.0.3
 ```
-### 🗄️ Erro de Banco de Dados / ORM (SQLAlchemy)
-* **O erro:** `sqlalchemy.exc.ArgumentError: Column expression, FROM clause, or other columns clause element expected...`
-* **O motivo:** A versão do SQLAlchemy atualizou para a v2.0+, quebrando a compatibilidade do motor interno do bot.
-* **A solução:** Faça o downgrade da biblioteca para a versão 1.4:
-```bash
-pip install SQLAlchemy==1.4.52
-```
 
 ---
+
 ## ⚠️ Disclaimer (Aviso Legal)
 Este software é um projeto de código aberto com fins educacionais e experimentais. Não é um conselho financeiro. O mercado de criptomoedas é altamente volátil. Os desenvolvedores não se responsabilizam por perdas financeiras. Utilize por sua conta e risco, e teste exaustivamente com quantias pequenas antes de alocar capital significativo.
