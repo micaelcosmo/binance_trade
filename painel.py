@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import scrolledtext
+import tkinter.messagebox as messagebox
 import subprocess
 import threading
 import sys
@@ -71,6 +72,10 @@ class BinanceBotGUI:
         self.btn_add_trade = tk.Button(self.tools_frame, text="🔋 +1 Tentativa Hoje", command=self.add_trade_chance, bg=self.accent_green, fg="black", font=("Segoe UI", 9, "bold"), width=20)
         self.btn_add_trade.pack(side=tk.RIGHT, padx=0)
         
+        # V3.3.0: Botão de Venda Forçada (Panic Button)
+        self.btn_force_sell = tk.Button(self.tools_frame, text="🚨 Venda Forçada", command=self.force_sell_action, bg=self.accent_red, fg="white", font=("Segoe UI", 9, "bold"), width=18)
+        self.btn_force_sell.pack(side=tk.RIGHT, padx=5)
+        
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
         self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=10)
 
@@ -121,7 +126,7 @@ class BinanceBotGUI:
             self.lbl_chart_title.grid(row=5, column=4, sticky="e", padx=(0,10))
             
         else:
-            pass # Interface legada da estratégia default omitida para brevidade visual
+            pass 
 
         self.content_frame = tk.Frame(root, bg=self.bg_main)
         self.content_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
@@ -174,6 +179,19 @@ class BinanceBotGUI:
             
         self.locked_at_trade_count = current_trades
         self.log_message("\n[+] 🔋 Solicitada +1 tentativa pro dia. Botão bloqueado até a conclusão do próximo trade.\n")
+
+    def force_sell_action(self):
+        resposta = messagebox.askyesno(
+            "🚨 ATENÇÃO: VENDA FORÇADA", 
+            "Você tem certeza que deseja fechar a operação atual vendendo a mercado AGORA?\n\nO bot irá registrar o P/L atual no placar (W ou L) e pausar por 60 segundos."
+        )
+        if resposta:
+            try:
+                with open("force_sell.flag", "w") as f:
+                    f.write("trigger_manual_sell")
+                self.log_message("\n[🚨] SINAL ENVIADO: Aguardando o motor interceptar a flag de venda forçada...\n")
+            except Exception as e:
+                self.log_message(f"\n[X] Erro ao criar flag de venda: {e}\n")
 
     def show_ai_analysis(self):
         top = tk.Toplevel(self.root)
@@ -258,7 +276,7 @@ class BinanceBotGUI:
             self.lbl_chart_title.config(text=f"{coin_symbol} - Aguardando Dados...")
             return
 
-        self.lbl_chart_title.config(text=f"{coin_symbol} - Últimas 2h30 (5m)", fg=self.accent_blue)
+        self.lbl_chart_title.config(text=f"{coin_symbol} - Últimas 7h30 (15m)", fg=self.accent_blue)
         
         canvas_width = int(self.canvas_chart['width'])
         canvas_height = int(self.canvas_chart['height'])
@@ -285,7 +303,7 @@ class BinanceBotGUI:
             self.canvas_chart.create_line(padding_value, y_buy_coordinate, canvas_width-padding_value, y_buy_coordinate, fill="#f2a900", dash=(2, 2))
             if buy_time_stamp > 0:
                 diff_seconds = time.time() - buy_time_stamp
-                candles_ago_count = diff_seconds / 300.0 
+                candles_ago_count = diff_seconds / 900.0 # V3.3.0: Ajustado para 15m (900s)
                 idx_compra_plot = (len(chart_data_points) - 1) - candles_ago_count
                 if 0 <= idx_compra_plot <= len(chart_data_points) - 1:
                     x_buy_coordinate = padding_value + idx_compra_plot * x_axis_step

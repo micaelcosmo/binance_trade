@@ -25,11 +25,10 @@ class Strategy:
         self.ultimo_veredito_ia = "Aguardando lote de dados..."
         self.ai_cooldown_until = 0.0
         
-        # Risco/Retorno Ajustado (Alvo de 1.50%, Stop mais curto)
         self.trailing_activation_percentage = 1.50 
         self.trailing_drop_percentage = 0.30
         
-        self.stop_loss_percentage_base = 3.00 # Base caso ATR falhe
+        self.stop_loss_percentage_base = 3.00 
         self.stop_loss_dinamico_ativo = 0.0
         self.stop_loss_monitor_drop = 0.0 
         
@@ -146,9 +145,80 @@ class Strategy:
                 os.remove("add_trade.flag")
             except Exception:
                 pass
+                
+        # V3.3.0: Interceptador do Panic Button
+        if os.path.exists("force_sell.flag"):
+            try:
+                os.remove("force_sell.flag")
+                self._execute_forced_sell()
+            except Exception as e:
+                self.system_logger.error(f"Erro ao acionar flag de venda: {e}")
+
+    def _execute_forced_sell(self):
+        if not self.em_operacao or not self.moeda_atual_operacao:
+            self.system_logger.warning("⚠️ Botão de Venda pressionado, mas o bot não possui operação ativa para fechar.")
+            return
+
+        market_symbol = f"{self.moeda_atual_operacao}{self.base_coin}"
+        self.system_logger.warning(f"🚨 INTERVENÇÃO MANUAL: Venda forçada acionada para {market_symbol}!")
+
+        try:
+            ticker_info = self.binance_client.get_symbol_ticker(symbol=market_symbol)
+            preco_atual_fechamento = float(ticker_info['price'])
+            
+            drop_percentage = ((preco_atual_fechamento - self.preco_compra_ativo) / self.preco_compra_ativo) * 100
+            
+            self._desbloquear_saldo(market_symbol)
+            saldo_livre = self._get_balance(self.moeda_atual_operacao, free_only=True)
+            ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
+            
+            self.binance_client.create_order(
+                symbol=market_symbol, 
+                side=SIDE_SELL, 
+                type=ORDER_TYPE_MARKET, 
+                quantity=self.format_decimal(saldo_livre, step_size_value)
+            )
+            
+            if drop_percentage > 0:
+                self.trades_won += 1
+                motivo_log = f"VENDA_MANUAL (GAIN: {drop_percentage:+.2f}%)"
+            else:
+                self.trades_lost += 1
+                motivo_log = f"VENDA_MANUAL (LOSS: {drop_percentage:+.2f}%)"
+                
+            self.lucro_diario_pct += drop_percentage
+            self.trades_no_dia += 1
+            
+            self.historico_diario.append({
+                "hora": datetime.now().strftime("%H:%M:%S"),
+                "moeda": self.moeda_atual_operacao,
+                "resultado": f"{drop_percentage:+.2f}%",
+                "motivo": motivo_log
+            })
+            
+            self.system_logger.info(f"✅ Venda Forçada concluída com sucesso! P/L da operação: {drop_percentage:+.2f}%")
+            self.system_logger.info("⏱️ Motor em cooldown de 60 segundos antes de retomar as análises.")
+            
+            self.em_operacao = False
+            self.moeda_atual_operacao = None
+            self.stop_loss_monitor_drop = 0.0
+            self.preco_compra_ativo = 0.0
+            self.preco_atual_ativo = 0.0
+            self.preco_alvo_ativo = 0.0
+            self.quantidade_altcoin_ativa = 0.0
+            self.peak_profit_percentage = 0.0
+            self.chart_data_cache = []
+            self.stop_loss_dinamico_ativo = 0.0
+            
+            self.ai_cooldown_until = time.time() + 60
+            self._save_state()
+            self._write_json_ui()
+
+        except Exception as erro_venda:
+            self.system_logger.error(f"❌ ERRO CRÍTICO na Venda Manual: {erro_venda}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.18 (R:R Fix + 15m MACD)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.0 (Manual Override & Panic Button)")
         self._write_json_ui()
 
     def scout(self):
@@ -216,13 +286,11 @@ class Strategy:
 
     def get_enriched_data(self, target_symbol):
         try:
-            # 4H: Visão Macro
             klines_4h = self.binance_client.get_klines(symbol=target_symbol, interval='4h', limit=30)
             df_4h = pandas.DataFrame(klines_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['close']: df_4h[col] = pandas.to_numeric(df_4h[col])
             df_4h.ta.rsi(length=14, append=True)
             
-            # 1H: Visão Intermediária e Elasticidade
             klines_1h = self.binance_client.get_klines(symbol=target_symbol, interval='1h', limit=60)
             df_1h = pandas.DataFrame(klines_1h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['open', 'high', 'low', 'close', 'vol']: df_1h[col] = pandas.to_numeric(df_1h[col])
@@ -230,7 +298,6 @@ class Strategy:
             df_1h.ta.rsi(length=14, append=True)
             df_1h.ta.atr(length=14, append=True) 
             
-            # 15m: O Novo Gatilho Sniper Micro (MACD + Volume)
             klines_15m = self.binance_client.get_klines(symbol=target_symbol, interval='15m', limit=60)
             df_15m = pandas.DataFrame(klines_15m, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['open', 'high', 'low', 'close', 'vol']: df_15m[col] = pandas.to_numeric(df_15m[col])
@@ -243,7 +310,6 @@ class Strategy:
             
             preco_atual = float(ultima_linha_1h['close'])
             
-            # RSIs
             rsi_4h = float(ultima_linha_4h.get('RSI_14', 50.0))
             rsi_1h = float(ultima_linha_1h.get('RSI_14', 50.0))
             rsi_15m = float(ultima_linha_15m.get('RSI_14', 50.0))
@@ -251,7 +317,6 @@ class Strategy:
             if pandas.isna(rsi_1h): rsi_1h = 50.0
             if pandas.isna(rsi_15m): rsi_15m = 50.0
             
-            # MACD Histogram 15m (A Barriga)
             macd_hist_15m = float(ultima_linha_15m.get('MACDh_12_26_9', 0.0))
             macd_histograma_15m_positivo = bool(macd_hist_15m > 0)
             
@@ -286,7 +351,6 @@ class Strategy:
                 variacao_24h_minima = 0.0
                 volume_24h_usdt = 0.0
 
-            # V3.2.18: Conserto do Risk/Reward. Stop dinâmico é 2x o ATR (max 3.5%, min 2.0%)
             stop_dinamico = atr_pct_atual * 2.0
             stop_dinamico = max(2.0, min(stop_dinamico, 3.50)) 
             
@@ -441,7 +505,6 @@ class Strategy:
             market_symbol = f"{self.moeda_atual_operacao}{self.base_coin}"
             
             try:
-                # Modificado para mostrar o gráfico de 15m no painel para corresponder à nova lógica
                 klines_history = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=30)
                 self.chart_data_cache = [float(kline_item[4]) for kline_item in klines_history]
             except Exception: pass
