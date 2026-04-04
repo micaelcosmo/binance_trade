@@ -151,7 +151,7 @@ class Strategy:
                 pass
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.15 (Data Enrichment)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.2.x (Laboratório Dinâmico ATR)")
         self._write_json_ui()
 
     def scout(self):
@@ -249,8 +249,6 @@ class Strategy:
             maxima_recente = float(df_1h['high'].tail(24).max())
             queda_da_maxima_pct = ((maxima_recente - preco_atual) / maxima_recente) * 100 if maxima_recente > 0 else 0.0
             
-            # V3.2.15: Cálculo de Anomalia de Volume no Micro (5m)
-            # Verifica se o volume do candle atual é maior que a média dos últimos 10 candles
             try:
                 media_volume_10_candles = df_5m['vol'].tail(11).head(10).mean()
                 volume_candle_atual = df_5m['vol'].iloc[-1]
@@ -258,8 +256,11 @@ class Strategy:
             except Exception:
                 volume_micro_acima_media = False
 
-            # V3.2.15: Distância percentual do preço atual para a EMA 21 de 1H (Elasticidade)
             distancia_ema21_1h_pct = ((preco_atual - ema21_1h) / ema21_1h) * 100 if ema21_1h > 0 else 0.0
+            
+            # Cálculo Quantitativo: Fundo Dinâmico baseado em 2x o ATR
+            atr_pct_atual = (atr_1h / preco_atual) * 100 if preco_atual > 0 else 0.0
+            fundo_exigido_atr_pct = -(atr_pct_atual * 2.0)
             
             try:
                 ticker_info = self.binance_client.get_ticker(symbol=target_symbol)
@@ -267,7 +268,7 @@ class Strategy:
                 open_price = float(ticker_info['openPrice'])
                 low_price = float(ticker_info['lowPrice'])
                 variacao_24h_minima = ((low_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
-                volume_24h_usdt = float(ticker_info.get('quoteVolume', 0.0)) # V3.2.15: Liquidez diária
+                volume_24h_usdt = float(ticker_info.get('quoteVolume', 0.0)) 
             except Exception:
                 variacao_24h = 0.0
                 variacao_24h_minima = 0.0
@@ -281,9 +282,10 @@ class Strategy:
                 "preco_atual": preco_atual,
                 "rsi_MACRO_1h": round(rsi_1h, 2),
                 "rsi_MICRO_5m": round(rsi_5m, 2), 
-                "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2),
+                "distancia_do_topo_24h_pct": round(queda_da_maxima_pct, 2), 
                 "variacao_24h_pct": f"{variacao_24h:+.2f}%",
                 "variacao_minima_24h_pct": f"{variacao_24h_minima:+.2f}%",
+                "fundo_exigido_atr_pct": f"{fundo_exigido_atr_pct:+.2f}%", # Novo Gatilho Dinâmico
                 "micro_candle_confirmacao_alta": micro_candle_fecha_em_alta,
                 "volume_24h_usdt": round(volume_24h_usdt, 2),
                 "volume_micro_acima_media": volume_micro_acima_media,
@@ -381,10 +383,14 @@ class Strategy:
                 if is_uptrend: aptas_temporary_list.append(texto_linha_lateral)
                 else: geladeira_temporary_list.append(texto_linha_lateral)
 
+                # FILTRO DE TITÂNIO DINÂMICO
                 try:
-                    var_str = str(dados_enriquecidos['variacao_24h_pct']).replace('%', '').replace('+', '')
-                    var_float = float(var_str)
-                    if -4.00 <= var_float <= -0.50:
+                    var_atual_float = float(str(dados_enriquecidos['variacao_24h_pct']).replace('%', '').replace('+', ''))
+                    var_minima_float = float(str(dados_enriquecidos['variacao_minima_24h_pct']).replace('%', '').replace('+', ''))
+                    fundo_exigido_float = float(str(dados_enriquecidos['fundo_exigido_atr_pct']).replace('%', '').replace('+', ''))
+                    
+                    # O fundo do poço atingiu o alvo do ATR? O preço atual ainda está negativo em no mínimo -0.50%?
+                    if var_minima_float <= fundo_exigido_float and var_atual_float <= -0.50:
                         lote_dados_ia.append(dados_enriquecidos)
                 except Exception:
                     pass
@@ -538,9 +544,11 @@ class Strategy:
                             for d in lote_dados_ia:
                                 if d['moeda'] != self.moeda_atual_operacao:
                                     try:
-                                        var_str = str(d['variacao_24h_pct']).replace('%', '').replace('+', '')
-                                        var_float = float(var_str)
-                                        if -4.00 <= var_float <= -0.50:
+                                        var_atual_str = str(d['variacao_24h_pct']).replace('%', '').replace('+', '')
+                                        var_minima_str = str(d['variacao_minima_24h_pct']).replace('%', '').replace('+', '')
+                                        fundo_exigido_str = str(d['fundo_exigido_atr_pct']).replace('%', '').replace('+', '')
+                                        
+                                        if float(var_minima_str) <= float(fundo_exigido_str) and float(var_atual_str) <= -0.50:
                                             lote_dados_swap.append(d)
                                     except Exception: pass
                             
