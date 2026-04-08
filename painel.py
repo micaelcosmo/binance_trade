@@ -183,9 +183,11 @@ class BinanceBotGUI:
             self.perform_update()
 
     def perform_update(self):
-        """ Processa a sincronização silenciosa via Git e invoca auto-restart estrutural. """
+        """ Processa a sincronização silenciosa via Git e invoca auto-restart estrutural se houver alterações. """
         self.btn_update.config(state=tk.DISABLED, text="Baixando atualização...")
         self.log_message("\n[INFO] Estabelecendo conexão com repositório remoto...\n")
+        
+        was_running = self.bot_running
         try:
             self.stop_bot()
             subprocess.run(["git", "reset", "--hard", "HEAD"], capture_output=True, text=True, timeout=10)
@@ -195,6 +197,8 @@ class BinanceBotGUI:
                 self.log_message("[OK] Sistema encontra-se na versão mais recente.\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
                 self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+                if was_running:
+                    self.start_bot()
             elif result.returncode == 0:
                 self.log_message("[OK] Atualização validada. Reiniciando interface do usuário...\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
@@ -204,10 +208,14 @@ class BinanceBotGUI:
                 self.log_message("[ERROR] Conflito de integridade com o tracking remoto.\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
                 self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+                if was_running:
+                    self.start_bot()
         except Exception as exception_log:
             self.log_message(f"[ERROR] Exceção gerada durante o protocolo de sub-processo: {exception_log}\n")
             if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
             self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+            if was_running:
+                self.start_bot()
 
     def add_trade_chance(self):
         with open("add_trade.flag", "w") as f:
