@@ -33,7 +33,7 @@ class Strategy:
         self.stop_loss_monitor_drop = 0.0 
         
         self.maximum_hold_time_seconds = 7200      
-        self.golden_rule_cooldown_seconds = 7200 
+        self.golden_rule_cooldown_seconds = 2700 # V3.3.1: Tribunal analisa mais cedo (45 min)
         
         self.data_atual = datetime.now().strftime("%Y-%m-%d")
         self.lucro_diario_pct = 0.0
@@ -60,6 +60,10 @@ class Strategy:
         self.moeda_atual_operacao = None
         self.aptas_cache = []
         self.geladeira_cache = []
+        
+        self.system_status_ui = ""
+        self.last_heartbeat_time = "--"
+        self.current_coin_change = 0.0
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -139,14 +143,15 @@ class Strategy:
                 
         if os.path.exists("add_trade.flag"):
             self.max_trades_diario += 1
-            self.system_logger.warning(f"🟢 [UI OVERRIDE] Limite de trades de hoje aumentado para {self.max_trades_diario}!")
+            # V3.3.1: Força o motor a acordar em 60s
+            self.ai_cooldown_until = time.time() + 60
+            self.system_logger.warning(f"🟢 [UI OVERRIDE] Limite de trades aumentado para {self.max_trades_diario}! Próxima análise forçada para daqui a 60s.")
             self._save_state()
             try:
                 os.remove("add_trade.flag")
             except Exception:
                 pass
                 
-        # V3.3.0: Interceptador do Panic Button
         if os.path.exists("force_sell.flag"):
             try:
                 os.remove("force_sell.flag")
@@ -209,6 +214,7 @@ class Strategy:
             self.peak_profit_percentage = 0.0
             self.chart_data_cache = []
             self.stop_loss_dinamico_ativo = 0.0
+            self.current_coin_change = 0.0
             
             self.ai_cooldown_until = time.time() + 60
             self._save_state()
@@ -218,13 +224,16 @@ class Strategy:
             self.system_logger.error(f"❌ ERRO CRÍTICO na Venda Manual: {erro_venda}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.0 (Manual Override & Panic Button)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.1 (Network Healing & Double Lock Swap)")
         self._write_json_ui()
 
     def scout(self):
         self._check_ui_flags()
         self._check_daily_reset()
-        self.system_logger.info(f"[HEARTBEAT] 💓 Motor executando varredura. Base oficial: {self.base_coin}")
+        
+        self.last_heartbeat_time = datetime.now().strftime("%H:%M:%S")
+        self.system_status_ui = "" 
+        
         self.scan_market()
         self._write_json_ui()
 
@@ -351,8 +360,12 @@ class Strategy:
                 variacao_24h_minima = 0.0
                 volume_24h_usdt = 0.0
 
+            # V3.3.1: Privilégio do Rei (Stop afrouxado para agulhadas do BTC)
             stop_dinamico = atr_pct_atual * 2.0
-            stop_dinamico = max(2.0, min(stop_dinamico, 3.50)) 
+            if "BTC" in target_symbol:
+                stop_dinamico = max(4.0, min(stop_dinamico * 2.0, 6.50))
+            else:
+                stop_dinamico = max(2.0, min(stop_dinamico, 3.50)) 
             
             dados_montados = {
                 "moeda": target_symbol.replace(self.base_coin, ""),
@@ -374,6 +387,10 @@ class Strategy:
             is_uptrend = preco_atual > ema21_1h
             return dados_montados, is_uptrend
         except Exception as erro:
+            erro_str = str(erro)
+            # V3.3.1: Conversão do poluidor visual em erro limpo para a UI
+            if "Connection" in erro_str or "10054" in erro_str or "NameResolution" in erro_str or "Timeout" in erro_str:
+                raise ConnectionError(f"Network Drop: {erro_str}")
             self.system_logger.error(f"Erro ao enriquecer dados de {target_symbol}: {erro}")
             return None, False
 
@@ -407,6 +424,7 @@ class Strategy:
             self.preco_alvo_ativo = float(preco_atual) * (1 + (self.trailing_activation_percentage / 100))
             self.stop_loss_dinamico_ativo = float(stop_calculado_atr)
             self.last_switch_time = time.time()
+            self.current_coin_change = 0.0
             self._save_state()
             
             self.preco_atual_ativo = float(preco_atual)
@@ -450,11 +468,19 @@ class Strategy:
         except Exception:
             saldos_dicionario = {}
 
+        self.system_status_ui = "Minerando métricas do mercado..."
+
         for check_coin in self.system_configuration.SUPPORTED_COIN_LIST:
             if check_coin == self.base_coin: continue
             
             market_symbol = f"{check_coin}{self.base_coin}"
-            dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
+            
+            try:
+                dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
+            except ConnectionError:
+                self.system_status_ui = "⚠️ Sem conexão com a internet. Tentando reconectar..."
+                return 
+                
             if dados_enriquecidos:
                 moeda_alin = f"{check_coin: <7}"
                 texto_linha_lateral = f"💼 {moeda_alin}: ${dados_enriquecidos['preco_atual']:.4f} ({dados_enriquecidos['variacao_24h_pct']})"
@@ -510,8 +536,9 @@ class Strategy:
             except Exception: pass
 
             try:
-                ticker_info = self.binance_client.get_symbol_ticker(symbol=market_symbol)
-                self.preco_atual_ativo = float(ticker_info['price'])
+                ticker_info = self.binance_client.get_ticker(symbol=market_symbol)
+                self.preco_atual_ativo = float(ticker_info['lastPrice'])
+                self.current_coin_change = float(ticker_info['priceChangePercent'])
                 
                 saldo_moeda_operada = self._get_balance(self.moeda_atual_operacao)
 
@@ -525,6 +552,7 @@ class Strategy:
                     self.stop_loss_monitor_drop, self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo, self.quantidade_altcoin_ativa, self.peak_profit_percentage = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                     self.chart_data_cache = []
                     self.stop_loss_dinamico_ativo = 0.0
+                    self.current_coin_change = 0.0
                     self._save_state()
                     return
 
@@ -561,6 +589,8 @@ class Strategy:
                 cooldown_restante_segundos = self.golden_rule_cooldown_seconds - segundos_desde_switch_regra
                 status_cooldown_string = f" (Tribunal: {int(cooldown_restante_segundos//3600)}h {int((cooldown_restante_segundos%3600)//60)}m)" if cooldown_restante_segundos > 0 else " (Tribunal: Pronta)"
                 self.tempo_operacao_string = f"{horas_ativas}h {minutos_ativos}m{status_cooldown_string}"
+                
+                self.system_status_ui = f"Em Operação ({self.moeda_atual_operacao})"
 
                 is_selling_now = False
                 motivo_venda_executada = ""
@@ -608,78 +638,86 @@ class Strategy:
                     self.stop_loss_monitor_drop, self.preco_compra_ativo, self.preco_atual_ativo, self.preco_alvo_ativo, self.quantidade_altcoin_ativa, self.peak_profit_percentage = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                     self.chart_data_cache = []
                     self.stop_loss_dinamico_ativo = 0.0
+                    self.current_coin_change = 0.0
                     self._save_state()
                 else:
                     if drop_percentage < -0.15 and cooldown_restante_segundos <= 0:
-                        
                         if drop_percentage < -2.50:
-                            self.system_logger.info(f"🛡️ TRIBUNAL BLOQUEADO no código Python: Prejuízo atual ({drop_percentage:.2f}%) excede o limite de -2.50%. HOLD obrigatório até recuperar.")
                             self.last_switch_time = time.time()
                             self._save_state()
                         else:
-                            self.system_logger.info("⚖️ O ativo está na zona de swap segura (>-2.50%). Convocando o TRIBUNAL DE SWAP da IA...")
-                            
-                            lote_dados_swap = []
-                            for d in lote_dados_ia:
-                                if d['moeda'] != self.moeda_atual_operacao:
-                                    try:
-                                        var_atual_str = str(d['variacao_24h_pct']).replace('%', '').replace('+', '')
-                                        var_minima_str = str(d['variacao_minima_24h_pct']).replace('%', '').replace('+', '')
-                                        fundo_exigido_str = str(d['fundo_exigido_atr_pct']).replace('%', '').replace('+', '')
-                                        
-                                        if float(var_minima_str) <= float(fundo_exigido_str) and float(var_atual_str) <= -0.50:
-                                            lote_dados_swap.append(d)
-                                    except Exception: pass
-                            
-                            if lote_dados_swap:
-                                analise_swap = self.ai_agent.analisar_swap(lote_dados_swap, self.moeda_atual_operacao, drop_percentage, tempo_preso_horas)
-                                nova_moeda_promissora = analise_swap.get("moeda_vencedora", "HOLD")
-                                confianca = analise_swap.get("confianca_final", 0)
-                                resumo_decisao_swap = analise_swap.get("resumo_decisao", "Decisão mantida em HOLD.")
+                            # V3.3.1: Double Lock Swap (10h + >= 4 moedas)
+                            if tempo_preso_horas >= 10.0:
+                                lote_dados_swap = []
+                                for d in lote_dados_ia:
+                                    if d['moeda'] != self.moeda_atual_operacao:
+                                        try:
+                                            var_atual_str = str(d['variacao_24h_pct']).replace('%', '').replace('+', '')
+                                            var_minima_str = str(d['variacao_minima_24h_pct']).replace('%', '').replace('+', '')
+                                            fundo_exigido_str = str(d['fundo_exigido_atr_pct']).replace('%', '').replace('+', '')
+                                            
+                                            if float(var_minima_str) <= float(fundo_exigido_str) and float(var_atual_str) <= -0.50:
+                                                lote_dados_swap.append(d)
+                                        except Exception: pass
                                 
-                                if nova_moeda_promissora not in ["HOLD", "NENHUMA"] and confianca >= 95:
-                                    item_escolhido = next((item for item in lote_dados_swap if item['moeda'] == nova_moeda_promissora), None)
-                                    if item_escolhido:
-                                        preco_alvo_swap = item_escolhido['preco_atual']
-                                        stop_atr_swap = item_escolhido['sugestao_stop_loss_atr']
+                                if len(lote_dados_swap) >= 4:
+                                    self.system_status_ui = "⏳ Convocando TRIBUNAL DE SWAP..."
+                                    analise_swap = self.ai_agent.analisar_swap(lote_dados_swap, self.moeda_atual_operacao, drop_percentage, tempo_preso_horas)
+                                    nova_moeda_promissora = analise_swap.get("moeda_vencedora", "HOLD")
+                                    
+                                    if nova_moeda_promissora == "ERROR_503":
+                                        self.system_status_ui = "⚠️ IA sobrecarregada. Nova tentativa em 5 min."
+                                        self.last_switch_time = time.time() - self.golden_rule_cooldown_seconds + 300 
+                                        return
                                         
-                                        self.system_logger.warning(f"👑 TRIBUNAL APROVOU SWAP! Assumindo prejuízo para migrar com {confianca}% de chance para {nova_moeda_promissora}!")
-                                        
-                                        self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n⚖️ TRIBUNAL DE SWAP APROVADO\n🏆 Vencedora: {nova_moeda_promissora} ({confianca}%)\n\n🧠 Parecer:\n{resumo_decisao_swap}"
+                                    confianca = analise_swap.get("confianca_final", 0)
+                                    resumo_decisao_swap = analise_swap.get("resumo_decisao", "Decisão mantida em HOLD.")
+                                    
+                                    if nova_moeda_promissora not in ["HOLD", "NENHUMA"] and confianca >= 95:
+                                        item_escolhido = next((item for item in lote_dados_swap if item['moeda'] == nova_moeda_promissora), None)
+                                        if item_escolhido:
+                                            preco_alvo_swap = item_escolhido['preco_atual']
+                                            stop_atr_swap = item_escolhido['sugestao_stop_loss_atr']
+                                            
+                                            self.system_logger.warning(f"👑 TRIBUNAL APROVOU SWAP! Assumindo prejuízo para migrar com {confianca}% de chance para {nova_moeda_promissora}!")
+                                            
+                                            self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n⚖️ TRIBUNAL DE SWAP APROVADO\n🏆 Vencedora: {nova_moeda_promissora} ({confianca}%)\n\n🧠 Parecer:\n{resumo_decisao_swap}"
+                                            self._imprimir_parecer_ia(resumo_decisao_swap)
+                                            
+                                            self._desbloquear_saldo(market_symbol) 
+                                            saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
+                                            ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
+                                            
+                                            self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
+                                            time.sleep(2)
+                                            
+                                            self.trades_lost += 1 
+                                            self.lucro_diario_pct += drop_percentage 
+                                            self.trades_no_dia += 1
+                                            
+                                            self.historico_diario.append({
+                                                "hora": datetime.now().strftime("%H:%M:%S"),
+                                                "moeda": self.moeda_atual_operacao,
+                                                "resultado": f"{drop_percentage:+.2f}%",
+                                                "motivo": "SWAP_IA_95%"
+                                            })
+                                            
+                                            self.last_switch_time = time.time()
+                                            self.em_operacao = False 
+                                            self._save_state()
+                                            
+                                            if preco_alvo_swap > 0 and self.execute_real_trade(nova_moeda_promissora, preco_alvo_swap, stop_atr_swap):
+                                                self.em_operacao = True
+                                                self.moeda_atual_operacao = nova_moeda_promissora
+                                        return
+                                    else:
+                                        self.system_logger.info(f"🛡️ TRIBUNAL ORDENOU HOLD. O mercado não tem certeza de 95%+. Paciência com a moeda atual.")
+                                        self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛡️ TRIBUNAL DE SWAP RECUSADO (HOLD)\n⚖️ Veredito: Nenhuma moeda com 95%+ de chance detectada. Segurando {self.moeda_atual_operacao}.\n\n🧠 Parecer:\n{resumo_decisao_swap}"
                                         self._imprimir_parecer_ia(resumo_decisao_swap)
-                                        
-                                        self._desbloquear_saldo(market_symbol) 
-                                        saldo_livre_disponivel = self._get_balance(self.moeda_atual_operacao, free_only=True)
-                                        ignore_tick, step_size_value = self.get_precision_filters(market_symbol)
-                                        
-                                        self.binance_client.create_order(symbol=market_symbol, side=SIDE_SELL, type=ORDER_TYPE_MARKET, quantity=self.format_decimal(saldo_livre_disponivel, step_size_value))
-                                        time.sleep(2)
-                                        
-                                        self.trades_lost += 1 
-                                        self.lucro_diario_pct += drop_percentage 
-                                        self.trades_no_dia += 1
-                                        
-                                        self.historico_diario.append({
-                                            "hora": datetime.now().strftime("%H:%M:%S"),
-                                            "moeda": self.moeda_atual_operacao,
-                                            "resultado": f"{drop_percentage:+.2f}%",
-                                            "motivo": "SWAP_IA_95%"
-                                        })
-                                        
-                                        self.last_switch_time = time.time()
-                                        self.em_operacao = False 
+                                        self.last_switch_time = time.time() 
                                         self._save_state()
-                                        
-                                        if preco_alvo_swap > 0 and self.execute_real_trade(nova_moeda_promissora, preco_alvo_swap, stop_atr_swap):
-                                            self.em_operacao = True
-                                            self.moeda_atual_operacao = nova_moeda_promissora
-                                    return
                                 else:
-                                    self.system_logger.info(f"🛡️ TRIBUNAL ORDENOU HOLD. O mercado não tem certeza de 95%+. Paciência com a moeda atual.")
-                                    self.relatorio_ia_completo = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛡️ TRIBUNAL DE SWAP RECUSADO (HOLD)\n⚖️ Veredito: Nenhuma moeda com 95%+ de chance detectada. Segurando {self.moeda_atual_operacao}.\n\n🧠 Parecer:\n{resumo_decisao_swap}"
-                                    self._imprimir_parecer_ia(resumo_decisao_swap)
                                     self.last_switch_time = time.time() 
-                                    self._save_state()
 
             except Exception as erro_monitoramento:
                 self.system_logger.error(f"Erro no monitoramento: {erro_monitoramento}")
@@ -687,13 +725,21 @@ class Strategy:
         else:
             tempo_atual = time.time()
             if tempo_atual < self.ai_cooldown_until:
+                self.system_status_ui = "Aguardando próxima análise..."
                 return
 
             if lote_dados_ia:
+                self.system_status_ui = "Aguardando veredito da IA..."
                 self.system_logger.info(f"🟢 Submetendo Dossiê com {len(lote_dados_ia)} ativos ao Comitê IA...")
                 analise_agente_ia = self.ai_agent.analisar_lote(lote_dados_ia)
                 
                 moeda_vencedora = analise_agente_ia.get("moeda_vencedora", "NENHUMA")
+                
+                if moeda_vencedora == "ERROR_503":
+                    self.system_status_ui = "⚠️ IA sobrecarregada. Nova tentativa em 5 min."
+                    self.ai_cooldown_until = time.time() + 300
+                    return
+                    
                 confianca_final = analise_agente_ia.get("confianca_final", 0)
                 resumo_decisao = analise_agente_ia.get("resumo_decisao", "Sem motivo específico.")
 
@@ -720,7 +766,11 @@ class Strategy:
                 else:
                     primeira_linha = resumo_decisao.split('\n')[0] if resumo_decisao else "Sem motivo."
                     self.ultimo_veredito_ia = f"🛑 MERCADO VETADO: {primeira_linha}"
-                    self.ai_cooldown_until = time.time() + 3600
+                    # V3.3.1: Cooldown reduzido para 45min (2700s) após rejeição da IA
+                    self.ai_cooldown_until = time.time() + 2700
+                    
+            else:
+                self.system_status_ui = "Mapeando Tendências"
 
     def _write_json_ui(self):
         try:
@@ -733,12 +783,8 @@ class Strategy:
         texto_metas = f" | 📅 Diário: {self.lucro_diario_pct:+.2f}% ({self.trades_no_dia}/{self.max_trades_diario} Trades)"
         
         agora = time.time()
-        if self.em_operacao:
-            status_texto = "Em Operação (Alvo/Stop)"
-        elif agora < self.ai_cooldown_until:
-            status_texto = "Aguardando próxima análise"
-        else:
-            status_texto = "Mapeando Tendências"
+        
+        status_texto = self.system_status_ui if self.system_status_ui else "Processando..."
         
         if self.em_operacao:
             stop_atual_exibir = self.stop_loss_dinamico_ativo if self.stop_loss_dinamico_ativo > 0 else self.stop_loss_percentage_base
@@ -749,6 +795,7 @@ class Strategy:
         else:
             if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
                 detalhe_centralizado = f"💤 HIBERNAÇÃO ATIVA: Metas ou limites atingidos. Retorno à meia-noite.{texto_metas}"
+                status_texto = "Hibernação"
             else:
                 detalhe_centralizado = f"🧠 ÚLTIMO VEREDITO: {self.ultimo_veredito_ia}{texto_metas}"
             
@@ -756,6 +803,8 @@ class Strategy:
             "coin": self.moeda_atual_operacao if self.em_operacao else self.base_coin,
             "status": status_texto,
             "cooldown_until": self.ai_cooldown_until,
+            "last_heartbeat": self.last_heartbeat_time,
+            "current_coin_change": self.current_coin_change,
             "btc_price": btc_price_value,
             "btc_change": btc_change_value,
             "buy_price": self.preco_compra_ativo,

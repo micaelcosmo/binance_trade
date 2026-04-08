@@ -62,10 +62,10 @@ FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
 }"""
 
         self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Gestão de Risco Institucional).
-O robô está segurando uma moeda no prejuízo. O stop loss matemático do motor é duro (máximo de -3.50%). 
+O robô está segurando uma moeda no prejuízo há pelo menos 10 horas. 
 
 SUA MISSÃO:
-Julgar se o robô deve fazer "HOLD" (aguardar recuperação parcial) ou aprovar um "SWAP DE EMERGÊNCIA" caso exista uma oportunidade absurdamente superior.
+Julgar se o robô deve fazer "HOLD" ou aprovar um "SWAP" para uma das candidatas que demonstre setup claro de reversão.
 
 LIMITES MATEMÁTICOS INEGOCIÁVEIS:
 1. Teto de Prejuízo (O Escudo): Se o Prejuízo Atual for MAIS NEGATIVO que -2.00% (ex: -2.50%, -3.00%), NÃO PODE aprovar o Swap. O custo é alto demais. Retorne HOLD.
@@ -111,6 +111,11 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
             return json.loads(resposta_limpa)
 
         except Exception as erro_execucao:
+            erro_str = str(erro_execucao)
+            # V3.3.1: Captura de erro 503 para evitar crash de parsing e poluição visual
+            if "503" in erro_str or "UNAVAILABLE" in erro_str:
+                return {"moeda_vencedora": "ERROR_503", "confianca_final": 0, "resumo_decisao": "Servidor sobrecarregado."}
+            
             self.system_logger.error(f"Erro no Parser JSON/API da IA: {erro_execucao}")
             return {"moeda_vencedora": "NENHUMA", "confianca_final": 0, "resumo_decisao": "Falha na comunicação ou resposta mal formatada."}
 
@@ -144,5 +149,9 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
             return json.loads(resposta_limpa)
 
         except Exception as erro_execucao:
+            erro_str = str(erro_execucao)
+            if "503" in erro_str or "UNAVAILABLE" in erro_str:
+                return {"moeda_vencedora": "ERROR_503", "confianca_final": 0, "resumo_decisao": "Servidor sobrecarregado."}
+                
             self.system_logger.error(f"Erro no Tribunal de Swap da IA: {erro_execucao}")
             return {"moeda_vencedora": "HOLD", "confianca_final": 0, "resumo_decisao": "Falha de comunicação no Tribunal. Decisão automática: HOLD."}

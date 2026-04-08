@@ -72,7 +72,6 @@ class BinanceBotGUI:
         self.btn_add_trade = tk.Button(self.tools_frame, text="🔋 +1 Tentativa Hoje", command=self.add_trade_chance, bg=self.accent_green, fg="black", font=("Segoe UI", 9, "bold"), width=20)
         self.btn_add_trade.pack(side=tk.RIGHT, padx=0)
         
-        # V3.3.0: Botão de Venda Forçada (Panic Button)
         self.btn_force_sell = tk.Button(self.tools_frame, text="🚨 Venda Forçada", command=self.force_sell_action, bg=self.accent_red, fg="white", font=("Segoe UI", 9, "bold"), width=18)
         self.btn_force_sell.pack(side=tk.RIGHT, padx=5)
         
@@ -97,6 +96,10 @@ class BinanceBotGUI:
         self.lbl_trades.grid(row=1, column=1, padx=10, pady=5, sticky="w")
         self.lbl_ping = tk.Label(self.metrics_frame, text="PING: -- ms", bg=self.bg_frame, fg="#bdc1c6", font=("Segoe UI", 10), anchor="w")
         self.lbl_ping.grid(row=1, column=2, padx=10, pady=5, sticky="w")
+        
+        # V3.3.1: Heartbeat isolado da tela de log
+        self.lbl_heartbeat = tk.Label(self.metrics_frame, text="💓 Última batida: --", bg=self.bg_frame, fg="#bdc1c6", font=("Segoe UI", 9), anchor="w")
+        self.lbl_heartbeat.grid(row=1, column=3, padx=10, pady=5, sticky="w")
 
         self.lbl_cur_coin = tk.Label(self.metrics_frame, text="Current Coin: BUSCANDO...", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_cur_coin.grid(row=2, column=0, padx=10, pady=(15, 5), sticky="w")
@@ -178,7 +181,7 @@ class BinanceBotGUI:
             except Exception: pass
             
         self.locked_at_trade_count = current_trades
-        self.log_message("\n[+] 🔋 Solicitada +1 tentativa pro dia. Botão bloqueado até a conclusão do próximo trade.\n")
+        self.log_message("\n[+] 🔋 Solicitada +1 tentativa pro dia. Bot acordará em 60 segundos...\n")
 
     def force_sell_action(self):
         resposta = messagebox.askyesno(
@@ -303,7 +306,7 @@ class BinanceBotGUI:
             self.canvas_chart.create_line(padding_value, y_buy_coordinate, canvas_width-padding_value, y_buy_coordinate, fill="#f2a900", dash=(2, 2))
             if buy_time_stamp > 0:
                 diff_seconds = time.time() - buy_time_stamp
-                candles_ago_count = diff_seconds / 900.0 # V3.3.0: Ajustado para 15m (900s)
+                candles_ago_count = diff_seconds / 900.0 
                 idx_compra_plot = (len(chart_data_points) - 1) - candles_ago_count
                 if 0 <= idx_compra_plot <= len(chart_data_points) - 1:
                     x_buy_coordinate = padding_value + idx_compra_plot * x_axis_step
@@ -339,9 +342,17 @@ class BinanceBotGUI:
                         else:
                             self.lbl_countdown.config(text="⏳ Próxima Análise: -- (Em operação)")
                         
+                        last_hb = state_data.get("last_heartbeat", "--")
+                        self.lbl_heartbeat.config(text=f"💓 Última batida: {last_hb}")
+                        
                         if "coin" in state_data:
                             coin_symbol = state_data.get('coin', 'BUSCANDO...')
-                            self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol}")
+                            coin_change = state_data.get('current_coin_change', 0.0)
+                            
+                            if is_em_operacao and coin_symbol != getattr(self.bot_config, 'BRIDGE', 'USDT'):
+                                self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol} | Var: {coin_change:+.2f}%")
+                            else:
+                                self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol}")
                             
                             btc_price_value = state_data.get('btc_price', 0.0)
                             btc_change_value = state_data.get('btc_change', 0.0)
@@ -376,7 +387,7 @@ class BinanceBotGUI:
                             
                             if "status" in state_data:
                                 cor_texto_status = self.accent_yellow if "Em Operação" in state_data['status'] else self.accent_blue
-                                if "Crash" in state_data['status']: cor_texto_status = self.accent_red
+                                if "Crash" in state_data['status'] or "⚠️" in state_data['status']: cor_texto_status = self.accent_red
                                 self.lbl_status.config(text=f"STATUS: {state_data['status']}", fg=cor_texto_status)
                             
                             chart_data_points = state_data.get('chart_data', [])
@@ -405,6 +416,13 @@ class BinanceBotGUI:
         
         try:
             for log_line in iter(process_ref.stdout.readline, ''):
+                # V3.3.1: Filtro de string para remover milissegundos sem uso de regex
+                if " - " in log_line:
+                    parts = log_line.split(" - ", 1)
+                    time_part = parts[0]
+                    if "," in time_part:
+                        time_part = time_part.split(",")[0]
+                    log_line = f"{time_part} - {parts[1]}"
                 self.log_message(log_line)
         except Exception:
             pass
