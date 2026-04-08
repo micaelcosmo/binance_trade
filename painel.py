@@ -25,9 +25,11 @@ class BinanceBotGUI:
         
         try:
             self.bot_config = Config()
-            self.current_strategy = getattr(self.bot_config, 'STRATEGY', 'default').lower()
+            self.current_strategy = getattr(self.bot_config, 'STRATEGY', 'profit_gain').lower()
+            if self.current_strategy == 'default': 
+                self.current_strategy = 'profit_gain'
         except Exception:
-            self.current_strategy = 'default'
+            self.current_strategy = 'profit_gain'
             
         self.gui_state_file = "gui_state.json"
         self.initial_balance = 0.0

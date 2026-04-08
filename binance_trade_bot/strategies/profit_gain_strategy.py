@@ -247,7 +247,7 @@ class Strategy:
 
     def initialize(self):
         """ Inicialização padrão do algoritmo no ciclo de vida da engine. """
-        self.system_logger.info("🚀 Inicializando Profit Gain V3.4.3")
+        self.system_logger.info("🚀 Inicializando Profit Gain V3.4.5")
         self._write_json_ui()
 
     def scout(self):
