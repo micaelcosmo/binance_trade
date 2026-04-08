@@ -234,7 +234,7 @@ class Strategy:
 
     def initialize(self):
         """ Inicialização padrão do algoritmo no ciclo de vida da engine. """
-        self.system_logger.info("🚀 Inicializando Profit Gain V3.4.0")
+        self.system_logger.info("🚀 Inicializando Profit Gain V3.4.1")
         self._write_json_ui()
 
     def scout(self):
@@ -311,7 +311,7 @@ class Strategy:
         return f"{truncated_val:.{precision_lvl}f}"
 
     def get_enriched_data(self, target_symbol):
-        """ Extrai métricas quantitativas, calcula limites dinâmicos e estrutura velas e momentum. """
+        """ Extrai métricas quantitativas avançadas (Cruzadinha 1H profunda 12h), calcula limites dinâmicos e estrutura velas e momentum. """
         try:
             klines_4h = self.binance_client.get_klines(symbol=target_symbol, interval='4h', limit=30)
             df_4h = pandas.DataFrame(klines_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
@@ -322,6 +322,8 @@ class Strategy:
             df_1h = pandas.DataFrame(klines_1h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['open', 'high', 'low', 'close', 'vol']: df_1h[col] = pandas.to_numeric(df_1h[col])
             df_1h.ta.ema(length=21, append=True)
+            df_1h.ta.ema(length=9, append=True) 
+            df_1h.ta.macd(fast=12, slow=26, signal=9, append=True) 
             df_1h.ta.rsi(length=14, append=True)
             df_1h.ta.atr(length=14, append=True) 
             
@@ -348,14 +350,23 @@ class Strategy:
             
             rsi_4h = float(last_row_4h.get('RSI_14', 50.0))
             rsi_1h = float(last_row_1h.get('RSI_14', 50.0))
+            rsi_1h_prev = float(df_1h.iloc[-2].get('RSI_14', 50.0))
+            rsi_1h_slope_val = rsi_1h - rsi_1h_prev
             rsi_15m = float(last_row_15m.get('RSI_14', 50.0))
+            
             if pandas.isna(rsi_4h): rsi_4h = 50.0
             if pandas.isna(rsi_1h): rsi_1h = 50.0
             if pandas.isna(rsi_15m): rsi_15m = 50.0
             
+            macd_hist_1h_current = float(last_row_1h.get('MACDh_12_26_9', 0.0))
+            macd_hist_1h_prev = float(df_1h.iloc[-2].get('MACDh_12_26_9', 0.0))
+            macd_1h_shifting_up = bool(macd_hist_1h_current > macd_hist_1h_prev)
+            macd_histogram_1h_positive = bool(macd_hist_1h_current > 0)
+
             macd_hist_15m = float(last_row_15m.get('MACDh_12_26_9', 0.0))
             macd_histogram_15m_positive = bool(macd_hist_15m > 0)
             
+            ema9_1h = float(last_row_1h.get('EMA_9', 0.0))
             ema21_1h = float(last_row_1h.get('EMA_21', 0.0))
             atr_1h = float(last_row_1h.get('ATRr_14', 0.0))
             
@@ -369,7 +380,13 @@ class Strategy:
                 volume_15m_above_avg = False
 
             ema21_1h_distance_pct = ((current_price - ema21_1h) / ema21_1h) * 100 if ema21_1h > 0 else 0.0
+            price_vs_ema9_1h_pct = ((current_price - ema9_1h) / ema9_1h) * 100 if ema9_1h > 0 else 0.0
             
+            price_action_1h_last_12 = [
+                {"h": float(df_1h.iloc[-i]['high']), "l": float(df_1h.iloc[-i]['low']), "c": float(df_1h.iloc[-i]['close'])}
+                for i in range(12, 0, -1)
+            ]
+
             current_atr_pct = (atr_1h / current_price) * 100 if current_price > 0 else 0.0
             required_atr_bottom_pct = -(current_atr_pct * 2.0)
             
@@ -391,24 +408,28 @@ class Strategy:
             else:
                 dynamic_stop_val = max(4.0, min(dynamic_stop_val, 7.00)) 
             
-            # As chaves do dicionário devem obrigatoriamente corresponder ao esperado pelas instruções estritas da IA.
             ai_payload_dict = {
-                "moeda": target_symbol.replace(self.base_coin, ""),
-                "preco_atual": current_price,
-                "candle_1h_alta": bullish_1h_candle,
-                "rejeicao_fundo_1h": bottom_rejection_1h,
+                "coin": target_symbol.replace(self.base_coin, ""),
+                "current_price": current_price,
+                "bullish_1h_candle": bullish_1h_candle,
+                "bottom_rejection_1h": bottom_rejection_1h,
+                "price_action_1h_last_12": price_action_1h_last_12, 
+                "macd_1h_shifting_up": macd_1h_shifting_up, 
+                "macd_histogram_1h_positive": macd_histogram_1h_positive, 
+                "rsi_1h_slope": round(rsi_1h_slope_val, 2), 
                 "rsi_MACRO_4h": round(rsi_4h, 2),
                 "rsi_INTER_1h": round(rsi_1h, 2),
                 "rsi_MICRO_15m": round(rsi_15m, 2), 
-                "macd_histograma_15m_positivo": macd_histogram_15m_positive,
-                "variacao_24h_pct": f"{change_24h_pct:+.2f}%",
-                "variacao_minima_24h_pct": f"{min_24h_change_pct:+.2f}%",
-                "fundo_exigido_atr_pct": f"{required_atr_bottom_pct:+.2f}%",
-                "micro_candle_confirmacao_alta": bullish_15m_micro_candle,
+                "macd_histogram_15m_positive": macd_histogram_15m_positive,
+                "change_24h_pct": f"{change_24h_pct:+.2f}%",
+                "min_24h_change_pct": f"{min_24h_change_pct:+.2f}%",
+                "required_atr_bottom_pct": f"{required_atr_bottom_pct:+.2f}%",
+                "bullish_15m_micro_candle": bullish_15m_micro_candle,
                 "volume_24h_usdt": round(volume_24h_usdt, 2),
-                "volume_15m_acima_media": volume_15m_above_avg,
-                "distancia_ema21_1h_pct": f"{ema21_1h_distance_pct:+.2f}%",
-                "sugestao_stop_loss_atr": round(dynamic_stop_val, 2)
+                "volume_15m_above_avg": volume_15m_above_avg,
+                "ema21_1h_distance_pct": f"{ema21_1h_distance_pct:+.2f}%",
+                "price_vs_ema9_1h_pct": f"{price_vs_ema9_1h_pct:+.2f}%", 
+                "suggested_atr_stop_loss": round(dynamic_stop_val, 2)
             }
             
             is_uptrend = current_price > ema21_1h
@@ -512,15 +533,15 @@ class Strategy:
                 
             if enriched_data:
                 aligned_coin_str = f"{check_coin: <7}"
-                ui_line_text = f"💼 {aligned_coin_str}: ${enriched_data['preco_atual']:.4f} ({enriched_data['variacao_24h_pct']})"
+                ui_line_text = f"💼 {aligned_coin_str}: ${enriched_data['current_price']:.4f} ({enriched_data['change_24h_pct']})"
                 
                 if is_uptrend: temp_hot_list.append(ui_line_text)
                 else: temp_cold_list.append(ui_line_text)
 
                 try:
-                    cur_change_flt = float(str(enriched_data['variacao_24h_pct']).replace('%', '').replace('+', ''))
-                    min_change_flt = float(str(enriched_data['variacao_minima_24h_pct']).replace('%', '').replace('+', ''))
-                    req_bottom_flt = float(str(enriched_data['fundo_exigido_atr_pct']).replace('%', '').replace('+', ''))
+                    cur_change_flt = float(str(enriched_data['change_24h_pct']).replace('%', '').replace('+', ''))
+                    min_change_flt = float(str(enriched_data['min_24h_change_pct']).replace('%', '').replace('+', ''))
+                    req_bottom_flt = float(str(enriched_data['required_atr_bottom_pct']).replace('%', '').replace('+', ''))
                     
                     if min_change_flt <= req_bottom_flt and -15.00 <= cur_change_flt <= 2.50:
                         ai_batch_payload.append(enriched_data)
@@ -678,11 +699,11 @@ class Strategy:
                             if locked_time_hours >= 10.0:
                                 swap_payload = []
                                 for asset in ai_batch_payload:
-                                    if asset['moeda'] != self.current_operation_coin:
+                                    if asset['coin'] != self.current_operation_coin:
                                         try:
-                                            cur_change_str = str(asset['variacao_24h_pct']).replace('%', '').replace('+', '')
-                                            min_change_str = str(asset['variacao_minima_24h_pct']).replace('%', '').replace('+', '')
-                                            req_bottom_str = str(asset['fundo_exigido_atr_pct']).replace('%', '').replace('+', '')
+                                            cur_change_str = str(asset['change_24h_pct']).replace('%', '').replace('+', '')
+                                            min_change_str = str(asset['min_24h_change_pct']).replace('%', '').replace('+', '')
+                                            req_bottom_str = str(asset['required_atr_bottom_pct']).replace('%', '').replace('+', '')
                                             
                                             if float(min_change_str) <= float(req_bottom_str) and float(cur_change_str) <= -0.50:
                                                 swap_payload.append(asset)
@@ -691,21 +712,21 @@ class Strategy:
                                 if len(swap_payload) >= 4:
                                     self.system_status_ui = "⏳ Convocando TRIBUNAL DE SWAP..."
                                     swap_analysis = self.ai_agent.analyze_swap(swap_payload, self.current_operation_coin, drop_percentage, locked_time_hours)
-                                    winning_swap_coin = swap_analysis.get("moeda_vencedora", "HOLD")
+                                    winning_swap_coin = swap_analysis.get("winning_coin", "HOLD")
                                     
                                     if winning_swap_coin == "ERROR_503":
                                         self.system_status_ui = "⚠️ IA sobrecarregada. Nova tentativa em 5 min."
                                         self.last_switch_time = time.time() - self.golden_rule_cooldown_seconds + 300 
                                         return
                                         
-                                    ai_confidence = swap_analysis.get("confianca_final", 0)
-                                    swap_decision_desc = swap_analysis.get("resumo_decisao", "Decisão mantida em HOLD.")
+                                    ai_confidence = swap_analysis.get("final_confidence", 0)
+                                    swap_decision_desc = swap_analysis.get("decision_summary", "Decisão mantida em HOLD.")
                                     
                                     if winning_swap_coin not in ["HOLD", "NENHUMA"] and ai_confidence >= 95:
-                                        chosen_asset = next((item for item in swap_payload if item['moeda'] == winning_swap_coin), None)
+                                        chosen_asset = next((item for item in swap_payload if item['coin'] == winning_swap_coin), None)
                                         if chosen_asset:
-                                            target_swap_price = chosen_asset['preco_atual']
-                                            target_swap_stop_atr = chosen_asset['sugestao_stop_loss_atr']
+                                            target_swap_price = chosen_asset['current_price']
+                                            target_swap_stop_atr = chosen_asset['suggested_atr_stop_loss']
                                             
                                             self.system_logger.warning(f"👑 TRIBUNAL APROVOU SWAP! Assumindo prejuízo para migrar com {ai_confidence}% de chance para {winning_swap_coin}.")
                                             
@@ -761,15 +782,15 @@ class Strategy:
                 self.system_logger.info(f"🟢 Submetendo Dossiê com {len(ai_batch_payload)} ativos ao Comitê de IA...")
                 ai_agent_analysis = self.ai_agent.analyze_batch(ai_batch_payload)
                 
-                ai_winning_coin = ai_agent_analysis.get("moeda_vencedora", "NENHUMA")
+                ai_winning_coin = ai_agent_analysis.get("winning_coin", "NENHUMA")
                 
                 if ai_winning_coin == "ERROR_503":
                     self.system_status_ui = "⚠️ IA sobrecarregada. Nova tentativa em 5 min."
                     self.ai_cooldown_until = time.time() + 300
                     return
                     
-                ai_final_confidence = ai_agent_analysis.get("confianca_final", 0)
-                ai_decision_summary = ai_agent_analysis.get("resumo_decisao", "Sem motivo específico.")
+                ai_final_confidence = ai_agent_analysis.get("final_confidence", 0)
+                ai_decision_summary = ai_agent_analysis.get("decision_summary", "Sem motivo específico.")
 
                 self.system_logger.info("================ RELATÓRIO DA HORA ===================")
                 self.system_logger.info(f"📋 Ativos Analisados : {len(ai_batch_payload)} moedas")
@@ -782,10 +803,10 @@ class Strategy:
                 if ai_winning_coin != "NENHUMA" and ai_final_confidence >= 90:
                     self.last_ai_verdict = f"✅ COMPRA {ai_winning_coin} ({ai_final_confidence}%): {ai_decision_summary.splitlines()[0]}"
                     
-                    chosen_asset = next((item for item in ai_batch_payload if item['moeda'] == ai_winning_coin), None)
+                    chosen_asset = next((item for item in ai_batch_payload if item['coin'] == ai_winning_coin), None)
                     if chosen_asset:
-                        target_price = chosen_asset['preco_atual']
-                        target_stop_atr = chosen_asset['sugestao_stop_loss_atr']
+                        target_price = chosen_asset['current_price']
+                        target_stop_atr = chosen_asset['suggested_atr_stop_loss']
                         
                         trade_executed = self.execute_real_trade(ai_winning_coin, target_price, target_stop_atr)
                         if trade_executed:
