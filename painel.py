@@ -203,7 +203,11 @@ class BinanceBotGUI:
                 self.log_message("[OK] Atualização validada. Reiniciando interface do usuário...\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
                 time.sleep(2)
-                os.execl(sys.executable, sys.executable, *sys.argv)
+                
+                script_absolute_path = os.path.abspath(sys.argv[0])
+                subprocess.Popen([sys.executable, script_absolute_path])
+                self.root.quit()
+                sys.exit()
             else:
                 self.log_message("[ERROR] Conflito de integridade com o tracking remoto.\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
