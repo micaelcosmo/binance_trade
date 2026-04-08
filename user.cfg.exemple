@@ -1,108 +1,69 @@
 [binance_user_config]
-api_key=EXEMPLE_KEY
-api_secret_key=EXEMPLE_KEY
+api_key=aqui tá minha chave
+api_secret_key=aqui tá minha chave
 
-# BotTestnet
-# api_key=EXEMPLE_KEY
-# api_secret_key=EXEMPLE_KEY
+# Chave do Google Gemini (Obrigatorio para a Inteligencia Artificial funcionar)
+GOOGLE_API_KEY=aqui tá minha chave
 
-GOOGLE_API_KEY="sua_chave"
 
 # ==============================================================================
-# BINANCE TRADE BOT PRO - CONFIGURACAO E MANUAL DE PARAMETROS
+# CONFIGURACOES GERAIS DO MOTOR (SISTEMA BASE)
 # ==============================================================================
 
-# --- 1. CONFIGURACOES BASICAS ---
-# Moeda base para as operacoes (A que guarda seu lucro e te protege em quedas)
-# Opcoes comuns: USDT, USDC, BUSD.
+# A moeda base que guarda seu dinheiro e contabiliza seus lucros. Normalmente USDT.
 bridge=USDT
 
-# Moeda inicial. 
-# Deixe em branco (current_coin=) para o bot usar o Smart Start e procurar a melhor.
-# Se quiser forcar o inicio em uma moeda, coloque a sigla (Ex: current_coin=ANKR).
-current_coin=
+# A estrategia que o bot vai rodar. 
+# Deixe 'profit_gain' para utilizar a Inteligencia Artificial e o sistema de analise de lote.
+strategy=profit_gain
 
-# Regiao da API da Binance.
-# Opcoes: 'com' (Binance Global - Padrao) ou 'us' (Binance US - Apenas EUA).
-tld=com
+# Tempo (em segundos) que o bot dorme antes de solicitar novos graficos.
+# Recomendado: 60. Menos que isso a Binance bloqueia sua conexao por excesso de chamadas.
+scout_sleep_time=60
 
-# Modo de Simulacao? 
-# False = Roda na sua conta real com dinheiro de verdade.
-# True = Roda na rede de testes da Binance (Testnet) com dinheiro falso.
+# Usar ambiente de teste? False = Dinheiro Real. True = Rede de teste da Binance (Falso).
 testnet=False
 
-# Estrategia Principal em Uso.
-# Opcoes: 
-# 'default' = Foca em Acumulo (Jumps) e usa o Trailing Stop Global para lucrar.
-# 'profit_gain' = Foca em Scalping classico (Compra, define Take Profit e Stop Loss fixos em Dolar).
-strategy=default
+# Regiao da Binance (com = Binance Global / us = Binance America).
+tld=com
 
 
-# --- 2. MOTOR DE DECISAO E SCOUT ---
-# Tempo (em segundos) que o bot dorme entre cada requisicao a Binance.
-# Recomendado: 5. Menos que isso pode esgotar o limite da API e causar banimento temporario.
-scout_sleep_time=5
+# ==============================================================================
+# LIMITES E METAS DA INTELIGENCIA ARTIFICIAL (PROFIT GAIN)
+# ==============================================================================
 
-# Usar calculo de margem em Porcentagem (%) para pular de moeda?
-# 'yes' = O bot usa o "scout_margin" (Ex: so pula se o ganho for > 1.2%). E a opcao mais inteligente.
-# 'no' = O bot ignora a % e usa o "scout_multiplier" (calculo de proporcao fixa de moedas, mais antigo e menos preciso).
-use_margin=yes
+# Meta de Lucro Diario (%). 
+# Quando o bot atingir essa % de lucro somado no dia, ele entra em modo "Hibernacao".
+# Ele para de comprar e so volta a operar apos a meia-noite para garantir o lucro no bolso.
+daily_profit_target_pct=5.0
 
-# Multiplicador padrao (so funciona se use_margin=no).
-# Recomendado: entre 3 e 7.
-scout_multiplier=5
+# Limite Maximo de Trades por Dia.
+# Quantas operacoes totais (soma de Gains e Losses) o bot pode abrir num unico dia.
+# Impede que ele devolva os ganhos abrindo infinitas operacoes em um dia de mercado ruim.
+max_daily_trades=3
 
-# Margem MINIMA matematica exigida para o bot realizar um salto (Jump).
-# AVALIACAO LOGICA: A Binance cobra ~0.2% de taxa (compra+venda). O Spread do mercado come mais ~0.3%.
-# Custo oculto total de um pulo = ~0.5%.
-# Valores:
-# 0.5 a 0.8: O bot pula muito rapido, mas voce pode empatar nas taxas ou acumular poeira sem lucro real.
-# 1.0 a 1.5: Ponto ideal. O bot paga a Binance e ainda garante de 0.5% a 1.0% de aumento real nas suas moedas.
-# 2.0 a 3.0: Bot conservador. Demora muito pra pular, so pega as grandes oportunidades.
-scout_margin=1.2
+# Stop Loss Padrao (%).
+# O limite maximo de prejuizo que voce aceita em uma moeda comum (Altcoins) antes do bot 
+# vender a mercado para proteger seu capital de uma queda livre.
+base_stop_loss_pct=7.0
 
-# Horas para manter o historico de calculos (ratios) no banco de dados.
-# Recomendado: 1. Mantem o banco leve e focado apenas no momento atual.
-hourToKeepScoutHistory=1
+# Gatilho do Trailing Stop (%).
+# Quanto a moeda precisa subir de lucro para o bot "armar a armadilha" do Take Profit dinamico.
+trailing_activation_pct=1.5
 
+# Recuo do Trailing Stop (%).
+# Depois que a armadilha armou (ex: lucro bateu +1.5%), quanto o preco pode cair do pico 
+# antes do bot executar a venda? Exemplo: Bateu +1.5%, recuo de 0.3%. Se o preco descer 
+# para +1.2%, o bot vende imediatamente e guarda o lucro.
+trailing_drop_pct=0.3
 
-# --- 3. TIMEOUTS E GELADEIRA (TEMPOS EM MINUTOS) ---
-# A Guilhotina. Tempo maximo segurando uma moeda antes de abortar e voltar para USDT.
-# Valores recomendados: 60 a 120. Menos que 60 pode fazer o bot vender no prejuizo em oscilacoes normais.
-jump_timeout=90
+# Stop Desastre (A Guilhotina) (%).
+# A trava de protecao absoluta do sistema. Se o mercado ignorar os calculos de volatilidade e 
+# a moeda despencar de uma vez de forma bizarra (Crash), o bot vende tudo ao bater essa %.
+disaster_stop_pct=15.0
 
-# A Geladeira (Filtro Anti Ping-Pong). Tempo que uma moeda fica bloqueada apos ser vendida.
-# Recomendado: 30 a 60. Impede o bot de ficar batendo bola entre as mesmas duas moedas pagando taxa a toa.
-cooldown_minutos=60
-
-# Segundos para aguardar uma ordem pendente na Binance antes de cancelar.
-# Como usamos ordens a Mercado (Market), isso raramente e acionado, mas 10 e uma boa rede de seguranca.
-buy_timeout=10
-sell_timeout=10
-
-
-# --- 4. FILTROS DE RISCO (O PORTEIRO DO MERCADO) ---
-# Queda (nas ultimas 24h) do Bitcoin necessaria para ativar o MODO SOBREVIVENCIA.
-# Exemplo: -3.0. Se o BTC cair 3%, o bot bloqueia o uso de USDT e paralisa os timeouts de prejuizo.
-btc_crash_limit=-3.0
-
-# Recuperacao do Bitcoin necessaria para desligar o MODO SOBREVIVENCIA.
-# Exemplo: -1.5. O BTC precisa subir do -3.0% para o -1.5% para o bot entender que a tempestade passou.
-btc_recover_limit=-1.5
-
-# O Filtro de Momentum (A regra de Ouro). Variacao minima positiva (em 24h) de uma altcoin.
-# Exemplo: 2.0. O bot NUNCA vai comprar ou pular para uma moeda que nao esteja pelo menos +2.0% verde hoje.
-min_24h_change=2.0
-
-
-# --- 5. TRAILING STOP LOSS GLOBAL (A MAQUINA DE FAZER DINHEIRO) ---
-# % de Lucro liquido no patrimonio total para engatilhar o freio de seguranca.
-# Exemplo: 3.5. Quando seu saldo em USD subir 3.5%, o bot arma a armadilha (mas ainda nao vende).
-global_take_profit=3.5
-
-# % de Queda aceitavel (a "distancia da coleira") em relacao ao pico de lucro.
-# LOGICA: Se global_take_profit=3.5 e trailing_drop=0.4:
-# 1. Bateu 3.5% -> Bot fica de prontidao.
-# 2. Subiu para 4.5% -> Bot atualiza a meta.
-# 3. Caiu para 4.1% (4.5 - 0.4) -> O BOT VENDE TUDO PARA USDT E POE O LUCRO NO BOLSO!
-trailing_drop=0.4
+# Tempo de Espera do Tribunal IA (Minutos).
+# Se o bot comprar uma moeda e ela amarrar em prejuizo, quanto tempo (em minutos) ele deve 
+# esperar antes de permitir que a IA avalie trocar ela por outra melhor (Swap)?
+# Recomendado: 45. Assim o bot nao fica pulando de moeda em moeda no desespero.
+ai_cooldown_minutes=45

@@ -12,10 +12,8 @@ sqlitedict==2.1.0
 unicorn_binance_websocket_api==2.10.2
 unicorn_binance_rest_api
 
-# --- Novos Motores (Análise Técnica e IA) ---
+# --- Motores de Análise Técnica e IA ---
 pandas
 pandas-ta
 python-dotenv
-langchain-core
-langchain-google-genai
-google-generativeai
+google-genai

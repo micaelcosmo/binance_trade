@@ -65,9 +65,9 @@
 
     <header>
         <h1>Binance Trade Bot Pro <span style="color: #fff; font-size: 1.5rem; vertical-align: middle;">🤖 AI Edition</span></h1>
-        <p>Terminal quantitativo automatizado com análise tridimensional (MACD/ATR), trailing stop e gestão institucional em lote validada pelo Google Gemini.</p>
+        <p>Terminal quantitativo automatizado com análise tridimensional profunda (Contexto 12h), trailing stop e gestão institucional em lote validada pelo Google Gemini.</p>
         <div class="hero-badges">
-            <span>v3.3.0</span>
+            <span>v3.4.2</span>
             <span>Python 3.9+</span>
             <span>Tkinter UI</span>
             <span>Gemini 2.5 Flash-Lite</span>
@@ -76,20 +76,20 @@
 
     <section class="features">
         <div class="feature-card">
-            <h3>🧠 Visão Tridimensional (IA)</h3>
-            <p>O motor avalia o mercado em 4H (Macro), 1H (Elástico EMA) e 15m (Gatilho MACD). O Dossiê é submetido à IA, que garante a formação da "barriga" da reversão antes de comprar.</p>
+            <h3>🧠 Visão Tridimensional Estendida</h3>
+            <p>O motor avalia o mercado fornecendo à IA o histórico completo de Price Action das últimas 12 horas (Macro), além da EMA curta (1H) e do Gatilho MACD (15m). O sistema evita matematicamente a compra de facas caindo.</p>
         </div>
         <div class="feature-card">
-            <h3>📈 Risco/Retorno Ajustado</h3>
-            <p>Stop Loss dinâmico calculado via ATR (Average True Range) blindado em no máximo -3.50%. O Trailing Stop persegue alvos de +1.50%, mantendo a matemática a seu favor.</p>
+            <h3>📈 Risco/Retorno Elástico</h3>
+            <p>Stop Loss dinâmico calculado via ATR (Average True Range) blindado de forma elástica até -7.00% (Altcoins) e -10.50% (BTC). O Trailing Stop persegue alvos invisíveis de +1.50%, suportando a volatilidade do mercado.</p>
         </div>
         <div class="feature-card">
-            <h3>🚨 Manual Override</h3>
-            <p>O Painel UI conta com um <strong>Botão de Venda Forçada</strong>. Assuma o controle total da operação em caso de notícias macroeconômicas, registrando o P/L de forma perfeitamente assíncrona.</p>
+            <h3>🔄 Auto-Updater Seguro</h3>
+            <p>Sincronize o código-fonte direto do GitHub com 1 clique no Painel UI. O sistema possui trava inteligente: aguarda o encerramento de operações em aberto para executar atualizações sem colocar seu capital em risco.</p>
         </div>
         <div class="feature-card">
-            <h3>👑 Auto-Switch & Cooldown</h3>
-            <p>A IA veta mercados laterais poupando tokens (30min cooldown). Caso esteja preso num trade, o Tribunal de Swap julga matematicamente se vale a pena migrar o capital.</p>
+            <h3>🚨 Manual Override & Cooldown</h3>
+            <p>Assuma o controle via <strong>Botão de Venda Forçada</strong>. Em cenários complexos, a IA veta mercados laterais (30min cooldown) ou julga matematicamente se vale a pena migrar de uma operação ruim (Tribunal de Swap).</p>
         </div>
     </section>
 
@@ -104,7 +104,7 @@
             <p>Este manual guiará você desde a instalação até a sua primeira operação automatizada.</p>
 
             <h2>1. Instalação e Preparação</h2>
-            <p>Clone o repositório, crie um ambiente virtual e instale as dependências. O projeto utiliza <code>google-genai</code> nativo para alta performance.</p>
+            <p>Clone o repositório, crie um ambiente virtual e instale as dependências. O projeto utiliza o SDK oficial <code>google-genai</code> nativo para alta performance.</p>
             <pre><code>git clone https://github.com/micaelcosmo/binance_trade.git
 cd binance_trade
 python -m venv venv
@@ -115,62 +115,63 @@ pip install -r requirements.txt</code></pre>
             <div class="warning alert">
                 <strong>Aviso de Segurança:</strong> Nunca ative a permissão de "Saques" (Withdrawals) na sua API da Binance. O bot precisa apenas de permissão de Leitura e Spot Trading.
             </div>
-            <p>Faça cópias dos exemplos fornecidos:</p>
+            <p>Faça cópias dos arquivos de exemplo fornecidos na raiz do projeto:</p>
             <ul>
                 <li>Copie <code>user.cfg.example</code> para <code>user.cfg</code></li>
                 <li>Copie <code>supported_coin_list.example</code> para <code>supported_coin_list.txt</code></li>
             </ul>
-            <p>Abra o <code>user.cfg</code> e insira suas chaves da Binance e a <strong>GOOGLE_API_KEY</strong> (Gerada no Google AI Studio).</p>
+            <p>Abra o <code>user.cfg</code> com um editor de texto e insira suas chaves da Binance e a sua <strong>GOOGLE_API_KEY</strong> (Gerada gratuitamente no Google AI Studio).</p>
 
             <h2>3. Lista de Moedas (Watchlist)</h2>
-            <p>Abra o <code>supported_coin_list.txt</code>. Adicione o símbolo das moedas (uma por linha), sem o par USDT. Exemplo:</p>
+            <p>Abra o arquivo <code>supported_coin_list.txt</code>. Adicione o símbolo das moedas que você deseja que o bot monitore (uma por linha), sem o par USDT. Exemplo:</p>
             <pre><code>BTC
 SOL
 LINK
 PEPE</code></pre>
 
-            <h2>4. Iniciando o Painel UI</h2>
-            <p>Inicie o Dashboard gráfico:</p>
+            <h2>4. Iniciando o Painel UI e Atualizações</h2>
+            <p>Inicie o Dashboard gráfico executando o seguinte comando no terminal:</p>
             <pre><code>python painel.py</code></pre>
-            <p>No painel, clique em <strong>RUN > Iniciar Bot</strong>. Você tem à disposição o placar em tempo real, os gráficos de 15m e o botão <strong>🚨 Venda Forçada</strong> para intervenções manuais de segurança.</p>
+            <p>No painel, clique em <strong>RUN > Iniciar Bot</strong>. Você tem à disposição o placar em tempo real, Dossiê de Inteligência e ferramentas de intervenção manual.</p>
+            <p>Para se manter atualizado com novas versões de estratégia, basta clicar no botão <strong>🔄 Atualizar Versão</strong> na interface. O bot fará o download e reiniciará sozinho com segurança.</p>
 
             <h2>5. Troubleshooting Comum</h2>
             <ul>
-                <li><strong>Erro -1021 (Timestamp outside recvWindow):</strong> Relógio do Windows atrasado. Vá em Data/Hora e clique em "Sincronizar Agora".</li>
-                <li><strong>Erro de Conflito websockets:</strong> Rode <code>pip install websockets==11.0.3</code> para forçar o downgrade exigido pela Binance.</li>
+                <li><strong>Erro -1021 (Timestamp outside recvWindow):</strong> Relógio do Windows atrasado. Vá em configurações de Data/Hora e clique em "Sincronizar Agora".</li>
+                <li><strong>Erro de Conflito websockets:</strong> Em sistemas antigos, pode ser necessário rodar <code>pip install websockets==11.0.3</code> para forçar o downgrade exigido pela API da Binance.</li>
             </ul>
         </div>
 
         <div id="dev" class="tab-content">
-            <h2>Arquitetura do Sistema (v3.3.0)</h2>
-            <p>A arquitetura evoluiu para um ecossistema Híbrido: Cálculo Local (Pandas-TA) + Validação em Nuvem (LLM).</p>
+            <h2>Arquitetura do Sistema (v3.4.2)</h2>
+            <p>A arquitetura evoluiu para um ecossistema Híbrido padronizado (Inglês no código/Variáveis e Português em Docstrings/UI): Cálculo Local via Dataframes (Pandas-TA) + Auditoria em Nuvem Generativa (Google Gemini).</p>
 
-            <h2>1. Classe Principal: Strategy (<code>profit_gain_strategy.py</code>)</h2>
-            <p>O motor gerencia a matemática pesada com a seguinte árvore de decisão tridimensional:</p>
+            <h2>1. Estrutura Quantitativa (<code>profit_gain_strategy.py</code>)</h2>
+            <p>O motor (Strategy) centraliza a extração assíncrona dos candlests (OHLCV) e calcula a árvore de decisão através do método <code>get_enriched_data</code>:</p>
             <ul>
-                <li><strong>4H (Macro):</strong> Verifica colapsos semanais via RSI.</li>
-                <li><strong>1H (Swing):</strong> Mede o distanciamento da EMA 21 (Reversão à Média) e calcula o True Bottom exigindo uma queda maior que 2x o ATR.</li>
-                <li><strong>15m (Gatilho):</strong> Cruza o MACD Histogram com anomalias de volume institucional para confirmar a formação da "barriga" da curva de preço.</li>
+                <li><strong>Contexto 12h (Macro):</strong> Injeta o histórico contínuo das últimas 12 horas (Price Action) e afere a compressão do ativo via EMA 9 (Reversão de Curto Prazo).</li>
+                <li><strong>Swing de Exaustão (1H):</strong> Mede o distanciamento da EMA 21, o slope (inclinação) direcional do RSI e exige que o Histograma MACD demonstre sinais de reversão (`macd_1h_shifting_up`). Calcula o True Bottom exigindo uma queda maior que 2x o ATR.</li>
+                <li><strong>Gatilho Micro (15m):</strong> Cruza o MACD Histogram positivo com anomalias de volume institucional no time-frame de aceleração.</li>
             </ul>
 
             <h2>2. Agente Institucional: MarketAnalyzer (<code>ai_agent.py</code>)</h2>
-            <p>Integrado com <strong>gemini-2.5-flash-lite</strong>. A IA processa o *Chain of Thought* sob leis estritas:</p>
+            <p>Integrado via SDK nativo com <strong>gemini-2.5-flash-lite</strong>. A IA processa o *Chain of Thought* recebendo o payload JSON sob leis estritas:</p>
             <ul>
-                <li><strong>A Lei da Curva:</strong> Veta matematicamente ativos onde o <code>macd_histograma_15m_positivo</code> seja FALSE.</li>
-                <li><strong>Trava de Confiança:</strong> Impossibilita *scores* >= 90 sem que o Python confirme *Spikes* de volume.</li>
+                <li><strong>A Lei da Estrutura:</strong> Veta matematicamente ativos onde as últimas 12 horas demonstrem colapso descendente contínuo, independente de picos isolados.</li>
+                <li><strong>Trava de Confiança Micro:</strong> Impossibilita emissão de *scores* de aprovação (>= 90) sem que o Python confirme *Spikes* de volume acima da média de 10 períodos no 15m.</li>
             </ul>
 
-            <h2>3. Manual Override e IPC (Inter-Process Communication)</h2>
-            <p>A separação entre a Interface (Tkinter) e o Motor (Processo Independente) exige um IPC sem bloqueios (Non-blocking):</p>
+            <h2>3. Auto-Updater & IPC (Inter-Process Communication)</h2>
+            <p>A separação entre a Interface (Tkinter/Main Thread) e o Motor Quantitativo (Sub-processo Independente via `subprocess.Popen`) exige um IPC robusto (Non-blocking):</p>
             <ul>
-                <li>Ações de UI, como o <strong>Panic Button</strong> ou adição de novas chances, geram *ghost flags* (arquivos <code>.flag</code>).</li>
-                <li>O loop assíncrono do bot consome essas flags no intervalo de varredura, executando funções como <code>_execute_forced_sell()</code>, liquidando a operação a mercado e assumindo um silêncio tático de 60 segundos automaticamente.</li>
+                <li><strong>Safe Update Cycle:</strong> O componente <code>perform_update</code> no painel aciona a sincronização remota (`git reset` e `git pull`). Utiliza a leitura de diretório absoluto (`os.path.abspath`) para o recarregamento na memória via substituição de Popen (`sys.execl` deprecado), garantindo imunidade a *paths* corrompidos de atalhos do Windows.</li>
+                <li><strong>Ghost Flags:</strong> Ações de UI, como botões de Venda Forçada ou bloqueio para atualização, geram arquivos <code>.flag</code> que são interceptados silenciosamente pelo motor durante sua varredura (ex: método <code>_check_ui_flags</code>).</li>
             </ul>
 
-            <h2>4. Roadmap Dev (O que vem na v4.0)</h2>
+            <h2>4. Roadmap (Visão v4.0)</h2>
             <div class="success alert">
-                <strong>Próxima Evolução: Webhooks & Multi-Agentes</strong><br>
-                Substituição do modelo CLI centralizado por uma arquitetura distribuída. Implementação de Webhooks diretos do TradingView para gatilho secundário e divisão do Comitê de IA em multi-agentes.
+                <strong>Próxima Evolução: Análise de Notícias & Mensageria Ativa</strong><br>
+                Implementação de um novo módulo de IA dedicado a monitorar o sentimento do mercado e buscar moedas promissoras através de leitura de notícias em tempo real. Além disso, o sistema contará com integração completa de mensageria (ex: Telegram) para notificações ao vivo das operações, acionamentos de <em>Stop Loss</em> e relatórios de auditoria direto no seu celular.
             </div>
         </div>
     </section>
