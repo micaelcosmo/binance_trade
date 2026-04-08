@@ -30,20 +30,37 @@ class Strategy:
         self.last_ai_verdict = "Aguardando lote de dados..."
         self.ai_cooldown_until = 0.0
         
-        self.trailing_activation_pct = 1.50 
-        self.trailing_drop_pct = 0.30
-        
-        self.base_stop_loss_pct = 7.00 
+        # Leitura dinâmica do user.cfg com trava de segurança (Fallback)
+        try:
+            self.daily_profit_target_pct = float(getattr(self.system_configuration, 'daily_profit_target_pct', 5.0))
+            self.max_daily_trades = int(getattr(self.system_configuration, 'max_daily_trades', 3))
+            
+            self.base_stop_loss_pct = float(getattr(self.system_configuration, 'base_stop_loss_pct', 7.0))
+            self.disaster_stop_pct = float(getattr(self.system_configuration, 'disaster_stop_pct', 15.0))
+            
+            self.trailing_activation_pct = float(getattr(self.system_configuration, 'trailing_activation_pct', 1.5))
+            self.trailing_drop_pct = float(getattr(self.system_configuration, 'trailing_drop_pct', 0.3))
+            
+            ai_cooldown_mins = float(getattr(self.system_configuration, 'ai_cooldown_minutes', 45.0))
+            self.golden_rule_cooldown_seconds = ai_cooldown_mins * 60.0
+        except Exception as config_error:
+            self.system_logger.error(f"Erro na conversao do user.cfg: {config_error}. Assumindo padroes estritos.")
+            self.daily_profit_target_pct = 5.0
+            self.max_daily_trades = 3
+            self.base_stop_loss_pct = 7.0
+            self.disaster_stop_pct = 15.0
+            self.trailing_activation_pct = 1.5
+            self.trailing_drop_pct = 0.3
+            self.golden_rule_cooldown_seconds = 2700.0
+
         self.active_dynamic_stop_loss = 0.0
         self.active_monitor_drop_pct = 0.0 
         
         self.maximum_hold_time_seconds = 7200      
-        self.golden_rule_cooldown_seconds = 2700 
         
         self.current_date = datetime.now().strftime("%Y-%m-%d")
         self.daily_profit_pct = 0.0
         self.daily_trades = 0
-        self.max_daily_trades = 3
         self.daily_history = []
         self.full_ai_report = "Aguardando primeira análise detalhada da IA..."
         
@@ -90,7 +107,6 @@ class Strategy:
                         self.current_date = saved_date
                         self.daily_profit_pct = state_data.get("daily_profit_pct", 0.0)
                         self.daily_trades = state_data.get("daily_trades", 0)
-                        self.max_daily_trades = state_data.get("max_daily_trades", 3)
                         self.daily_history = state_data.get("daily_history", [])
                         self.full_ai_report = state_data.get("full_ai_report", "Aguardando primeira análise detalhada da IA...")
             except Exception:
@@ -112,7 +128,6 @@ class Strategy:
                     "current_date": self.current_date,
                     "daily_profit_pct": self.daily_profit_pct,
                     "daily_trades": self.daily_trades,
-                    "max_daily_trades": self.max_daily_trades,
                     "daily_history": self.daily_history,
                     "full_ai_report": self.full_ai_report
                 }, file_handler)
@@ -126,7 +141,6 @@ class Strategy:
             self.current_date = today_date
             self.daily_profit_pct = 0.0
             self.daily_trades = 0
-            self.max_daily_trades = 3
             self.daily_history = []
             self.full_ai_report = "Aguardando primeira análise do novo dia..."
             if not self.in_operation:
@@ -140,7 +154,6 @@ class Strategy:
             self.trades_lost = 0
             self.daily_profit_pct = 0.0
             self.daily_trades = 0
-            self.max_daily_trades = 3
             self.daily_history = []
             self.full_ai_report = "Placar zerado. Aguardando nova análise..."
             self._save_state()
@@ -234,7 +247,7 @@ class Strategy:
 
     def initialize(self):
         """ Inicialização padrão do algoritmo no ciclo de vida da engine. """
-        self.system_logger.info("🚀 Inicializando Profit Gain V3.4.1")
+        self.system_logger.info("🚀 Inicializando Profit Gain V3.4.3")
         self._write_json_ui()
 
     def scout(self):
@@ -406,7 +419,7 @@ class Strategy:
             if "BTC" in target_symbol:
                 dynamic_stop_val = max(6.0, min(dynamic_stop_val, 10.50))
             else:
-                dynamic_stop_val = max(4.0, min(dynamic_stop_val, 7.00)) 
+                dynamic_stop_val = max(4.0, min(dynamic_stop_val, self.base_stop_loss_pct)) 
             
             ai_payload_dict = {
                 "coin": target_symbol.replace(self.base_coin, ""),
@@ -497,7 +510,7 @@ class Strategy:
     def scan_market(self):
         """ Função principal de coordenação: minera dados, submete lotes à IA e avalia execução ou encerramento de posições. """
         if not self.in_operation:
-            if self.daily_profit_pct >= 5.0 or self.daily_trades >= self.max_daily_trades:
+            if self.daily_profit_pct >= self.daily_profit_target_pct or self.daily_trades >= self.max_daily_trades:
                 time_now = datetime.now()
                 tomorrow_date = time_now + timedelta(days=1)
                 midnight_time = datetime(tomorrow_date.year, tomorrow_date.month, tomorrow_date.day, 0, 0, 0)
@@ -543,7 +556,7 @@ class Strategy:
                     min_change_flt = float(str(enriched_data['min_24h_change_pct']).replace('%', '').replace('+', ''))
                     req_bottom_flt = float(str(enriched_data['required_atr_bottom_pct']).replace('%', '').replace('+', ''))
                     
-                    if min_change_flt <= req_bottom_flt and -15.00 <= cur_change_flt <= 2.50:
+                    if min_change_flt <= req_bottom_flt and -self.disaster_stop_pct <= cur_change_flt <= 2.50:
                         ai_batch_payload.append(enriched_data)
                 except Exception:
                     pass
@@ -647,10 +660,10 @@ class Strategy:
                 
                 current_sl_limit = self.active_dynamic_stop_loss if self.active_dynamic_stop_loss > 0 else self.base_stop_loss_pct
 
-                if drop_percentage <= -15.0:
+                if drop_percentage <= -self.disaster_stop_pct:
                     is_selling_now = True
                     executed_sell_reason = "STOP_DESASTRE"
-                    self.system_logger.warning(f"🚨 DESASTRE ABSOLUTO ACIONADO! Moeda perdeu 15% de valor em carteira. Cortando risco sistêmico.")
+                    self.system_logger.warning(f"🚨 DESASTRE ABSOLUTO ACIONADO! Moeda perdeu {self.disaster_stop_pct}% de valor em carteira. Cortando risco sistêmico.")
                 elif drop_percentage <= -current_sl_limit:
                     is_selling_now = True
                     executed_sell_reason = "STOP_LOSS_DINAMICO"
@@ -840,7 +853,7 @@ class Strategy:
             else:
                 centered_detail = f"[⏳] Duração: {self.operation_time_string} | [🎯] Gatilho Trailing: {self.trailing_activation_pct:.2f}% | [🛑] SL: -{display_current_sl:.2f}% (Var: {self.active_monitor_drop_pct:+.2f}%){target_text}"
         else:
-            if self.daily_profit_pct >= 5.0 or self.daily_trades >= self.max_daily_trades:
+            if self.daily_profit_pct >= self.daily_profit_target_pct or self.daily_trades >= self.max_daily_trades:
                 centered_detail = f"💤 HIBERNAÇÃO ATIVA: Metas ou limites atingidos. Retorno à meia-noite.{target_text}"
                 status_text = "Hibernação Institucional"
             else:
