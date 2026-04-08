@@ -78,7 +78,6 @@ class BinanceBotGUI:
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
         self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=10)
 
-        # V3.3.2: Reorganização em Colunas Estritas (0, 1, 2, 3(Chart))
         self.metrics_frame.columnconfigure(0, weight=1)
         self.metrics_frame.columnconfigure(1, weight=2) 
         self.metrics_frame.columnconfigure(2, weight=1)
@@ -347,11 +346,11 @@ class BinanceBotGUI:
                         else:
                             self.lbl_countdown.config(text="⏳ Próxima Análise: -- (Em operação)")
                         
-                        # V3.3.2: Heartbeat com cores dinâmicas (Tempo real)
                         last_hb_ts = state_data.get("last_heartbeat_ts", 0.0)
                         if last_hb_ts > 0:
                             delta_hb = time.time() - last_hb_ts
-                            cor_hb = self.accent_green if delta_hb <= 70 else (self.accent_yellow if delta_hb <= 300 else self.accent_red)
+                            # Margem ampliada pra 80s pra não piscar sem necessidade
+                            cor_hb = self.accent_green if delta_hb <= 80 else (self.accent_yellow if delta_hb <= 300 else self.accent_red)
                             hb_str = time.strftime("%H:%M:%S", time.localtime(last_hb_ts))
                             self.lbl_heartbeat.config(text=f"💓 Última batida: {hb_str}", fg=cor_hb)
                         
@@ -360,7 +359,6 @@ class BinanceBotGUI:
                             coin_change = state_data.get('current_coin_change', 0.0)
                             current_price_value = state_data.get('current_price', 0.0)
                             
-                            # V3.3.2: Formatting Current Coin label
                             if coin_symbol in ["USDT", "BTC"] or not is_em_operacao:
                                 self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol}")
                             else:
@@ -396,6 +394,11 @@ class BinanceBotGUI:
                             win_rate_percentage = (trades_won_count / total_trades_count * 100) if total_trades_count > 0 else 0.0
                             self.lbl_trades.config(text=f"TRADES: {total_trades_count} | W: {trades_won_count} | L: {trades_lost_count} ({win_rate_percentage:.1f}%)")
                             
+                            if "status" in state_data:
+                                cor_texto_status = self.accent_yellow if "Em Operação" in state_data['status'] else self.accent_blue
+                                if "Crash" in state_data['status'] or "⚠️" in state_data['status']: cor_texto_status = self.accent_red
+                                self.lbl_status.config(text=f"STATUS: {state_data['status']}", fg=cor_texto_status)
+                            
                             chart_data_points = state_data.get('chart_data', [])
                             if chart_data_points:
                                 self.draw_mini_chart(chart_data_points, coin_symbol, buy_price_value, buy_time_stamp)
@@ -403,7 +406,6 @@ class BinanceBotGUI:
                                 self.canvas_chart.delete("all")
                                 self.lbl_chart_title.config(text="Mini-Gráfico (Inativo)", fg="#9aa0a6")
 
-                            # V3.3.2: Cache do Scroll. Só atualiza a lista se a lista real mudou.
                             aptas_list = state_data.get('aptas', [])
                             geladeira_list = state_data.get('geladeira', [])
                             
