@@ -30,9 +30,10 @@ class BinanceBotGUI:
             self.current_strategy = 'default'
             
         self.gui_state_file = "gui_state.json"
-        self.saldo_inicial = 0.0
-        self.saldo_atual = 0.0
+        self.initial_balance = 0.0
+        self.current_balance = 0.0
         self.locked_at_trade_count = -1
+        self.in_operation = False
         self._load_gui_state()
         
         self.bg_main = "#0b0e11" 
@@ -74,6 +75,9 @@ class BinanceBotGUI:
         
         self.btn_force_sell = tk.Button(self.tools_frame, text="🚨 Venda Forçada", command=self.force_sell_action, bg=self.accent_red, fg="white", font=("Segoe UI", 9, "bold"), width=18)
         self.btn_force_sell.pack(side=tk.RIGHT, padx=5)
+
+        self.btn_update = tk.Button(self.tools_frame, text="🔄 Atualizar Versão", command=self.request_update, bg=self.accent_blue, fg="black", font=("Segoe UI", 9, "bold"), width=20)
+        self.btn_update.pack(side=tk.RIGHT, padx=5)
         
         self.metrics_frame = tk.Frame(root, bg=self.bg_frame, pady=15)
         self.metrics_frame.pack(fill=tk.X, side=tk.TOP, padx=15, pady=10)
@@ -83,8 +87,7 @@ class BinanceBotGUI:
         self.metrics_frame.columnconfigure(2, weight=1)
         self.metrics_frame.columnconfigure(3, weight=0)
 
-        # COLUNA 0 (Esquerda)
-        texto_inicial = f"${self.saldo_inicial:.2f}" if self.saldo_inicial > 0 else "--"
+        texto_inicial = f"${self.initial_balance:.2f}" if self.initial_balance > 0 else "--"
         self.lbl_inicial = tk.Label(self.metrics_frame, text=f"[S] Saldo Inicial: {texto_inicial}", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_inicial.grid(row=0, column=0, padx=10, pady=5, sticky="w")
         
@@ -97,11 +100,9 @@ class BinanceBotGUI:
         self.lbl_trades = tk.Label(self.metrics_frame, text="TRADES: 0 | W: 0 | L: 0 (0.0%)", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_trades.grid(row=3, column=0, padx=10, pady=5, sticky="w")
         
-        # O RETORNO DA STATUS LABEL (Correção do Crash UI)
         self.lbl_status = tk.Label(self.metrics_frame, text="STATUS: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_status.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        # COLUNA 1 (Meio)
         self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_btc.grid(row=0, column=1, padx=10, pady=5, sticky="w")
         
@@ -115,7 +116,6 @@ class BinanceBotGUI:
             self.lbl_tgt_price = tk.Label(self.metrics_frame, text="[🎯] Alvo (Venda): $0.000000 | 0.00 USDT ⇌ 0.0000", bg=self.bg_frame, fg=self.accent_green, font=("Segoe UI", 10, "bold"), anchor="w")
             self.lbl_tgt_price.grid(row=3, column=1, padx=10, pady=5, sticky="w")
 
-        # COLUNA 2 (Direita)
         self.lbl_cur_coin = tk.Label(self.metrics_frame, text="Current Coin: BUSCANDO...", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_cur_coin.grid(row=0, column=2, padx=10, pady=5, sticky="w")
         
@@ -128,14 +128,12 @@ class BinanceBotGUI:
         self.lbl_countdown = tk.Label(self.metrics_frame, text="⏳ Próxima Análise: --", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_countdown.grid(row=3, column=2, padx=10, pady=5, sticky="w")
         
-        # COLUNA 3 (Mini Gráfico)
         if self.current_strategy == 'profit_gain':
             self.canvas_chart = tk.Canvas(self.metrics_frame, bg="#000000", width=280, height=110, highlightthickness=1, highlightbackground="#3c4043")
             self.canvas_chart.grid(row=0, column=3, rowspan=4, padx=(0,10), pady=5, sticky="e")
             self.lbl_chart_title = tk.Label(self.metrics_frame, text="Mini-Gráfico (Inativo)", bg=self.bg_frame, fg="#9aa0a6", font=("Segoe UI", 8, "bold"))
             self.lbl_chart_title.grid(row=4, column=3, sticky="e", padx=(0,10))
 
-        # LINHA INFERIOR (Detalhes)
         self.lbl_det_atu = tk.Label(self.metrics_frame, text="Aguardando detalhes da operação...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), anchor="w", justify="left")
         self.lbl_det_atu.grid(row=5, column=0, columnspan=4, padx=10, pady=(10, 5), sticky="we")
 
@@ -165,72 +163,106 @@ class BinanceBotGUI:
             try:
                 with open(self.gui_state_file, "r") as file_handler:
                     state_data = json.load(file_handler)
-                    self.saldo_inicial = state_data.get("saldo_inicial", 0.0)
+                    self.initial_balance = state_data.get("saldo_inicial", 0.0)
             except: pass
 
     def _save_gui_state(self):
         try:
             with open(self.gui_state_file, "w") as file_handler:
-                json.dump({"saldo_inicial": self.saldo_inicial}, file_handler)
+                json.dump({"saldo_inicial": self.initial_balance}, file_handler)
         except: pass
+
+    def request_update(self):
+        """ Inicializa a verificação de update remoto. Bloqueia execução imediata caso o motor opere capital em risco. """
+        if self.in_operation:
+            with open("update_pending.flag", "w") as flag_file:
+                flag_file.write("pending")
+            self.btn_update.config(state=tk.DISABLED, text="⏳ Aguardando Venda...")
+            self.log_message("\n[INFO] Atualização agendada para execução pós-venda.\n")
+        else:
+            self.perform_update()
+
+    def perform_update(self):
+        """ Processa a sincronização silenciosa via Git e invoca auto-restart estrutural. """
+        self.btn_update.config(state=tk.DISABLED, text="Baixando atualização...")
+        self.log_message("\n[INFO] Estabelecendo conexão com repositório remoto...\n")
+        try:
+            self.stop_bot()
+            subprocess.run(["git", "reset", "--hard", "HEAD"], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(["git", "pull"], capture_output=True, text=True, timeout=15)
+
+            if "Already up to date." in result.stdout or "Already up-to-date." in result.stdout:
+                self.log_message("[OK] Sistema encontra-se na versão mais recente.\n")
+                if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
+                self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+            elif result.returncode == 0:
+                self.log_message("[OK] Atualização validada. Reiniciando interface do usuário...\n")
+                if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
+                time.sleep(2)
+                os.execl(sys.executable, sys.executable, *sys.argv)
+            else:
+                self.log_message("[ERROR] Conflito de integridade com o tracking remoto.\n")
+                if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
+                self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+        except Exception as exception_log:
+            self.log_message(f"[ERROR] Exceção gerada durante o protocolo de sub-processo: {exception_log}\n")
+            if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
+            self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
 
     def add_trade_chance(self):
         with open("add_trade.flag", "w") as f:
             f.write("1")
-        
         self.btn_add_trade.config(state=tk.DISABLED, bg="#5f6368")
-        
         current_trades = 0
         if os.path.exists("bot_status.json"):
             try:
                 with open("bot_status.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    current_trades = data.get("trades_no_dia", 0)
+                    current_trades = data.get("daily_trades", 0)
             except Exception: pass
-            
         self.locked_at_trade_count = current_trades
-        self.log_message("\n[+] 🔋 Solicitada +1 tentativa pro dia. Bot acordará em 60 segundos...\n")
+        self.log_message("\n[+] Extensão de limite de operações solicitada ao motor central.\n")
 
     def force_sell_action(self):
         resposta = messagebox.askyesno(
-            "🚨 ATENÇÃO: VENDA FORÇADA", 
-            "Você tem certeza que deseja fechar a operação atual vendendo a mercado AGORA?\n\nO bot irá registrar o P/L atual no placar (W ou L) e pausar por 60 segundos."
+            "ATENÇÃO: VENDA FORÇADA", 
+            "Confirma o encerramento manual e imediato da operação financeira vigente?\n\nO algoritmo consolidará o resultado a mercado e efetuará pausa compulsória de 60 segundos."
         )
         if resposta:
             try:
                 with open("force_sell.flag", "w") as f:
                     f.write("trigger_manual_sell")
-                self.log_message("\n[🚨] SINAL ENVIADO: Aguardando o motor interceptar a flag de venda forçada...\n")
-            except Exception as e:
-                self.log_message(f"\n[X] Erro ao criar flag de venda: {e}\n")
+                self.log_message("\n[INFO] Diretiva de venda interceptada. Aguardando execução do motor.\n")
+            except Exception as flag_error:
+                self.log_message(f"\n[ERROR] Falha na emissão do comando: {flag_error}\n")
 
     def show_ai_analysis(self):
         top = tk.Toplevel(self.root)
-        top.title("🧠 Parecer Analítico da IA")
+        top.title("Parecer Analítico Institucional")
         top.geometry("700x450")
         top.configure(bg=self.bg_frame)
         top.transient(self.root) 
         top.grab_set() 
 
-        lbl = tk.Label(top, text="Dossiê Institucional Mais Recente", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 12, "bold"))
+        lbl = tk.Label(top, text="Dossiê Quantitativo", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 12, "bold"))
         lbl.pack(pady=(15, 5))
 
         txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.accent_green, font=("Consolas", 10))
         txt.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         
-        report = getattr(self, 'current_ai_report', "Nenhum relatório gerado ainda. Aguarde a varredura.")
+        report = getattr(self, 'current_ai_report', "Nenhum relatório foi processado neste ciclo.")
         txt.insert(tk.END, report)
         txt.config(state=tk.DISABLED)
 
     def show_daily_history(self):
         top = tk.Toplevel(self.root)
-        top.title("📜 Histórico de Transações (Hoje)")
+        top.title("Extrato de Operações")
         top.geometry("600x350")
         top.configure(bg=self.bg_frame)
         top.transient(self.root)
         top.grab_set()
 
-        lbl = tk.Label(top, text="Extrato de Trades Executados", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
+        lbl = tk.Label(top, text="Histórico Financeiro Diário", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
         lbl.pack(pady=(15, 5))
 
         txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.fg_text, font=("Consolas", 10))
@@ -238,21 +270,20 @@ class BinanceBotGUI:
         
         hist = getattr(self, 'current_daily_history', [])
         if not hist:
-            txt.insert(tk.END, "Nenhuma operação foi concluída no dia de hoje ainda.")
+            txt.insert(tk.END, "Nenhuma transação registrada na data vigente.")
         else:
             for item in hist:
-                cor_res = "🟢" if "+" in item['resultado'] else "🔴"
-                linha = f"[{item['hora']}] {cor_res} {item['moeda']: <8} -> {item['resultado']} (Gatilho: {item['motivo']})\n\n"
+                cor_res = "🟢" if "+" in item['result'] else "🔴"
+                linha = f"[{item['time']}] {cor_res} {item['coin']: <8} -> {item['result']} (Motivo de saída: {item['reason']})\n\n"
                 txt.insert(tk.END, linha)
-        
         txt.config(state=tk.DISABLED)
 
     def reset_initial_balance(self):
-        if self.saldo_atual > 0:
-            self.saldo_inicial = self.saldo_atual
+        if self.current_balance > 0:
+            self.initial_balance = self.current_balance
             self._save_gui_state()
-            self.lbl_inicial.config(text=f"[S] Saldo Inicial: ${self.saldo_inicial:.2f}")
-            self.log_message("\n[✓] ♻️ Saldo Inicial sincronizado com sucesso!\n")
+            self.lbl_inicial.config(text=f"[S] Saldo Inicial: ${self.initial_balance:.2f}")
+            self.log_message("\n[OK] Capital inicial recalibrado com sucesso.\n")
 
     def reset_scoreboard(self):
         try:
@@ -277,14 +308,14 @@ class BinanceBotGUI:
                 with open("profit_gain_state.json", "w") as f:
                     json.dump(pg_state, f)
 
-            self.log_message("\n[✓] ♻️ Placar de trades zerado com sucesso!\n")
-        except Exception as e:
-            self.log_message(f"\n[X] Erro ao zerar placar: {e}\n")
+            self.log_message("\n[OK] Placar financeiro e estatísticas reiniciados.\n")
+        except Exception as file_error:
+            self.log_message(f"\n[ERROR] Falha ao sobreescrever persistência de placar: {file_error}\n")
 
     def draw_mini_chart(self, chart_data_points, coin_symbol, buy_price_value=0.0, buy_time_stamp=0.0):
         self.canvas_chart.delete("all")
         if not chart_data_points or len(chart_data_points) < 2:
-            self.lbl_chart_title.config(text=f"{coin_symbol} - Aguardando Dados...")
+            self.lbl_chart_title.config(text=f"{coin_symbol} - Formando dados...")
             return
 
         self.lbl_chart_title.config(text=f"{coin_symbol} - Últimas 7h30 (15m)", fg=self.accent_blue)
@@ -330,23 +361,29 @@ class BinanceBotGUI:
                 if state_data:
                     if self.current_strategy == 'profit_gain':
                         
-                        self.current_ai_report = state_data.get("ai_report", "Aguardando dados...")
+                        self.current_ai_report = state_data.get("full_ai_report", "Aguardando dados estruturados...")
                         self.current_daily_history = state_data.get("daily_history", [])
-                        trades_no_dia = state_data.get("trades_no_dia", 0)
+                        trades_no_dia = state_data.get("daily_trades", 0)
                         
-                        is_em_operacao = "Em Operação" in state_data.get("status", "")
+                        self.in_operation = "Em Operação" in state_data.get("status", "")
+                        
+                        if os.path.exists("update_pending.flag"):
+                            self.btn_update.config(state=tk.DISABLED, text="⏳ Aguardando Venda...")
+                            if not self.in_operation:
+                                self.perform_update()
+
                         if self.btn_add_trade['state'] == tk.DISABLED:
-                            if not is_em_operacao and trades_no_dia > self.locked_at_trade_count:
+                            if not self.in_operation and trades_no_dia > self.locked_at_trade_count:
                                 self.btn_add_trade.config(state=tk.NORMAL, bg=self.accent_green)
                         
                         cooldown_until = state_data.get('cooldown_until', 0.0)
-                        if not is_em_operacao:
+                        if not self.in_operation:
                             if time.time() < cooldown_until:
                                 restante = int(cooldown_until - time.time())
                                 mins, secs = divmod(restante, 60)
                                 self.lbl_countdown.config(text=f"⏳ Próxima Análise: {mins:02d}:{secs:02d}")
                             else:
-                                self.lbl_countdown.config(text="⏳ Próxima Análise: Analisando agora...")
+                                self.lbl_countdown.config(text="⏳ Próxima Análise: Executando...")
                         else:
                             self.lbl_countdown.config(text="⏳ Próxima Análise: -- (Em operação)")
                         
@@ -362,7 +399,7 @@ class BinanceBotGUI:
                             coin_change = state_data.get('current_coin_change', 0.0)
                             current_price_value = state_data.get('current_price', 0.0)
                             
-                            if coin_symbol in ["USDT", "BTC"] or not is_em_operacao:
+                            if coin_symbol in ["USDT", "BTC"] or not self.in_operation:
                                 self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol}")
                             else:
                                 self.lbl_cur_coin.config(text=f"Current Coin: {coin_symbol} | ${current_price_value:.4f} | Var: {coin_change:+.2f}%")
@@ -389,7 +426,7 @@ class BinanceBotGUI:
                                 self.lbl_cur_price.config(text=f"[💲] Atual: $0.000000 | 0.00 USDT ⇌ 0.0000")
                                 self.lbl_tgt_price.config(text=f"[🎯] Alvo (Venda): $0.000000 | 0.00 USDT ⇌ 0.0000")
                                 
-                            self.lbl_det_atu.config(text=f"{state_data.get('detalhe_atual', '--')}")
+                            self.lbl_det_atu.config(text=f"{state_data.get('current_detail', '--')}")
                             
                             trades_won_count = state_data.get("trades_won", 0)
                             trades_lost_count = state_data.get("trades_lost", 0)
@@ -400,7 +437,6 @@ class BinanceBotGUI:
                             if "status" in state_data:
                                 cor_texto_status = self.accent_yellow if "Em Operação" in state_data['status'] else self.accent_blue
                                 if "Crash" in state_data['status'] or "⚠️" in state_data['status']: cor_texto_status = self.accent_red
-                                # AGORA A LABEL EXISTE E NÃO VAI DAR CRASH!
                                 self.lbl_status.config(text=f"STATUS: {state_data['status']}", fg=cor_texto_status)
                             
                             chart_data_points = state_data.get('chart_data', [])
@@ -410,8 +446,8 @@ class BinanceBotGUI:
                                 self.canvas_chart.delete("all")
                                 self.lbl_chart_title.config(text="Mini-Gráfico (Inativo)", fg="#9aa0a6")
 
-                            aptas_list = state_data.get('aptas', [])
-                            geladeira_list = state_data.get('geladeira', [])
+                            aptas_list = state_data.get('hot_cache', [])
+                            geladeira_list = state_data.get('cold_cache', [])
                             
                             if getattr(self, 'last_aptas', None) != aptas_list:
                                 self.list_hot.delete(0, tk.END)
@@ -450,7 +486,7 @@ class BinanceBotGUI:
             pass
         
         if self.bot_running:
-            self.root.after(0, lambda: self.lbl_det_atu.config(text="Status: Erro/Crash (Veja o Log)", fg=self.accent_red))
+            self.root.after(0, lambda: self.lbl_det_atu.config(text="Status: Erro de execução de processo. Verifique log console.", fg=self.accent_red))
             self.bot_running = False
 
     def get_total_usdt_balance(self, binance_client_instance, bridge_symbol):
@@ -480,13 +516,13 @@ class BinanceBotGUI:
                 total_atual_value = self.get_total_usdt_balance(binance_client_instance, bridge_symbol)
                 ping_latency_ms = int((time.time() - start_time) * 1000)
                 if total_atual_value > 0:
-                    self.saldo_atual = total_atual_value
-                    if self.saldo_inicial == 0.0:
-                        self.saldo_inicial = total_atual_value
+                    self.current_balance = total_atual_value
+                    if self.initial_balance == 0.0:
+                        self.initial_balance = total_atual_value
                         self._save_gui_state()
                         
                     cor_ping = self.accent_green if ping_latency_ms <= 600 else (self.accent_yellow if ping_latency_ms <= 1000 else self.accent_red)
-                    self.root.after(0, lambda u=self.saldo_inicial, p=ping_latency_ms, c=cor_ping: [
+                    self.root.after(0, lambda u=self.initial_balance, p=ping_latency_ms, c=cor_ping: [
                         self.lbl_inicial.config(text=f"[S] Saldo Inicial: ${u:.2f}"),
                         self.lbl_ping.config(text=f"PING: {p} ms", fg=c)
                     ])
@@ -499,11 +535,11 @@ class BinanceBotGUI:
                 ping_latency_ms = int((time.time() - start_time) * 1000)
                 
                 if total_atual_value > 0:
-                    self.saldo_atual = total_atual_value
+                    self.current_balance = total_atual_value
                     
-                if self.saldo_inicial > 0 and total_atual_value > 0:
-                    profit_loss_value = total_atual_value - self.saldo_inicial
-                    profit_loss_percentage = (profit_loss_value / self.saldo_inicial) * 100
+                if self.initial_balance > 0 and total_atual_value > 0:
+                    profit_loss_value = total_atual_value - self.initial_balance
+                    profit_loss_percentage = (profit_loss_value / self.initial_balance) * 100
                     cor_texto_pl = self.accent_green if profit_loss_value >= 0 else self.accent_red
                 else:
                     profit_loss_value = profit_loss_percentage = 0
@@ -521,11 +557,11 @@ class BinanceBotGUI:
 
     def start_bot(self):
         if self.bot_running or self.process is not None:
-            self.log_message("[!] O motor já está em execução! Clique em STOP antes de iniciar novamente.\n")
+            self.log_message("[INFO] A instância da engine já encontra-se ativa.\n")
             return
             
-        self.log_message("[!] Iniciando...\n")
-        self.lbl_det_atu.config(text="Status: Booting...", fg=self.fg_text)
+        self.log_message("[INFO] Inicializando ambiente em modo seguro...\n")
+        self.lbl_det_atu.config(text="Status: Alocando memória da engine...", fg=self.fg_text)
         with open("bot_status.json", "w") as file_handler: json.dump({}, file_handler)
         
         environment_variables = os.environ.copy()
@@ -546,7 +582,7 @@ class BinanceBotGUI:
             except Exception: pass
             self.process = None
         self.bot_running = False
-        self.lbl_det_atu.config(text="Status: Parado", fg=self.fg_text)
+        self.lbl_det_atu.config(text="Status: Processo suspenso.", fg=self.fg_text)
 
     def clear_log(self): self.log_area.delete(1.0, tk.END)
 

@@ -25,7 +25,7 @@ class MarketAnalyzer:
         else:
             self.client = genai.Client(api_key=google_api_key)
 
-        self.system_instruction_normal = """Você é um Analista Quantitativo Sênior e Auditor de Risco de um Hedge Fund Institucional.
+        self.normal_instruction = """Você é um Analista Quantitativo Sênior e Auditor de Risco de um Hedge Fund Institucional.
 Sua missão é avaliar um lote de ativos pré-filtrados e selecionar EXATAMENTE UMA moeda para compra, ou NENHUMA.
 
 OBJETIVO ESTRATÉGICO: "COMPRAR A REVERSÃO CONFIRMADA (NUNCA A FACA CAINDO)"
@@ -62,7 +62,7 @@ FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
   "resumo_decisao": "string (OBRIGATÓRIO formatar em uma única linha contendo os caracteres '\\n' para gerar quebras de linha e tópicos. Exemplo: '🎯 Veredito: ... \\n📉 Fundo ATR: ... \\n📊 Cruzadinha 1H/15m: ... \\n⚠️ Motivo do Veto: ...')"
 }"""
 
-        self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Gestão de Risco Institucional).
+        self.swap_instruction = """Você é o Tribunal de Auditoria de Swap (Gestão de Risco Institucional).
 O robô está segurando uma moeda no prejuízo há pelo menos 10 horas. 
 
 SUA MISSÃO:
@@ -82,18 +82,19 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
 }"""
 
     def analyze_batch(self, batch_data):
+        """ Submete o lote de ativos para avaliação detalhada do modelo generativo. """
         if not self.client:
             return {"moeda_vencedora": "COMPRA_TESTE", "confianca_final": 100, "resumo_decisao": "Modo Bypass (Sem API Key configurada)"}
 
         try:
-            batch_json_string = json.dumps(batch_data, indent=2)
-            prompt_text = f"Por favor, execute a Análise em 4 Passos no lote de dados abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{batch_json_string}"
+            json_payload = json.dumps(batch_data, indent=2)
+            prompt_text = f"Por favor, execute a Análise em 4 Passos no lote de dados abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{json_payload}"
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
                 contents=prompt_text,
                 config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction_normal,
+                    system_instruction=self.normal_instruction,
                     temperature=0.1,
                     max_output_tokens=8192,
                     response_mime_type="application/json",
@@ -112,45 +113,46 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
             return json.loads(clean_response)
 
         except Exception as execution_error:
-            error_str = str(execution_error)
-            if "503" in error_str or "UNAVAILABLE" in error_str:
+            error_msg = str(execution_error)
+            if "503" in error_msg or "UNAVAILABLE" in error_msg:
                 return {"moeda_vencedora": "ERROR_503", "confianca_final": 0, "resumo_decisao": "Servidor sobrecarregado."}
             
             self.system_logger.error(f"Erro no Parser JSON/API da IA: {execution_error}")
             return {"moeda_vencedora": "NENHUMA", "confianca_final": 0, "resumo_decisao": "Falha na comunicação ou resposta mal formatada."}
 
     def analyze_swap(self, batch_data, current_coin, current_loss, hold_time_hours):
+        """ Avalia a substituição de uma posição em prejuízo por uma nova oportunidade de alta confiança. """
         if not self.client:
             return {"moeda_vencedora": "HOLD", "confianca_final": 0, "resumo_decisao": "Modo Bypass (Sem API Key)"}
 
         try:
-            batch_json_string = json.dumps(batch_data, indent=2)
-            prompt_text = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {current_coin}\n- Prejuízo Atual: {current_loss:.2f}%\n- Tempo na Operação: {hold_time_hours:.1f} horas\n\nLOTE DE DADOS PRÉ-FILTRADOS PARA SWAP:\n{batch_json_string}\n\nJulgue com base nas Leis do Tribunal e retorne a decisão em JSON."
+            json_payload = json.dumps(batch_data, indent=2)
+            prompt_text = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {current_coin}\n- Prejuízo Atual: {current_loss:.2f}%\n- Tempo na Operação: {hold_time_hours:.1f} horas\n\nLOTE DE DADOS PRÉ-FILTRADOS PARA SWAP:\n{json_payload}\n\nJulgue com base nas Leis do Tribunal e retorne a decisão em JSON."
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
                 contents=prompt_text,
                 config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction_swap,
+                    system_instruction=self.swap_instruction,
                     temperature=0.1,
                     max_output_tokens=4096,
                     response_mime_type="application/json",
                 )
             )
-
+            
             usage = response.usage_metadata
             if usage:
                 tokens_in = getattr(usage, 'prompt_token_count', 0)
                 tokens_out = getattr(usage, 'candidates_token_count', 0)
                 self.system_logger.info(f"⚖️ [API AUDIT] Tokens (Tribunal de Swap) -> Total: {tokens_in + tokens_out}")
-            
+                
             raw_response = response.text
             clean_response = raw_response.strip('`').replace('json\n', '').strip()
             return json.loads(clean_response)
 
         except Exception as execution_error:
-            error_str = str(execution_error)
-            if "503" in error_str or "UNAVAILABLE" in error_str:
+            error_msg = str(execution_error)
+            if "503" in error_msg or "UNAVAILABLE" in error_msg:
                 return {"moeda_vencedora": "ERROR_503", "confianca_final": 0, "resumo_decisao": "Servidor sobrecarregado."}
                 
             self.system_logger.error(f"Erro no Tribunal de Swap da IA: {execution_error}")
