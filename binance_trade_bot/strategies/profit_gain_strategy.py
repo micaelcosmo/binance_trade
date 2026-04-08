@@ -223,14 +223,13 @@ class Strategy:
             self.system_logger.error(f"❌ ERRO CRÍTICO na Venda Manual: {erro_venda}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.4")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.5")
         self._write_json_ui()
 
     def scout(self):
         self._check_ui_flags()
         self._check_daily_reset()
         
-        self.last_heartbeat_ts = time.time()
         self.system_status_ui = "" 
         
         self.scan_market()
@@ -239,6 +238,8 @@ class Strategy:
     def update_values(self):
         self._check_ui_flags()
         self._check_daily_reset()
+        
+        self.last_heartbeat_ts = time.time() 
         self._write_json_ui()
 
     def _desbloquear_saldo(self, target_symbol):
@@ -325,7 +326,6 @@ class Strategy:
             candle_1h_alta = close_1h > open_1h
             corpo_1h = abs(close_1h - open_1h)
             pavio_inferior_1h = min(open_1h, close_1h) - low_1h
-            # Se o pavio for 1.5x maior que o corpo, houve absorção institucional na queda
             rejeicao_fundo_1h = bool(pavio_inferior_1h > (corpo_1h * 1.5))
             
             rsi_4h = float(ultima_linha_4h.get('RSI_14', 50.0))
@@ -485,8 +485,9 @@ class Strategy:
             try:
                 dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
             except ConnectionError:
-                self.system_status_ui = "⚠️ Sem conexão com a internet. Tentando reconectar..."
-                return 
+                self.system_status_ui = "⚠️ Conexão instável. Pulando ativo..."
+                
+                continue 
                 
             if dados_enriquecidos:
                 moeda_alin = f"{check_coin: <7}"

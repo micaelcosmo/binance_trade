@@ -96,6 +96,10 @@ class BinanceBotGUI:
         
         self.lbl_trades = tk.Label(self.metrics_frame, text="TRADES: 0 | W: 0 | L: 0 (0.0%)", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_trades.grid(row=3, column=0, padx=10, pady=5, sticky="w")
+        
+        # O RETORNO DA STATUS LABEL (Correção do Crash UI)
+        self.lbl_status = tk.Label(self.metrics_frame, text="STATUS: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10, "bold"), anchor="w")
+        self.lbl_status.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # COLUNA 1 (Meio)
         self.lbl_btc = tk.Label(self.metrics_frame, text="BTC: Buscando...", bg=self.bg_frame, fg=self.btc_gold, font=("Segoe UI", 10, "bold"), anchor="w")
@@ -131,8 +135,8 @@ class BinanceBotGUI:
             self.lbl_chart_title = tk.Label(self.metrics_frame, text="Mini-Gráfico (Inativo)", bg=self.bg_frame, fg="#9aa0a6", font=("Segoe UI", 8, "bold"))
             self.lbl_chart_title.grid(row=4, column=3, sticky="e", padx=(0,10))
 
-        # LINHA INFERIOR (Status / Detalhes)
-        self.lbl_det_atu = tk.Label(self.metrics_frame, text="Status: Aguardando...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), anchor="w", justify="left")
+        # LINHA INFERIOR (Detalhes)
+        self.lbl_det_atu = tk.Label(self.metrics_frame, text="Aguardando detalhes da operação...", bg=self.bg_frame, fg=self.fg_text, font=("Segoe UI", 10), anchor="w", justify="left")
         self.lbl_det_atu.grid(row=5, column=0, columnspan=4, padx=10, pady=(10, 5), sticky="we")
 
         self.content_frame = tk.Frame(root, bg=self.bg_main)
@@ -349,7 +353,6 @@ class BinanceBotGUI:
                         last_hb_ts = state_data.get("last_heartbeat_ts", 0.0)
                         if last_hb_ts > 0:
                             delta_hb = time.time() - last_hb_ts
-                            # Margem ampliada pra 80s pra não piscar sem necessidade
                             cor_hb = self.accent_green if delta_hb <= 80 else (self.accent_yellow if delta_hb <= 300 else self.accent_red)
                             hb_str = time.strftime("%H:%M:%S", time.localtime(last_hb_ts))
                             self.lbl_heartbeat.config(text=f"💓 Última batida: {hb_str}", fg=cor_hb)
@@ -397,6 +400,7 @@ class BinanceBotGUI:
                             if "status" in state_data:
                                 cor_texto_status = self.accent_yellow if "Em Operação" in state_data['status'] else self.accent_blue
                                 if "Crash" in state_data['status'] or "⚠️" in state_data['status']: cor_texto_status = self.accent_red
+                                # AGORA A LABEL EXISTE E NÃO VAI DAR CRASH!
                                 self.lbl_status.config(text=f"STATUS: {state_data['status']}", fg=cor_texto_status)
                             
                             chart_data_points = state_data.get('chart_data', [])
