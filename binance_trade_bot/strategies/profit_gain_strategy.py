@@ -224,7 +224,7 @@ class Strategy:
 
     def initialize(self):
         """ Inicialização padrão e limpa do motor """
-        self.system_logger.info("🚀 Inicializando Profit Gain V3.3.6")
+        self.system_logger.info("🚀 Inicializando Profit Gain V3.3.7")
         self._write_json_ui()
 
     def scout(self):
@@ -456,7 +456,8 @@ class Strategy:
 
     def scan_market(self):
         if not self.em_operacao:
-            if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
+            # Trava diária atualizada para 5.0%
+            if self.lucro_diario_pct >= 5.0 or self.trades_no_dia >= self.max_trades_diario:
                 agora = datetime.now()
                 amanha = agora + timedelta(days=1)
                 meia_noite = datetime(amanha.year, amanha.month, amanha.day, 0, 0, 0)
@@ -800,7 +801,8 @@ class Strategy:
             else:
                 detalhe_centralizado = f"[⏳] Duração: {self.tempo_operacao_string} | [🎯] Gatilho Trailing: {self.trailing_activation_percentage:.2f}% | [🛑] SL: -{stop_atual_exibir:.2f}% (Var: {self.stop_loss_monitor_drop:+.2f}%){texto_metas}"
         else:
-            if self.lucro_diario_pct >= 2.0 or self.trades_no_dia >= self.max_trades_diario:
+            # Trava visual atualizada para 5.0%
+            if self.lucro_diario_pct >= 5.0 or self.trades_no_dia >= self.max_trades_diario:
                 detalhe_centralizado = f"💤 HIBERNAÇÃO ATIVA: Metas ou limites atingidos. Retorno à meia-noite.{texto_metas}"
                 status_texto = "Hibernação Institucional"
             else:
