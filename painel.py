@@ -119,7 +119,7 @@ class BinanceBotGUI:
         self.lbl_ping = tk.Label(self.metrics_frame, text="PING: -- ms", bg=self.bg_frame, fg="#bdc1c6", font=("Segoe UI", 10), anchor="w")
         self.lbl_ping.grid(row=1, column=2, padx=10, pady=5, sticky="w")
         
-        self.lbl_heartbeat = tk.Label(self.metrics_frame, text="💓 Última batida: --", bg=self.bg_frame, fg="#bdc1c6", font=("Segoe UI", 9, "bold"), anchor="w")
+        self.lbl_heartbeat = tk.Label(self.metrics_frame, text="💓 Última batida: --", bg=self.bg_frame, fg="#bdc1c6", font=("Segoe UI", 10, "bold"), anchor="w")
         self.lbl_heartbeat.grid(row=2, column=2, padx=10, pady=5, sticky="w")
         
         self.lbl_countdown = tk.Label(self.metrics_frame, text="⏳ Próxima Análise: --", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 10, "bold"), anchor="w")
