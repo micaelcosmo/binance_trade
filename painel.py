@@ -205,7 +205,9 @@ class BinanceBotGUI:
                 time.sleep(2)
                 
                 script_absolute_path = os.path.abspath(sys.argv[0])
-                subprocess.Popen([sys.executable, script_absolute_path])
+                script_directory = os.path.dirname(script_absolute_path)
+                
+                subprocess.Popen([sys.executable, script_absolute_path], cwd=script_directory)
                 self.root.quit()
                 sys.exit()
             else:
