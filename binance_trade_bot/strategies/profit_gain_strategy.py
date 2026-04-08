@@ -28,7 +28,7 @@ class Strategy:
         self.trailing_activation_percentage = 1.50 
         self.trailing_drop_percentage = 0.30
         
-        self.stop_loss_percentage_base = 3.00 
+        self.stop_loss_percentage_base = 7.00 
         self.stop_loss_dinamico_ativo = 0.0
         self.stop_loss_monitor_drop = 0.0 
         
@@ -223,7 +223,8 @@ class Strategy:
             self.system_logger.error(f"❌ ERRO CRÍTICO na Venda Manual: {erro_venda}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.5")
+        """ Inicialização padrão e limpa do motor """
+        self.system_logger.info("🚀 Inicializando Profit Gain V3.3.6")
         self._write_json_ui()
 
     def scout(self):
@@ -294,6 +295,7 @@ class Strategy:
         return f"{truncated_value:.{precision_level}f}"
 
     def get_enriched_data(self, target_symbol):
+        """ Extrai métricas quantitativas, calcula limites dinâmicos e estrutura velas e momentum. """
         try:
             klines_4h = self.binance_client.get_klines(symbol=target_symbol, interval='4h', limit=30)
             df_4h = pandas.DataFrame(klines_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
@@ -367,11 +369,11 @@ class Strategy:
                 variacao_24h_minima = 0.0
                 volume_24h_usdt = 0.0
 
-            stop_dinamico = atr_pct_atual * 2.0
+            stop_dinamico = atr_pct_atual * 4.0 
             if "BTC" in target_symbol:
-                stop_dinamico = max(4.0, min(stop_dinamico * 2.0, 6.50))
+                stop_dinamico = max(6.0, min(stop_dinamico, 10.50))
             else:
-                stop_dinamico = max(2.0, min(stop_dinamico, 3.50)) 
+                stop_dinamico = max(4.0, min(stop_dinamico, 7.00)) 
             
             dados_montados = {
                 "moeda": target_symbol.replace(self.base_coin, ""),
@@ -486,7 +488,6 @@ class Strategy:
                 dados_enriquecidos, is_uptrend = self.get_enriched_data(market_symbol)
             except ConnectionError:
                 self.system_status_ui = "⚠️ Conexão instável. Pulando ativo..."
-                
                 continue 
                 
             if dados_enriquecidos:
@@ -605,10 +606,10 @@ class Strategy:
                 
                 stop_loss_atual = self.stop_loss_dinamico_ativo if self.stop_loss_dinamico_ativo > 0 else self.stop_loss_percentage_base
 
-                if drop_percentage <= -10.0:
+                if drop_percentage <= -15.0:
                     is_selling_now = True
                     motivo_venda_executada = "STOP_DESASTRE"
-                    self.system_logger.warning(f"🚨 DESASTRE ABSOLUTO ACIONADO! Moeda perdeu 10% de valor. Cortando na carne.")
+                    self.system_logger.warning(f"🚨 DESASTRE ABSOLUTO ACIONADO! Moeda perdeu 15% de valor em carteira. Cortando na carne.")
                 elif drop_percentage <= -stop_loss_atual:
                     is_selling_now = True
                     motivo_venda_executada = "STOP_LOSS_DINAMICO"
