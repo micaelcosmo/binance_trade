@@ -223,7 +223,7 @@ class Strategy:
             self.system_logger.error(f"❌ ERRO CRÍTICO na Venda Manual: {erro_venda}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.2 (UI Redesign & 1H Candle Reversal)")
+        self.system_logger.info("🚀 Inicializando Profit Gain Pro V3.3.4")
         self._write_json_ui()
 
     def scout(self):
@@ -318,7 +318,6 @@ class Strategy:
             
             preco_atual = float(ultima_linha_1h['close'])
             
-            # V3.3.2: Extracao da Estrutura do Candle de 1H (A Cruzadinha)
             open_1h = float(ultima_linha_1h['open'])
             close_1h = float(ultima_linha_1h['close'])
             low_1h = float(ultima_linha_1h['low'])
@@ -501,7 +500,6 @@ class Strategy:
                     var_minima_float = float(str(dados_enriquecidos['variacao_minima_24h_pct']).replace('%', '').replace('+', ''))
                     fundo_exigido_float = float(str(dados_enriquecidos['fundo_exigido_atr_pct']).replace('%', '').replace('+', ''))
                     
-                    # V3.3.2: O antolho foi tirado. O bot agora monitora quedas profundas até -15%.
                     if var_minima_float <= fundo_exigido_float and -15.00 <= var_atual_float <= 2.50:
                         lote_dados_ia.append(dados_enriquecidos)
                 except Exception:
