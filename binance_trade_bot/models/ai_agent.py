@@ -9,6 +9,11 @@ load_dotenv("user.cfg")
 
 
 class MarketAnalyzer:
+    """
+    Agente de IA responsável pela auditoria quantitativa de ativos e análise de risco.
+    Utiliza processamento de linguagem natural estruturado para confirmar setups de reversão.
+    """
+
     def __init__(self, system_logger):
         self.system_logger = system_logger
         
@@ -76,17 +81,17 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
   "resumo_decisao": "string (Formatar com '\\n')"
 }"""
 
-    def analisar_lote(self, lote_dados):
+    def analyze_batch(self, batch_data):
         if not self.client:
             return {"moeda_vencedora": "COMPRA_TESTE", "confianca_final": 100, "resumo_decisao": "Modo Bypass (Sem API Key configurada)"}
 
         try:
-            lote_json_string = json.dumps(lote_dados, indent=2)
-            prompt_texto = f"Por favor, execute a Análise em 4 Passos no lote de dados abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{lote_json_string}"
+            batch_json_string = json.dumps(batch_data, indent=2)
+            prompt_text = f"Por favor, execute a Análise em 4 Passos no lote de dados abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{batch_json_string}"
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
-                contents=prompt_texto,
+                contents=prompt_text,
                 config=types.GenerateContentConfig(
                     system_instruction=self.system_instruction_normal,
                     temperature=0.1,
@@ -102,29 +107,29 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
                 total_tokens = getattr(usage, 'total_token_count', 0)
                 self.system_logger.info(f"📊 [API AUDIT] Tokens (Caça Diária) -> Input: {tokens_in} | Output: {tokens_out} | Total: {total_tokens}")
             
-            resposta_bruta = response.text
-            resposta_limpa = resposta_bruta.strip('`').replace('json\n', '').strip()
-            return json.loads(resposta_limpa)
+            raw_response = response.text
+            clean_response = raw_response.strip('`').replace('json\n', '').strip()
+            return json.loads(clean_response)
 
-        except Exception as erro_execucao:
-            erro_str = str(erro_execucao)
-            if "503" in erro_str or "UNAVAILABLE" in erro_str:
+        except Exception as execution_error:
+            error_str = str(execution_error)
+            if "503" in error_str or "UNAVAILABLE" in error_str:
                 return {"moeda_vencedora": "ERROR_503", "confianca_final": 0, "resumo_decisao": "Servidor sobrecarregado."}
             
-            self.system_logger.error(f"Erro no Parser JSON/API da IA: {erro_execucao}")
+            self.system_logger.error(f"Erro no Parser JSON/API da IA: {execution_error}")
             return {"moeda_vencedora": "NENHUMA", "confianca_final": 0, "resumo_decisao": "Falha na comunicação ou resposta mal formatada."}
 
-    def analisar_swap(self, lote_dados, moeda_atual, prejuizo_atual, tempo_preso_horas):
+    def analyze_swap(self, batch_data, current_coin, current_loss, hold_time_hours):
         if not self.client:
             return {"moeda_vencedora": "HOLD", "confianca_final": 0, "resumo_decisao": "Modo Bypass (Sem API Key)"}
 
         try:
-            lote_json_string = json.dumps(lote_dados, indent=2)
-            prompt_texto = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {moeda_atual}\n- Prejuízo Atual: {prejuizo_atual:.2f}%\n- Tempo na Operação: {tempo_preso_horas:.1f} horas\n\nLOTE DE DADOS PRÉ-FILTRADOS PARA SWAP:\n{lote_json_string}\n\nJulgue com base nas Leis do Tribunal e retorne a decisão em JSON."
+            batch_json_string = json.dumps(batch_data, indent=2)
+            prompt_text = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {current_coin}\n- Prejuízo Atual: {current_loss:.2f}%\n- Tempo na Operação: {hold_time_hours:.1f} horas\n\nLOTE DE DADOS PRÉ-FILTRADOS PARA SWAP:\n{batch_json_string}\n\nJulgue com base nas Leis do Tribunal e retorne a decisão em JSON."
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
-                contents=prompt_texto,
+                contents=prompt_text,
                 config=types.GenerateContentConfig(
                     system_instruction=self.system_instruction_swap,
                     temperature=0.1,
@@ -139,14 +144,14 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
                 tokens_out = getattr(usage, 'candidates_token_count', 0)
                 self.system_logger.info(f"⚖️ [API AUDIT] Tokens (Tribunal de Swap) -> Total: {tokens_in + tokens_out}")
             
-            resposta_bruta = response.text
-            resposta_limpa = resposta_bruta.strip('`').replace('json\n', '').strip()
-            return json.loads(resposta_limpa)
+            raw_response = response.text
+            clean_response = raw_response.strip('`').replace('json\n', '').strip()
+            return json.loads(clean_response)
 
-        except Exception as erro_execucao:
-            erro_str = str(erro_execucao)
-            if "503" in erro_str or "UNAVAILABLE" in erro_str:
+        except Exception as execution_error:
+            error_str = str(execution_error)
+            if "503" in error_str or "UNAVAILABLE" in error_str:
                 return {"moeda_vencedora": "ERROR_503", "confianca_final": 0, "resumo_decisao": "Servidor sobrecarregado."}
                 
-            self.system_logger.error(f"Erro no Tribunal de Swap da IA: {erro_execucao}")
+            self.system_logger.error(f"Erro no Tribunal de Swap da IA: {execution_error}")
             return {"moeda_vencedora": "HOLD", "confianca_final": 0, "resumo_decisao": "Falha de comunicação no Tribunal. Decisão automática: HOLD."}
