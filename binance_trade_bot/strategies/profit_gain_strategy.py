@@ -1,12 +1,14 @@
-import time
 import json
 import math
 import os
-import pandas
-import pandas_ta
+import subprocess
+import time
 from datetime import datetime, timedelta
 
+import pandas
+import pandas_ta
 from binance.enums import *
+
 from binance_trade_bot.models.ai_agent import MarketAnalyzer
 
 
@@ -85,6 +87,17 @@ class Strategy:
         self.system_status_ui = ""
         self.last_heartbeat_ts = 0.0
         self.current_coin_change_pct = 0.0
+
+    def _get_current_version(self):
+        try:
+            version = subprocess.check_output(
+                ["git", "describe", "--tags", "--abbrev=0"], 
+                stderr=subprocess.STDOUT, 
+                text=True
+            ).strip()
+            return version
+        except Exception:
+            return "v3.5.2"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -240,7 +253,8 @@ class Strategy:
             self.system_logger.error(f"❌ ERRO CRITICO na Venda Manual: {sell_error}")
 
     def initialize(self):
-        self.system_logger.info("🚀 Inicializando Profit Gain V3.5.0")
+        current_version = self._get_current_version()
+        self.system_logger.info(f"🚀 Inicializando Profit Gain {current_version.upper()}")
         self._write_json_ui()
 
     def scout(self):
@@ -455,7 +469,9 @@ class Strategy:
         market_symbol = f"{coin_symbol}{self.base_coin}"
         available_base_balance = self._get_balance(self.base_coin)
         
-        if available_base_balance < 6.0: return False
+        if available_base_balance < 5.1: 
+            self.system_logger.warning(f"⚠️ VETO DA CORRETORA: A IA aprovou {coin_symbol}, mas seu saldo livre de {self.base_coin} é ${available_base_balance:.2f} (Mínimo Binance: $5.10).")
+            return False
 
         try:
             self.system_logger.info(f"🚀 ENTRADA REAL: Comprando {market_symbol} a mercado...")
