@@ -12,8 +12,8 @@ from binance_trade_bot.models.ai_agent import MarketAnalyzer
 
 class Strategy:
     """
-    Motor quantitativo principal. Realiza o mapeamento de mercado, cálculo de indicadores técnicos,
-    gerenciamento de estado das operações e integração com a IA para tomada de decisão.
+    Motor quantitativo principal. Realiza o mapeamento de mercado, calculo de indicadores tecnicos,
+    gerenciamento de estado das operacoes e integracao com a IA para tomada de decisao.
     """
 
     def __init__(self, binance_manager, database_connection, system_logger, system_configuration):
@@ -30,7 +30,6 @@ class Strategy:
         self.last_ai_verdict = "Aguardando lote de dados..."
         self.ai_cooldown_until = 0.0
         
-        # Leitura dinâmica do user.cfg com trava de segurança (Fallback)
         try:
             self.daily_profit_target_pct = float(getattr(self.system_configuration, 'daily_profit_target_pct', 5.0))
             self.max_daily_trades = int(getattr(self.system_configuration, 'max_daily_trades', 3))
@@ -62,7 +61,7 @@ class Strategy:
         self.daily_profit_pct = 0.0
         self.daily_trades = 0
         self.daily_history = []
-        self.full_ai_report = "Aguardando primeira análise detalhada da IA..."
+        self.full_ai_report = "Aguardando primeira analise detalhada da IA..."
         
         self.operation_start_time = 0.0
         self.last_switch_time = 0.0
@@ -88,7 +87,6 @@ class Strategy:
         self.current_coin_change_pct = 0.0
 
     def _load_state(self):
-        """ Carrega o estado de persistência do disco para retomada de operação segura. """
         if os.path.exists("profit_gain_state.json"):
             try:
                 with open("profit_gain_state.json", "r") as file_handler:
@@ -108,12 +106,11 @@ class Strategy:
                         self.daily_profit_pct = state_data.get("daily_profit_pct", 0.0)
                         self.daily_trades = state_data.get("daily_trades", 0)
                         self.daily_history = state_data.get("daily_history", [])
-                        self.full_ai_report = state_data.get("full_ai_report", "Aguardando primeira análise detalhada da IA...")
+                        self.full_ai_report = state_data.get("full_ai_report", "Aguardando primeira analise detalhada da IA...")
             except Exception:
                 pass
 
     def _save_state(self):
-        """ Salva o estado atual das variáveis de operação no disco. """
         try:
             with open("profit_gain_state.json", "w") as file_handler:
                 json.dump({
@@ -135,27 +132,25 @@ class Strategy:
             self.system_logger.error(f"Erro ao salvar estado local: {write_error}")
 
     def _check_daily_reset(self):
-        """ Verifica a virada de data do sistema para zerar as metas e placares do dia. """
         today_date = datetime.now().strftime("%Y-%m-%d")
         if self.current_date != today_date:
             self.current_date = today_date
             self.daily_profit_pct = 0.0
             self.daily_trades = 0
             self.daily_history = []
-            self.full_ai_report = "Aguardando primeira análise do novo dia..."
+            self.full_ai_report = "Aguardando primeira analise do novo dia..."
             if not self.in_operation:
-                self.system_logger.info("🌅 NOVO DIA: Metas, Histórico e Limites foram zerados.")
+                self.system_logger.info("🌅 NOVO DIA: Metas, Historico e Limites foram zerados.")
             self._save_state()
 
     def _check_ui_flags(self):
-        """ Varre a existência de arquivos de controle gerados pela interface gráfica. """
         if os.path.exists("reset_trades.flag"):
             self.trades_won = 0
             self.trades_lost = 0
             self.daily_profit_pct = 0.0
             self.daily_trades = 0
             self.daily_history = []
-            self.full_ai_report = "Placar zerado. Aguardando nova análise..."
+            self.full_ai_report = "Placar zerado. Aguardando nova analise..."
             self._save_state()
             try:
                 os.remove("reset_trades.flag")
@@ -166,7 +161,7 @@ class Strategy:
         if os.path.exists("add_trade.flag"):
             self.max_daily_trades += 1
             self.ai_cooldown_until = time.time() + 60
-            self.system_logger.warning(f"🟢 [UI OVERRIDE] Limite de trades aumentado para {self.max_daily_trades}! Próxima análise forçada para daqui a 60s.")
+            self.system_logger.warning(f"🟢 [UI OVERRIDE] Limite de trades aumentado para {self.max_daily_trades}! Proxima analise forcada para daqui a 60s.")
             self._save_state()
             try:
                 os.remove("add_trade.flag")
@@ -181,13 +176,12 @@ class Strategy:
                 self.system_logger.error(f"Erro ao acionar flag de venda: {flag_error}")
 
     def _execute_forced_sell(self):
-        """ Encerra a operação vigente emitindo ordem de venda a mercado imediatamente. """
         if not self.in_operation or not self.current_operation_coin:
-            self.system_logger.warning("⚠️ Botão de Venda pressionado, mas o bot não possui operação ativa para fechar.")
+            self.system_logger.warning("⚠️ Botao de Venda pressionado, mas o bot nao possui operacao ativa para fechar.")
             return
 
         market_symbol = f"{self.current_operation_coin}{self.base_coin}"
-        self.system_logger.warning(f"🚨 INTERVENÇÃO MANUAL: Venda forçada acionada para {market_symbol}!")
+        self.system_logger.warning(f"🚨 INTERVENCAO MANUAL: Venda forcada acionada para {market_symbol}!")
 
         try:
             ticker_info = self.binance_client.get_symbol_ticker(symbol=market_symbol)
@@ -223,8 +217,8 @@ class Strategy:
                 "reason": log_reason
             })
             
-            self.system_logger.info(f"✅ Venda Forçada concluída com sucesso! P/L da operação: {drop_percentage:+.2f}%")
-            self.system_logger.info("⏱️ Motor em cooldown de 60 segundos antes de retomar as análises.")
+            self.system_logger.info(f"✅ Venda Forcada concluida com sucesso! P/L da operacao: {drop_percentage:+.2f}%")
+            self.system_logger.info("⏱️ Motor em cooldown de 60 segundos antes de retomar as analises.")
             
             self.in_operation = False
             self.current_operation_coin = None
@@ -243,15 +237,13 @@ class Strategy:
             self._write_json_ui()
 
         except Exception as sell_error:
-            self.system_logger.error(f"❌ ERRO CRÍTICO na Venda Manual: {sell_error}")
+            self.system_logger.error(f"❌ ERRO CRITICO na Venda Manual: {sell_error}")
 
     def initialize(self):
-        """ Inicialização padrão do algoritmo no ciclo de vida da engine. """
-        self.system_logger.info("🚀 Inicializando Profit Gain V3.4.5")
+        self.system_logger.info("🚀 Inicializando Profit Gain V3.5.0")
         self._write_json_ui()
 
     def scout(self):
-        """ Varredura executada por padrão a cada 60 segundos pela engine core. """
         self._check_ui_flags()
         self._check_daily_reset()
         
@@ -260,7 +252,6 @@ class Strategy:
         self._write_json_ui()
 
     def update_values(self):
-        """ Atualização de pulso rápido executada a cada 1 segundo pela engine core. """
         self._check_ui_flags()
         self._check_daily_reset()
         
@@ -268,7 +259,6 @@ class Strategy:
         self._write_json_ui()
 
     def _unlock_balance(self, target_symbol):
-        """ Cancela ordens abertas na exchange para desobstruir o saldo de um símbolo específico. """
         try:
             open_orders_list = self.binance_client.get_open_orders(symbol=target_symbol)
             for order_info in open_orders_list:
@@ -279,7 +269,6 @@ class Strategy:
             self.system_logger.error(f"Erro ao limpar ordens travadas: {unlock_error}")
 
     def _get_balance(self, asset_symbol, free_only=False):
-        """ Consulta o balanço disponível (ou total) de um ativo na corretora. """
         try:
             balance_data = self.binance_client.get_asset_balance(asset=asset_symbol)
             if free_only:
@@ -290,7 +279,6 @@ class Strategy:
             return -1.0
 
     def _retrieve_real_buy_data(self, market_symbol):
-        """ Resgata o preço e timestamp real de compra baseado no histórico da exchange. """
         try:
             recent_trades = self.binance_client.get_my_trades(symbol=market_symbol, limit=5)
             if recent_trades:
@@ -300,11 +288,10 @@ class Strategy:
                     real_timestamp = int(last_trade['time']) / 1000.0
                     return real_price, real_timestamp
         except Exception as history_error:
-            self.system_logger.error(f"Erro ao buscar histórico: {history_error}")
+            self.system_logger.error(f"Erro ao buscar historico: {history_error}")
         return 0.0, 0.0
 
     def get_precision_filters(self, target_symbol):
-        """ Obtém os filtros de precisão de casas decimais para roteamento de ordens da Binance. """
         try:
             symbol_info = self.binance_client.get_symbol_info(target_symbol)
             tick_size_val, step_size_val = 0.00000001, 0.00000001
@@ -316,7 +303,6 @@ class Strategy:
             return 0.0001, 0.0001
 
     def format_decimal(self, raw_value, step_size_val):
-        """ Formata um valor numérico em conformidade com o LOT_SIZE da exchange. """
         precision_lvl = max(0, int(round(-math.log10(float(step_size_val)))))
         precision_factor = 10 ** precision_lvl
         truncated_val = math.floor(float(raw_value) * precision_factor) / precision_factor
@@ -324,7 +310,7 @@ class Strategy:
         return f"{truncated_val:.{precision_lvl}f}"
 
     def get_enriched_data(self, target_symbol):
-        """ Extrai métricas quantitativas avançadas (Cruzadinha 1H profunda 12h), calcula limites dinâmicos e estrutura velas e momentum. """
+        """ Extrai metricas quantitativas avancadas (Contexto 12h e Bandas de Bollinger). """
         try:
             klines_4h = self.binance_client.get_klines(symbol=target_symbol, interval='4h', limit=30)
             df_4h = pandas.DataFrame(klines_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
@@ -339,12 +325,14 @@ class Strategy:
             df_1h.ta.macd(fast=12, slow=26, signal=9, append=True) 
             df_1h.ta.rsi(length=14, append=True)
             df_1h.ta.atr(length=14, append=True) 
+            df_1h.ta.bbands(length=20, std=2, append=True) 
             
             klines_15m = self.binance_client.get_klines(symbol=target_symbol, interval='15m', limit=60)
             df_15m = pandas.DataFrame(klines_15m, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['open', 'high', 'low', 'close', 'vol']: df_15m[col] = pandas.to_numeric(df_15m[col])
             df_15m.ta.macd(fast=12, slow=26, signal=9, append=True)
             df_15m.ta.rsi(length=14, append=True)
+            df_15m.ta.bbands(length=20, std=2, append=True) 
             
             last_row_4h = df_4h.iloc[-1]
             last_row_1h = df_1h.iloc[-1]
@@ -384,6 +372,13 @@ class Strategy:
             atr_1h = float(last_row_1h.get('ATRr_14', 0.0))
             
             bullish_15m_micro_candle = bool(last_row_15m['close'] > last_row_15m['open'])
+            
+            lower_band_1h = float(last_row_1h.get('BBL_20_2.0', 0.0))
+            touched_lower_band_1h = bool(low_1h <= lower_band_1h) and lower_band_1h > 0
+            
+            low_15m = float(last_row_15m['low'])
+            lower_band_15m = float(last_row_15m.get('BBL_20_2.0', 0.0))
+            touched_lower_band_15m = bool(low_15m <= lower_band_15m) and lower_band_15m > 0
             
             try:
                 avg_vol_10_candles = df_15m['vol'].tail(11).head(10).mean()
@@ -429,6 +424,8 @@ class Strategy:
                 "price_action_1h_last_12": price_action_1h_last_12, 
                 "macd_1h_shifting_up": macd_1h_shifting_up, 
                 "macd_histogram_1h_positive": macd_histogram_1h_positive, 
+                "touched_lower_band_1h": touched_lower_band_1h,
+                "touched_lower_band_15m": touched_lower_band_15m,
                 "rsi_1h_slope": round(rsi_1h_slope_val, 2), 
                 "rsi_MACRO_4h": round(rsi_4h, 2),
                 "rsi_INTER_1h": round(rsi_1h, 2),
@@ -455,7 +452,6 @@ class Strategy:
             return None, False
 
     def execute_real_trade(self, coin_symbol, target_price, calculated_atr_stop):
-        """ Roteamento de ordem de compra a mercado e armação de tracking local de posições. """
         market_symbol = f"{coin_symbol}{self.base_coin}"
         available_base_balance = self._get_balance(self.base_coin)
         
@@ -499,7 +495,6 @@ class Strategy:
             return False
 
     def _print_ai_verdict(self, text_summary):
-        """ Estrutura e imprime o veredito recebido da IA generativa de forma limpa. """
         lines = str(text_summary).split('\n')
         if not lines: return
         self.system_logger.info(f"🧠 Parecer da IA    : {lines[0].strip()}")
@@ -508,7 +503,6 @@ class Strategy:
                 self.system_logger.info(f"                      {line.strip()}")
 
     def scan_market(self):
-        """ Função principal de coordenação: minera dados, submete lotes à IA e avalia execução ou encerramento de posições. """
         if not self.in_operation:
             if self.daily_profit_pct >= self.daily_profit_target_pct or self.daily_trades >= self.max_daily_trades:
                 time_now = datetime.now()
@@ -594,9 +588,26 @@ class Strategy:
             market_symbol = f"{self.current_operation_coin}{self.base_coin}"
             
             try:
-                klines_hist = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=30)
-                self.chart_data_cache = [float(k_item[4]) for k_item in klines_hist]
-            except Exception: pass
+                klines_hist = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=50)
+                df_chart = pandas.DataFrame(klines_hist, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
+                for col in ['open', 'high', 'low', 'close']: df_chart[col] = pandas.to_numeric(df_chart[col])
+                df_chart.ta.bbands(length=20, std=2, append=True)
+                
+                df_last_30 = df_chart.tail(30)
+                new_cache = []
+                for _, row in df_last_30.iterrows():
+                    new_cache.append({
+                        "o": float(row['open']),
+                        "h": float(row['high']),
+                        "l": float(row['low']),
+                        "c": float(row['close']),
+                        "bbu": float(row.get('BBU_20_2.0', row['high'])),
+                        "bbm": float(row.get('BBM_20_2.0', row['close'])),
+                        "bbl": float(row.get('BBL_20_2.0', row['low']))
+                    })
+                self.chart_data_cache = new_cache
+            except Exception as e: 
+                pass
 
             try:
                 ticker_data = self.binance_client.get_ticker(symbol=market_symbol)
@@ -834,7 +845,6 @@ class Strategy:
                 self.system_status_ui = "Mapeando tendências de mercado..."
 
     def _write_json_ui(self):
-        """ Exporta o pipeline de dados interno via JSON para renderização assíncrona da GUI Tkinter. """
         try:
             btc_ticker_data = self.binance_client.get_ticker(symbol=f"BTC{self.base_coin}")
             btc_price_val = float(btc_ticker_data['lastPrice'])

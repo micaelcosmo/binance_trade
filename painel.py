@@ -175,19 +175,17 @@ class BinanceBotGUI:
         except: pass
 
     def request_update(self):
-        """ Inicializa a verificação de update remoto. Bloqueia execução imediata caso o motor opere capital em risco. """
         if self.in_operation:
             with open("update_pending.flag", "w") as flag_file:
                 flag_file.write("pending")
             self.btn_update.config(state=tk.DISABLED, text="⏳ Aguardando Venda...")
-            self.log_message("\n[INFO] Atualização agendada para execução pós-venda.\n")
+            self.log_message("\n[INFO] Atualizacao agendada para execucao pos-venda.\n")
         else:
             self.perform_update()
 
     def perform_update(self):
-        """ Processa a sincronização silenciosa via Git e invoca auto-restart estrutural se houver alterações. """
-        self.btn_update.config(state=tk.DISABLED, text="Baixando atualização...")
-        self.log_message("\n[INFO] Estabelecendo conexão com repositório remoto...\n")
+        self.btn_update.config(state=tk.DISABLED, text="Baixando atualizacao...")
+        self.log_message("\n[INFO] Estabelecendo conexao com repositorio remoto...\n")
         
         was_running = self.bot_running
         try:
@@ -196,13 +194,13 @@ class BinanceBotGUI:
             result = subprocess.run(["git", "pull"], capture_output=True, text=True, timeout=15)
 
             if "Already up to date." in result.stdout or "Already up-to-date." in result.stdout:
-                self.log_message("[OK] Sistema encontra-se na versão mais recente.\n")
+                self.log_message("[OK] Sistema encontra-se na versao mais recente.\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
-                self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+                self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versao")
                 if was_running:
                     self.start_bot()
             elif result.returncode == 0:
-                self.log_message("[OK] Atualização validada. Reiniciando interface do usuário...\n")
+                self.log_message("[OK] Atualizacao validada. Reiniciando interface do usuario...\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
                 time.sleep(2)
                 
@@ -215,13 +213,13 @@ class BinanceBotGUI:
             else:
                 self.log_message("[ERROR] Conflito de integridade com o tracking remoto.\n")
                 if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
-                self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+                self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versao")
                 if was_running:
                     self.start_bot()
         except Exception as exception_log:
-            self.log_message(f"[ERROR] Exceção gerada durante o protocolo de sub-processo: {exception_log}\n")
+            self.log_message(f"[ERROR] Excecao gerada durante o protocolo de sub-processo: {exception_log}\n")
             if os.path.exists("update_pending.flag"): os.remove("update_pending.flag")
-            self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versão")
+            self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versao")
             if was_running:
                 self.start_bot()
 
@@ -237,48 +235,48 @@ class BinanceBotGUI:
                     current_trades = data.get("daily_trades", 0)
             except Exception: pass
         self.locked_at_trade_count = current_trades
-        self.log_message("\n[+] Extensão de limite de operações solicitada ao motor central.\n")
+        self.log_message("\n[+] Extensao de limite de operacoes solicitada ao motor central.\n")
 
     def force_sell_action(self):
         resposta = messagebox.askyesno(
             "ATENÇÃO: VENDA FORÇADA", 
-            "Confirma o encerramento manual e imediato da operação financeira vigente?\n\nO algoritmo consolidará o resultado a mercado e efetuará pausa compulsória de 60 segundos."
+            "Confirma o encerramento manual e imediato da operacao financeira vigente?\n\nO algoritmo consolidara o resultado a mercado e efetuara pausa compulsoria de 60 segundos."
         )
         if resposta:
             try:
                 with open("force_sell.flag", "w") as f:
                     f.write("trigger_manual_sell")
-                self.log_message("\n[INFO] Diretiva de venda interceptada. Aguardando execução do motor.\n")
+                self.log_message("\n[INFO] Diretiva de venda interceptada. Aguardando execucao do motor.\n")
             except Exception as flag_error:
-                self.log_message(f"\n[ERROR] Falha na emissão do comando: {flag_error}\n")
+                self.log_message(f"\n[ERROR] Falha na emissao do comando: {flag_error}\n")
 
     def show_ai_analysis(self):
         top = tk.Toplevel(self.root)
-        top.title("Parecer Analítico Institucional")
+        top.title("Parecer Analitico Institucional")
         top.geometry("700x450")
         top.configure(bg=self.bg_frame)
         top.transient(self.root) 
         top.grab_set() 
 
-        lbl = tk.Label(top, text="Dossiê Quantitativo", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 12, "bold"))
+        lbl = tk.Label(top, text="Dossie Quantitativo", bg=self.bg_frame, fg=self.accent_yellow, font=("Segoe UI", 12, "bold"))
         lbl.pack(pady=(15, 5))
 
         txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.accent_green, font=("Consolas", 10))
         txt.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         
-        report = getattr(self, 'current_ai_report', "Nenhum relatório foi processado neste ciclo.")
+        report = getattr(self, 'current_ai_report', "Nenhum relatorio foi processado neste ciclo.")
         txt.insert(tk.END, report)
         txt.config(state=tk.DISABLED)
 
     def show_daily_history(self):
         top = tk.Toplevel(self.root)
-        top.title("Extrato de Operações")
+        top.title("Extrato de Operacoes")
         top.geometry("600x350")
         top.configure(bg=self.bg_frame)
         top.transient(self.root)
         top.grab_set()
 
-        lbl = tk.Label(top, text="Histórico Financeiro Diário", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
+        lbl = tk.Label(top, text="Historico Financeiro Diario", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
         lbl.pack(pady=(15, 5))
 
         txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.fg_text, font=("Consolas", 10))
@@ -286,11 +284,11 @@ class BinanceBotGUI:
         
         hist = getattr(self, 'current_daily_history', [])
         if not hist:
-            txt.insert(tk.END, "Nenhuma transação registrada na data vigente.")
+            txt.insert(tk.END, "Nenhuma transacao registrada na data vigente.")
         else:
             for item in hist:
                 cor_res = "🟢" if "+" in item['result'] else "🔴"
-                linha = f"[{item['time']}] {cor_res} {item['coin']: <8} -> {item['result']} (Motivo de saída: {item['reason']})\n\n"
+                linha = f"[{item['time']}] {cor_res} {item['coin']: <8} -> {item['result']} (Motivo de saida: {item['reason']})\n\n"
                 txt.insert(tk.END, linha)
         txt.config(state=tk.DISABLED)
 
@@ -324,9 +322,9 @@ class BinanceBotGUI:
                 with open("profit_gain_state.json", "w") as f:
                     json.dump(pg_state, f)
 
-            self.log_message("\n[OK] Placar financeiro e estatísticas reiniciados.\n")
+            self.log_message("\n[OK] Placar financeiro e estatisticas reiniciados.\n")
         except Exception as file_error:
-            self.log_message(f"\n[ERROR] Falha ao sobreescrever persistência de placar: {file_error}\n")
+            self.log_message(f"\n[ERROR] Falha ao sobreescrever persistencia de placar: {file_error}\n")
 
     def draw_mini_chart(self, chart_data_points, coin_symbol, buy_price_value=0.0, buy_time_stamp=0.0):
         self.canvas_chart.delete("all")
@@ -338,23 +336,58 @@ class BinanceBotGUI:
         
         canvas_width = int(self.canvas_chart['width'])
         canvas_height = int(self.canvas_chart['height'])
-        padding_value = 5
+        padding_value = 8
         
-        min_chart_value = min(chart_data_points)
-        max_chart_value = max(chart_data_points)
-        value_range = max_chart_value - min_chart_value if max_chart_value != min_chart_value else 1
+        is_new_format = isinstance(chart_data_points[0], dict)
         
-        line_color = self.accent_green if chart_data_points[-1] >= chart_data_points[0] else self.accent_red
-        
-        plotted_points = []
-        x_axis_step = (canvas_width - 2*padding_value) / (len(chart_data_points) - 1)
-        for index, current_value in enumerate(chart_data_points):
-            x_coordinate = padding_value + index * x_axis_step
-            y_coordinate = padding_value + (canvas_height - 2*padding_value) * (1 - (current_value - min_chart_value) / value_range)
-            plotted_points.append(x_coordinate)
-            plotted_points.append(y_coordinate)
+        if is_new_format:
+            min_chart_value = min([min(p['l'], p['bbl']) for p in chart_data_points])
+            max_chart_value = max([max(p['h'], p['bbu']) for p in chart_data_points])
+        else:
+            min_chart_value = min(chart_data_points)
+            max_chart_value = max(chart_data_points)
             
-        self.canvas_chart.create_line(plotted_points, fill=line_color, width=2, smooth=True)
+        value_range = max_chart_value - min_chart_value if max_chart_value != min_chart_value else 1
+        x_axis_step = (canvas_width - 2*padding_value) / (len(chart_data_points) - 1)
+        
+        if is_new_format:
+            bbu_pts, bbm_pts, bbl_pts = [], [], []
+            for i, p in enumerate(chart_data_points):
+                x = padding_value + i * x_axis_step
+                bbu_pts.extend([x, padding_value + (canvas_height - 2*padding_value) * (1 - (p['bbu'] - min_chart_value) / value_range)])
+                bbm_pts.extend([x, padding_value + (canvas_height - 2*padding_value) * (1 - (p['bbm'] - min_chart_value) / value_range)])
+                bbl_pts.extend([x, padding_value + (canvas_height - 2*padding_value) * (1 - (p['bbl'] - min_chart_value) / value_range)])
+            
+            self.canvas_chart.create_line(bbu_pts, fill="#3c4043", dash=(4, 4), smooth=True)
+            self.canvas_chart.create_line(bbm_pts, fill="#4a4d51", dash=(2, 4), smooth=True)
+            self.canvas_chart.create_line(bbl_pts, fill="#3c4043", dash=(4, 4), smooth=True)
+            
+            candle_w = max(1, x_axis_step * 0.6)
+            for i, p in enumerate(chart_data_points):
+                x = padding_value + i * x_axis_step
+                y_o = padding_value + (canvas_height - 2*padding_value) * (1 - (p['o'] - min_chart_value) / value_range)
+                y_h = padding_value + (canvas_height - 2*padding_value) * (1 - (p['h'] - min_chart_value) / value_range)
+                y_l = padding_value + (canvas_height - 2*padding_value) * (1 - (p['l'] - min_chart_value) / value_range)
+                y_c = padding_value + (canvas_height - 2*padding_value) * (1 - (p['c'] - min_chart_value) / value_range)
+                
+                color = self.accent_green if p['c'] >= p['o'] else self.accent_red
+                
+                self.canvas_chart.create_line(x, y_h, x, y_l, fill=color, width=1)
+                
+                body_y1 = min(y_o, y_c)
+                body_y2 = max(y_o, y_c)
+                if body_y2 - body_y1 < 1: body_y2 = body_y1 + 1 
+                
+                self.canvas_chart.create_rectangle(x - candle_w/2, body_y1, x + candle_w/2, body_y2, fill=color, outline=color)
+        else:
+            plotted_points = []
+            line_color = self.accent_green if chart_data_points[-1] >= chart_data_points[0] else self.accent_red
+            for index, current_value in enumerate(chart_data_points):
+                x_coordinate = padding_value + index * x_axis_step
+                y_coordinate = padding_value + (canvas_height - 2*padding_value) * (1 - (current_value - min_chart_value) / value_range)
+                plotted_points.append(x_coordinate)
+                plotted_points.append(y_coordinate)
+            self.canvas_chart.create_line(plotted_points, fill=line_color, width=2, smooth=True)
 
         if buy_price_value > 0 and (min_chart_value <= buy_price_value <= max_chart_value):
             y_buy_coordinate = padding_value + (canvas_height - 2*padding_value) * (1 - (buy_price_value - min_chart_value) / value_range)
@@ -502,7 +535,7 @@ class BinanceBotGUI:
             pass
         
         if self.bot_running:
-            self.root.after(0, lambda: self.lbl_det_atu.config(text="Status: Erro de execução de processo. Verifique log console.", fg=self.accent_red))
+            self.root.after(0, lambda: self.lbl_det_atu.config(text="Status: Erro de execucao de processo. Verifique log console.", fg=self.accent_red))
             self.bot_running = False
 
     def get_total_usdt_balance(self, binance_client_instance, bridge_symbol):
@@ -573,11 +606,11 @@ class BinanceBotGUI:
 
     def start_bot(self):
         if self.bot_running or self.process is not None:
-            self.log_message("[INFO] A instância da engine já encontra-se ativa.\n")
+            self.log_message("[INFO] A instancia da engine ja encontra-se ativa.\n")
             return
             
         self.log_message("[INFO] Inicializando ambiente em modo seguro...\n")
-        self.lbl_det_atu.config(text="Status: Alocando memória da engine...", fg=self.fg_text)
+        self.lbl_det_atu.config(text="Status: Alocando memoria da engine...", fg=self.fg_text)
         with open("bot_status.json", "w") as file_handler: json.dump({}, file_handler)
         
         environment_variables = os.environ.copy()
