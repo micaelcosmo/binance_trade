@@ -97,7 +97,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.5.2"
+            return "v3.5.5"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -562,12 +562,16 @@ class Strategy:
                 else: temp_cold_list.append(ui_line_text)
 
                 try:
-                    cur_change_flt = float(str(enriched_data['change_24h_pct']).replace('%', '').replace('+', ''))
-                    min_change_flt = float(str(enriched_data['min_24h_change_pct']).replace('%', '').replace('+', ''))
-                    req_bottom_flt = float(str(enriched_data['required_atr_bottom_pct']).replace('%', '').replace('+', ''))
+                    # Parse matematico seguro para evitar quebras em strings vazias
+                    cur_change_flt = float(str(enriched_data.get('change_24h_pct', '0')).replace('%', '').replace('+', ''))
+                    min_change_flt = float(str(enriched_data.get('min_24h_change_pct', '0')).replace('%', '').replace('+', ''))
+                    req_bottom_flt = float(str(enriched_data.get('required_atr_bottom_pct', '0')).replace('%', '').replace('+', ''))
+                    
+                    bollinger_ok = enriched_data.get('touched_lower_band_1h', False) or enriched_data.get('touched_lower_band_15m', False)
                     
                     if min_change_flt <= req_bottom_flt and -self.disaster_stop_pct <= cur_change_flt <= 2.50:
-                        ai_batch_payload.append(enriched_data)
+                        if bollinger_ok:
+                            ai_batch_payload.append(enriched_data)
                 except Exception:
                     pass
 
@@ -741,12 +745,14 @@ class Strategy:
                                 for asset in ai_batch_payload:
                                     if asset['coin'] != self.current_operation_coin:
                                         try:
-                                            cur_change_str = str(asset['change_24h_pct']).replace('%', '').replace('+', '')
-                                            min_change_str = str(asset['min_24h_change_pct']).replace('%', '').replace('+', '')
-                                            req_bottom_str = str(asset['required_atr_bottom_pct']).replace('%', '').replace('+', '')
+                                            cur_change_str = str(asset.get('change_24h_pct', '0')).replace('%', '').replace('+', '')
+                                            min_change_str = str(asset.get('min_24h_change_pct', '0')).replace('%', '').replace('+', '')
+                                            req_bottom_str = str(asset.get('required_atr_bottom_pct', '0')).replace('%', '').replace('+', '')
                                             
                                             if float(min_change_str) <= float(req_bottom_str) and float(cur_change_str) <= -0.50:
-                                                swap_payload.append(asset)
+                                                bollinger_ok = asset.get('touched_lower_band_1h', False) or asset.get('touched_lower_band_15m', False)
+                                                if bollinger_ok:
+                                                    swap_payload.append(asset)
                                         except Exception: pass
                                 
                                 if len(swap_payload) >= 4:
