@@ -1,15 +1,15 @@
-import tkinter as tk
-from tkinter import scrolledtext
-import tkinter.messagebox as messagebox
-import subprocess
-import threading
-import sys
-import time
 import json
 import os
+import subprocess
+import sys
+import threading
+import time
+import tkinter as tk
+import tkinter.messagebox as messagebox
+from tkinter import scrolledtext
 
-from binance_trade_bot.config import Config
 from binance.client import Client
+from binance_trade_bot.config import Config
 
 
 class BinanceBotGUI:
@@ -358,9 +358,9 @@ class BinanceBotGUI:
                 bbm_pts.extend([x, padding_value + (canvas_height - 2*padding_value) * (1 - (p['bbm'] - min_chart_value) / value_range)])
                 bbl_pts.extend([x, padding_value + (canvas_height - 2*padding_value) * (1 - (p['bbl'] - min_chart_value) / value_range)])
             
-            self.canvas_chart.create_line(bbu_pts, fill="#3c4043", dash=(4, 4), smooth=True)
-            self.canvas_chart.create_line(bbm_pts, fill="#4a4d51", dash=(2, 4), smooth=True)
-            self.canvas_chart.create_line(bbl_pts, fill="#3c4043", dash=(4, 4), smooth=True)
+            self.canvas_chart.create_line(bbu_pts, fill="#848e9c", dash=(4, 4), smooth=True)
+            self.canvas_chart.create_line(bbm_pts, fill="#8ab4f8", dash=(2, 4), smooth=True)
+            self.canvas_chart.create_line(bbl_pts, fill="#848e9c", dash=(4, 4), smooth=True)
             
             candle_w = max(1, x_axis_step * 0.6)
             for i, p in enumerate(chart_data_points):

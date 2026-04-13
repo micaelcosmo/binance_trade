@@ -1,8 +1,9 @@
-import os
 import json
+import os
+
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from dotenv import load_dotenv
 
 
 load_dotenv("user.cfg")
@@ -32,21 +33,23 @@ OBJETIVO ESTRATÉGICO: "COMPRAR A REVERSÃO CONFIRMADA (NUNCA A FACA CAINDO)"
 O motor enviou moedas com quedas profundas. Seu trabalho é realizar a 'Cruzadinha Profunda', analisando a estrutura/Momentum de 1H vs estrutura/Momentum de 15m.
 Não compre repiques de 'dead cat bounce'. Só aprove a compra se a força vendedora do 1H estiver exausta E o 15m confirmar entrada de capital.
 
-REGRAS DE VETO ABSOLUTO (LIMITES MATEMÁTICOS INEGOCIÁVEIS - FALHOU EM UM, ESTÁ ELIMINADA):
-1. A Lei do Fundo Volátil: A 'min_24h_change_pct' DEVE ser MAIS NEGATIVA que o 'required_atr_bottom_pct'. Se a queda for rasa, VETE.
-2. A Lei da Agulhada de Bollinger (Exaustão Estatística): É OBRIGATÓRIO que a variável 'touched_lower_band_15m' seja TRUE OU a 'touched_lower_band_1h' seja TRUE. Se AMBAS vierem como FALSE, o ativo não furou o desvio padrão. VETE IMEDIATAMENTE.
-3. A Lei da Exaustão Macro (1H MACD): A variável 'macd_1h_shifting_up' DEVE ser TRUE. Se for FALSE, a faca ainda está caindo. VETE.
-4. A Lei da Estrutura (Price Action 1H - Últimas 12h): Analise o array 'price_action_1h_last_12'. Se o ativo estiver fazendo fundos consistentemente mais baixos de forma violenta E a 'bullish_1h_candle' for FALSE, o ativo está em colapso. VETE. (Releve a estrutura de baixa APENAS se 'bottom_rejection_1h' for TRUE).
-5. A Lei do Momentum Micro (15m): A variável 'macd_histogram_15m_positive' DEVE ser TRUE. O fluxo de curto prazo já precisa ser comprador. Se for FALSE, VETE.
-6. A Lei da Liquidez e Micro: A 'volume_24h_usdt' DEVE ser > 250000. O 'bullish_15m_micro_candle' DEVE ser TRUE.
-7. A Lei do Elástico: A 'ema21_1h_distance_pct' DEVE ser estritamente MAIS NEGATIVA que -1.00%.
-8. A Lei do Volume Micro: A variável 'volume_15m_above_avg' DEVE ser TRUE para confirmar a entrada de capital institucional.
+REGRAS DE VETO ABSOLUTO (LIMITES MATEMÁTICOS INEGOCIÁVEIS - LÓGICA BINÁRIA):
+ATENÇÃO: É ESTRITAMENTE PROIBIDO inventar justificativas como "não aplicável para esta moeda" ou "a regra não foi violada". Se a condição de veto for atingida, a moeda ESTÁ ELIMINADA sumariamente.
+
+1. A Lei do Fundo Volátil: SE a 'min_24h_change_pct' for MAIOR ou IGUAL a 'required_atr_bottom_pct', VETE.
+2. A Lei da Agulhada de Bollinger (Exaustão Estatística): SE ('touched_lower_band_15m' == FALSE E 'touched_lower_band_1h' == FALSE), VETE IMEDIATAMENTE. Ambas falsas significa que o desvio padrão não foi rompido.
+3. A Lei da Exaustão Macro: SE 'macd_1h_shifting_up' == FALSE, VETE.
+4. A Lei da Estrutura (Price Action 1H): SE ('bullish_1h_candle' == FALSE E 'bottom_rejection_1h' == FALSE), VETE. O ativo está em colapso.
+5. A Lei do Momentum Micro: SE 'macd_histogram_15m_positive' == FALSE, VETE.
+6. A Lei da Liquidez e Micro: SE ('volume_24h_usdt' < 250000 OU 'bullish_15m_micro_candle' == FALSE), VETE.
+7. A Lei do Elástico: SE 'ema21_1h_distance_pct' for MAIOR ou IGUAL a -1.00%, VETE.
+8. A Lei do Volume Micro: SE 'volume_15m_above_avg' == FALSE, VETE IMEDIATAMENTE. Falsos rompimentos não são tolerados.
 
 MÉTODO DE ANÁLISE OBRIGATÓRIO (O TORNEIO DE ELIMINAÇÃO EM 3 PASSOS):
-- Passo 1: Filtragem Individual. Analise os dados de CADA moeda do lote contra TODAS as 8 Regras de Veto Absoluto.
-- Passo 2: O Duelo dos Sobreviventes. Compare APENAS as moedas que passaram 100% no Passo 1. Busque aquela com a melhor assimetria (Agulhada em Bollinger validada + MACD forte).
+- Passo 1: Filtragem Individual. Analise os dados de CADA moeda do lote contra TODAS as 8 Regras de Veto Absoluto usando Lógica Booleana. SE HOUVER Busque aquela com a melhor assimetria (Agulhada em Bollinger validada + MACD forte)
+- Passo 2: O Duelo dos Sobreviventes. Compare APENAS as moedas que passaram 100% no Passo 1 (nenhum veto). Busque aquela com a melhor assimetria.
 - Passo 3: O Veredito de Risco. 
-  * Se NENHUMA moeda sobreviveu ao Passo 1: Você DEVE definir "winning_coin" como "NENHUMA", "final_confidence" < 90, e o "decision_summary" DEVE iniciar com "🛑 Nenhuma moeda selecionada. Todas falharam em ao menos um requisito" e explicar o motivo predominante das reprovações.
+  * Se NENHUMA moeda sobreviveu ao Passo 1: Defina "winning_coin" como "NENHUMA", "final_confidence" < 90, e o "decision_summary" DEVE iniciar com "🛑 Nenhuma moeda selecionada. Todas falharam em ao menos um requisito" e explicar o motivo predominante das reprovações..
   * Se HOUVER uma vencedora perfeita: Defina "winning_coin" com o símbolo, "final_confidence" >= 90, e explique o motivo da vitória no resumo.
 
 FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
@@ -90,7 +93,7 @@ FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
 
         try:
             batch_json_string = json.dumps(batch_data, indent=2)
-            prompt_text = f"Por favor, execute a Análise em 4 Passos no lote de dados quantitativos profundos (contexto 12h e Bandas de Bollinger) abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{batch_json_string}"
+            prompt_text = f"Por favor, execute a Análise em 3 Passos no lote de dados quantitativos profundos (contexto 12h e Bandas de Bollinger) abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{batch_json_string}"
             
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash-lite',
