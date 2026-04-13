@@ -120,6 +120,7 @@ class Strategy:
                         self.daily_trades = state_data.get("daily_trades", 0)
                         self.daily_history = state_data.get("daily_history", [])
                         self.full_ai_report = state_data.get("full_ai_report", "Aguardando primeira analise detalhada da IA...")
+                        self.max_daily_trades = state_data.get("max_daily_trades", self.max_daily_trades)
             except Exception:
                 pass
 
@@ -139,7 +140,8 @@ class Strategy:
                     "daily_profit_pct": self.daily_profit_pct,
                     "daily_trades": self.daily_trades,
                     "daily_history": self.daily_history,
-                    "full_ai_report": self.full_ai_report
+                    "full_ai_report": self.full_ai_report,
+                    "max_daily_trades": self.max_daily_trades
                 }, file_handler)
         except Exception as write_error:
             self.system_logger.error(f"Erro ao salvar estado local: {write_error}")
@@ -152,6 +154,11 @@ class Strategy:
             self.daily_trades = 0
             self.daily_history = []
             self.full_ai_report = "Aguardando primeira analise do novo dia..."
+            try:
+                self.max_daily_trades = int(getattr(self.system_configuration, 'max_daily_trades', 3))
+            except Exception:
+                self.max_daily_trades = 3
+                
             if not self.in_operation:
                 self.system_logger.info("🌅 NOVO DIA: Metas, Historico e Limites foram zerados.")
             self._save_state()
@@ -164,6 +171,11 @@ class Strategy:
             self.daily_trades = 0
             self.daily_history = []
             self.full_ai_report = "Placar zerado. Aguardando nova analise..."
+            try:
+                self.max_daily_trades = int(getattr(self.system_configuration, 'max_daily_trades', 3))
+            except Exception:
+                self.max_daily_trades = 3
+                
             self._save_state()
             try:
                 os.remove("reset_trades.flag")
@@ -562,7 +574,6 @@ class Strategy:
                 else: temp_cold_list.append(ui_line_text)
 
                 try:
-                    # Parse matematico seguro para evitar quebras em strings vazias
                     cur_change_flt = float(str(enriched_data.get('change_24h_pct', '0')).replace('%', '').replace('+', ''))
                     min_change_flt = float(str(enriched_data.get('min_24h_change_pct', '0')).replace('%', '').replace('+', ''))
                     req_bottom_flt = float(str(enriched_data.get('required_atr_bottom_pct', '0')).replace('%', '').replace('+', ''))
@@ -864,7 +875,17 @@ class Strategy:
                     self.ai_cooldown_until = time.time() + 2700
                     
             else:
-                self.system_status_ui = "Mapeando tendências de mercado..."
+                self.system_logger.info("🛑 [FILTRO PRÉVIO] Nenhum ativo atendeu aos critérios matemáticos mínimos (Bollinger/MACD/Volume).")
+                self.system_logger.info("================ RELATÓRIO DA HORA ===================")
+                self.system_logger.info("📋 Ativos Analisados : 0 moedas (Dossiê vazio)")
+                self.system_logger.info("🏆 Vencedor Avaliado: NENHUMA (Retido no Motor)")
+                self.system_logger.info("🧠 Parecer do Motor : Nenhuma moeda cumpriu o filtro de exaustão estatística.")
+                self.system_logger.info("======================================================")
+
+                self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛑 VETADO PELO MOTOR PYTHON\n\nNenhum ativo do mercado tocou na banda inferior de Bollinger (15m ou 1H) neste ciclo. Dossiê não gerado para economizar recursos."
+                self.last_ai_verdict = "🛑 MERCADO VETADO: Filtro Matemático (Sem Agulhada)."
+                self.system_status_ui = "Aguardando próxima análise..."
+                self.ai_cooldown_until = time.time() + 2700
 
     def _write_json_ui(self):
         try:
