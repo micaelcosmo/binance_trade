@@ -36,6 +36,7 @@ class BinanceBotGUI:
         self.current_balance = 0.0
         self.locked_at_trade_count = -1
         self.in_operation = False
+        self.current_motor_cooldown = 15
         self._load_gui_state()
         
         self.bg_main = "#0b0e11" 
@@ -74,6 +75,9 @@ class BinanceBotGUI:
 
         self.btn_dossier = tk.Button(self.tools_frame, text="📊 Dossiê do Motor", command=self.show_dossier, bg="#2b3139", fg=self.neutral_obs, font=("Segoe UI", 9, "bold"), width=20)
         self.btn_dossier.pack(side=tk.LEFT, padx=5)
+        
+        self.btn_cooldown = tk.Button(self.tools_frame, text=f"⏱️ Scan: {self.current_motor_cooldown}m", command=self.cycle_cooldown, bg="#2b3139", fg=self.accent_green, font=("Segoe UI", 9, "bold"), width=15)
+        self.btn_cooldown.pack(side=tk.LEFT, padx=5)
         
         self.btn_add_trade = tk.Button(self.tools_frame, text="🔋 +1 Tentativa Hoje", command=self.add_trade_chance, bg=self.accent_green, fg="black", font=("Segoe UI", 9, "bold"), width=20)
         self.btn_add_trade.pack(side=tk.RIGHT, padx=0)
@@ -225,6 +229,18 @@ class BinanceBotGUI:
             self.btn_update.config(state=tk.NORMAL, text="🔄 Atualizar Versao")
             if was_running:
                 self.start_bot()
+
+    def cycle_cooldown(self):
+        cycle = {15: 30, 30: 45, 45: 15}
+        next_cd = cycle.get(self.current_motor_cooldown, 15)
+        self.current_motor_cooldown = next_cd
+        self.btn_cooldown.config(text=f"⏱️ Scan: {next_cd}m")
+        try:
+            with open("cooldown.flag", "w") as f:
+                f.write(str(next_cd))
+            self.log_message(f"\n[+] Tempo de verificacao basica do motor ajustado para {next_cd} minutos.\n")
+        except Exception as e:
+            self.log_message(f"\n[ERROR] Falha ao ajustar tempo de scan: {e}\n")
 
     def add_trade_chance(self):
         with open("add_trade.flag", "w") as f:
@@ -484,6 +500,11 @@ class BinanceBotGUI:
                                 self.lbl_countdown.config(text="⏳ Próxima Análise: Executando...")
                         else:
                             self.lbl_countdown.config(text="⏳ Próxima Análise: -- (Em operação)")
+                            
+                        m_cd = state_data.get('motor_cooldown_minutes', 15)
+                        if getattr(self, 'current_motor_cooldown', 15) != m_cd:
+                            self.current_motor_cooldown = m_cd
+                            self.btn_cooldown.config(text=f"⏱️ Scan: {m_cd}m")
                         
                         last_hb_ts = state_data.get("last_heartbeat_ts", 0.0)
                         if last_hb_ts > 0:

@@ -31,6 +31,7 @@ class Strategy:
         self.ai_agent = MarketAnalyzer(self.system_logger)
         self.last_ai_verdict = "Aguardando lote de dados..."
         self.ai_cooldown_until = 0.0
+        self.motor_cooldown_minutes = 15
         
         try:
             self.daily_profit_target_pct = float(getattr(self.system_configuration, 'daily_profit_target_pct', 5.0))
@@ -98,7 +99,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.5.6"
+            return "v3.5.7"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -113,6 +114,7 @@ class Strategy:
                     self.active_buy_price = state_data.get("active_buy_price", 0.0)
                     self.peak_profit_pct = state_data.get("peak_profit_pct", 0.0)
                     self.active_dynamic_stop_loss = state_data.get("active_dynamic_stop_loss", 0.0)
+                    self.motor_cooldown_minutes = state_data.get("motor_cooldown_minutes", 15)
                     
                     saved_date = state_data.get("current_date", "")
                     if saved_date == datetime.now().strftime("%Y-%m-%d"):
@@ -142,7 +144,8 @@ class Strategy:
                     "daily_trades": self.daily_trades,
                     "daily_history": self.daily_history,
                     "full_ai_report": self.full_ai_report,
-                    "max_daily_trades": self.max_daily_trades
+                    "max_daily_trades": self.max_daily_trades,
+                    "motor_cooldown_minutes": self.motor_cooldown_minutes
                 }, file_handler)
         except Exception as write_error:
             self.system_logger.error(f"Erro ao salvar estado local: {write_error}")
@@ -165,6 +168,17 @@ class Strategy:
             self._save_state()
 
     def _check_ui_flags(self):
+        if os.path.exists("cooldown.flag"):
+            try:
+                with open("cooldown.flag", "r") as f:
+                    new_cd = int(f.read().strip())
+                self.motor_cooldown_minutes = new_cd
+                self.system_logger.info(f"⏱️ [UI OVERRIDE] Intervalo de scan do motor alterado para {new_cd} minutos.")
+                self._save_state()
+                os.remove("cooldown.flag")
+            except Exception:
+                pass
+
         if os.path.exists("reset_trades.flag"):
             self.trades_won = 0
             self.trades_lost = 0
@@ -878,7 +892,7 @@ class Strategy:
                 else:
                     first_line_reason = ai_decision_summary.split('\n')[0] if ai_decision_summary else "Veto de entrada."
                     self.last_ai_verdict = f"🛑 MERCADO VETADO: {first_line_reason}"
-                    self.ai_cooldown_until = time.time() + 2700
+                    self.ai_cooldown_until = time.time() + self.golden_rule_cooldown_seconds
                     
             else:
                 self.system_logger.info("🛑 [FILTRO PRÉVIO] Nenhum ativo atendeu aos critérios matemáticos mínimos (Queda ATR + Bollinger Inferior).")
@@ -891,7 +905,7 @@ class Strategy:
                 self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛑 VETADO PELO MOTOR PYTHON\n\nNenhum ativo do mercado tocou na banda inferior de Bollinger (15m ou 1H) neste ciclo. Dossiê retido na camada matemática para economizar recursos da API."
                 self.last_ai_verdict = "🛑 MERCADO VETADO: Filtro Matemático (Sem Agulhada)."
                 self.system_status_ui = "Aguardando próxima análise..."
-                self.ai_cooldown_until = time.time() + 2700
+                self.ai_cooldown_until = time.time() + (self.motor_cooldown_minutes * 60)
 
     def _write_json_ui(self):
         try:
@@ -941,7 +955,8 @@ class Strategy:
             "max_daily_trades": self.max_daily_trades,
             "full_ai_report": self.full_ai_report,
             "daily_history": self.daily_history,
-            "last_dossier": self.last_dossier
+            "last_dossier": self.last_dossier,
+            "motor_cooldown_minutes": self.motor_cooldown_minutes
         }
 
         try:
