@@ -77,6 +77,7 @@ class Strategy:
         self.active_current_price = 0.0
         self.active_target_price = 0.0
         self.chart_data_cache = []
+        self.last_dossier = []
         self.operation_time_string = "0h 0m"
         
         self.in_operation = False
@@ -97,7 +98,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.5.5"
+            return "v3.5.6"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -546,6 +547,7 @@ class Strategy:
         temp_hot_list = []
         temp_cold_list = []
         ai_batch_payload = []
+        dossier_cache = []
         
         try:
             account_data = self.binance_client.get_account()
@@ -581,6 +583,7 @@ class Strategy:
                     bollinger_ok = enriched_data.get('touched_lower_band_1h', False) or enriched_data.get('touched_lower_band_15m', False)
                     
                     if min_change_flt <= req_bottom_flt and -self.disaster_stop_pct <= cur_change_flt <= 2.50:
+                        dossier_cache.append(enriched_data)
                         if bollinger_ok:
                             ai_batch_payload.append(enriched_data)
                 except Exception:
@@ -588,6 +591,9 @@ class Strategy:
 
         self.hot_cache = sorted(temp_hot_list)
         self.cold_cache = sorted(temp_cold_list)
+        
+        if not self.in_operation and dossier_cache:
+            self.last_dossier = dossier_cache
 
         if not self.in_operation:
             self.active_current_price, self.active_target_price = 0.0, 0.0
@@ -875,14 +881,14 @@ class Strategy:
                     self.ai_cooldown_until = time.time() + 2700
                     
             else:
-                self.system_logger.info("🛑 [FILTRO PRÉVIO] Nenhum ativo atendeu aos critérios matemáticos mínimos (Bollinger/MACD/Volume).")
+                self.system_logger.info("🛑 [FILTRO PRÉVIO] Nenhum ativo atendeu aos critérios matemáticos mínimos (Queda ATR + Bollinger Inferior).")
                 self.system_logger.info("================ RELATÓRIO DA HORA ===================")
-                self.system_logger.info("📋 Ativos Analisados : 0 moedas (Dossiê vazio)")
+                self.system_logger.info(f"📋 Ativos Analisados : {len(self.last_dossier)} moedas (Dossiê retido)")
                 self.system_logger.info("🏆 Vencedor Avaliado: NENHUMA (Retido no Motor)")
                 self.system_logger.info("🧠 Parecer do Motor : Nenhuma moeda cumpriu o filtro de exaustão estatística.")
                 self.system_logger.info("======================================================")
 
-                self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛑 VETADO PELO MOTOR PYTHON\n\nNenhum ativo do mercado tocou na banda inferior de Bollinger (15m ou 1H) neste ciclo. Dossiê não gerado para economizar recursos."
+                self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛑 VETADO PELO MOTOR PYTHON\n\nNenhum ativo do mercado tocou na banda inferior de Bollinger (15m ou 1H) neste ciclo. Dossiê retido na camada matemática para economizar recursos da API."
                 self.last_ai_verdict = "🛑 MERCADO VETADO: Filtro Matemático (Sem Agulhada)."
                 self.system_status_ui = "Aguardando próxima análise..."
                 self.ai_cooldown_until = time.time() + 2700
@@ -934,7 +940,8 @@ class Strategy:
             "daily_trades": self.daily_trades,
             "max_daily_trades": self.max_daily_trades,
             "full_ai_report": self.full_ai_report,
-            "daily_history": self.daily_history
+            "daily_history": self.daily_history,
+            "last_dossier": self.last_dossier
         }
 
         try:

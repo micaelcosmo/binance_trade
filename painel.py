@@ -71,6 +71,9 @@ class BinanceBotGUI:
         
         self.btn_hist = tk.Button(self.tools_frame, text="📜 Histórico do Dia", command=self.show_daily_history, bg="#2b3139", fg=self.neutral_obs, font=("Segoe UI", 9, "bold"), width=20)
         self.btn_hist.pack(side=tk.LEFT, padx=5)
+
+        self.btn_dossier = tk.Button(self.tools_frame, text="📊 Dossiê do Motor", command=self.show_dossier, bg="#2b3139", fg=self.neutral_obs, font=("Segoe UI", 9, "bold"), width=20)
+        self.btn_dossier.pack(side=tk.LEFT, padx=5)
         
         self.btn_add_trade = tk.Button(self.tools_frame, text="🔋 +1 Tentativa Hoje", command=self.add_trade_chance, bg=self.accent_green, fg="black", font=("Segoe UI", 9, "bold"), width=20)
         self.btn_add_trade.pack(side=tk.RIGHT, padx=0)
@@ -292,6 +295,51 @@ class BinanceBotGUI:
                 txt.insert(tk.END, linha)
         txt.config(state=tk.DISABLED)
 
+    def show_dossier(self):
+        top = tk.Toplevel(self.root)
+        top.title("Dossiê do Motor Quantitativo")
+        top.geometry("750x550")
+        top.configure(bg=self.bg_frame)
+        top.transient(self.root)
+        top.grab_set()
+
+        lbl = tk.Label(top, text="Ativos Pré-Filtrados (Matemática)", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
+        lbl.pack(pady=(15, 5))
+
+        txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.fg_text, font=("Consolas", 10))
+        txt.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+
+        dossier = getattr(self, 'current_dossier', [])
+        if not dossier:
+            txt.insert(tk.END, "Nenhum dossiê foi retido na memória. O mercado não apresentou quedas agudas suficientes no último ciclo.")
+        else:
+            for item in dossier:
+                coin = item.get("coin", "N/A")
+                txt.insert(tk.END, f"=========================================\n")
+                txt.insert(tk.END, f" 🪙 MOEDA: {coin}\n")
+                txt.insert(tk.END, f"=========================================\n")
+                txt.insert(tk.END, f" 💵 Preço Atual: ${item.get('current_price', 0):.6f}\n")
+                txt.insert(tk.END, f" 📉 Variação 24h: {item.get('change_24h_pct', '0%')}\n")
+                txt.insert(tk.END, f" 🕳️ Fundo 24h (Queda Máxima): {item.get('min_24h_change_pct', '0%')}\n")
+                txt.insert(tk.END, f" 📏 Fundo ATR Exigido: {item.get('required_atr_bottom_pct', '0%')}\n")
+                
+                b_15 = "SIM" if item.get("touched_lower_band_15m") else "NÃO"
+                b_1h = "SIM" if item.get("touched_lower_band_1h") else "NÃO"
+                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (15m): {b_15}\n")
+                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (1H): {b_1h}\n")
+                
+                macd_1h = "SIM" if item.get("macd_1h_shifting_up") else "NÃO"
+                macd_15m = "SIM" if item.get("macd_histogram_15m_positive") else "NÃO"
+                txt.insert(tk.END, f" 📈 MACD 1H Perdendo Força Vendedora: {macd_1h}\n")
+                txt.insert(tk.END, f" 🚀 MACD 15m Positivo (Momentum): {macd_15m}\n")
+                
+                vol_15m = "SIM" if item.get("volume_15m_above_avg") else "NÃO"
+                txt.insert(tk.END, f" 📊 Volume 15m Acima da Média: {vol_15m}\n")
+                txt.insert(tk.END, f" 📏 Distância da EMA21 (1H): {item.get('ema21_1h_distance_pct', '0%')}\n")
+                
+                txt.insert(tk.END, "\n")
+        txt.config(state=tk.DISABLED)
+
     def reset_initial_balance(self):
         if self.current_balance > 0:
             self.initial_balance = self.current_balance
@@ -412,6 +460,7 @@ class BinanceBotGUI:
                         
                         self.current_ai_report = state_data.get("full_ai_report", "Aguardando dados estruturados...")
                         self.current_daily_history = state_data.get("daily_history", [])
+                        self.current_dossier = state_data.get("last_dossier", [])
                         trades_no_dia = state_data.get("daily_trades", 0)
                         
                         self.in_operation = "Em Operação" in state_data.get("status", "")
