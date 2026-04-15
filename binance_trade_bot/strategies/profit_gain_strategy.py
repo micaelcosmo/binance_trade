@@ -100,7 +100,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.6.4"
+            return "v3.6.3"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
