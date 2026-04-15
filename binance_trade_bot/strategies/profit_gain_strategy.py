@@ -99,7 +99,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.5.7"
+            return "v3.5.8"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -414,12 +414,17 @@ class Strategy:
             
             bullish_15m_micro_candle = bool(last_row_15m['close'] > last_row_15m['open'])
             
-            lower_band_1h = float(last_row_1h.get('BBL_20_2.0', 0.0))
-            touched_lower_band_1h = bool(low_1h <= lower_band_1h) and lower_band_1h > 0
+            # Novo Radar de Retrovisor: Verifica as ultimas 2 velas de 1H
+            touched_lower_band_1h = any(
+                bool(float(row['low']) <= float(row.get('BBL_20_2.0', 0.0))) and float(row.get('BBL_20_2.0', 0.0)) > 0
+                for _, row in df_1h.tail(2).iterrows()
+            )
             
-            low_15m = float(last_row_15m['low'])
-            lower_band_15m = float(last_row_15m.get('BBL_20_2.0', 0.0))
-            touched_lower_band_15m = bool(low_15m <= lower_band_15m) and lower_band_15m > 0
+            # Novo Radar de Retrovisor: Verifica as ultimas 3 velas de 15m
+            touched_lower_band_15m = any(
+                bool(float(row['low']) <= float(row.get('BBL_20_2.0', 0.0))) and float(row.get('BBL_20_2.0', 0.0)) > 0
+                for _, row in df_15m.tail(3).iterrows()
+            )
             
             try:
                 avg_vol_10_candles = df_15m['vol'].tail(11).head(10).mean()
