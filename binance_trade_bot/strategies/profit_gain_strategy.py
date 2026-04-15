@@ -32,6 +32,7 @@ class Strategy:
         self.last_ai_verdict = "Aguardando lote de dados..."
         self.ai_cooldown_until = 0.0
         self.motor_cooldown_minutes = 15
+        self.bollinger_std = 2.0
         
         try:
             self.daily_profit_target_pct = float(getattr(self.system_configuration, 'daily_profit_target_pct', 5.0))
@@ -99,7 +100,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.5.8"
+            return "v3.6.0"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -115,6 +116,7 @@ class Strategy:
                     self.peak_profit_pct = state_data.get("peak_profit_pct", 0.0)
                     self.active_dynamic_stop_loss = state_data.get("active_dynamic_stop_loss", 0.0)
                     self.motor_cooldown_minutes = state_data.get("motor_cooldown_minutes", 15)
+                    self.bollinger_std = state_data.get("bollinger_std", 2.0)
                     
                     saved_date = state_data.get("current_date", "")
                     if saved_date == datetime.now().strftime("%Y-%m-%d"):
@@ -145,7 +147,8 @@ class Strategy:
                     "daily_history": self.daily_history,
                     "full_ai_report": self.full_ai_report,
                     "max_daily_trades": self.max_daily_trades,
-                    "motor_cooldown_minutes": self.motor_cooldown_minutes
+                    "motor_cooldown_minutes": self.motor_cooldown_minutes,
+                    "bollinger_std": self.bollinger_std
                 }, file_handler)
         except Exception as write_error:
             self.system_logger.error(f"Erro ao salvar estado local: {write_error}")
@@ -176,6 +179,17 @@ class Strategy:
                 self.system_logger.info(f"⏱️ [UI OVERRIDE] Intervalo de scan do motor alterado para {new_cd} minutos.")
                 self._save_state()
                 os.remove("cooldown.flag")
+            except Exception:
+                pass
+
+        if os.path.exists("bb_std.flag"):
+            try:
+                with open("bb_std.flag", "r") as f:
+                    new_std = float(f.read().strip())
+                self.bollinger_std = new_std
+                self.system_logger.info(f"📏 [UI OVERRIDE] Desvio Padrão de Bollinger ajustado para {new_std}.")
+                self._save_state()
+                os.remove("bb_std.flag")
             except Exception:
                 pass
 
@@ -353,6 +367,8 @@ class Strategy:
     def get_enriched_data(self, target_symbol):
         """ Extrai metricas quantitativas avancadas (Contexto 12h e Bandas de Bollinger). """
         try:
+            std_str = f"{self.bollinger_std:.1f}"
+            
             klines_4h = self.binance_client.get_klines(symbol=target_symbol, interval='4h', limit=30)
             df_4h = pandas.DataFrame(klines_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['close']: df_4h[col] = pandas.to_numeric(df_4h[col])
@@ -366,14 +382,14 @@ class Strategy:
             df_1h.ta.macd(fast=12, slow=26, signal=9, append=True) 
             df_1h.ta.rsi(length=14, append=True)
             df_1h.ta.atr(length=14, append=True) 
-            df_1h.ta.bbands(length=20, std=2, append=True) 
+            df_1h.ta.bbands(length=20, std=self.bollinger_std, append=True) 
             
             klines_15m = self.binance_client.get_klines(symbol=target_symbol, interval='15m', limit=60)
             df_15m = pandas.DataFrame(klines_15m, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['open', 'high', 'low', 'close', 'vol']: df_15m[col] = pandas.to_numeric(df_15m[col])
             df_15m.ta.macd(fast=12, slow=26, signal=9, append=True)
             df_15m.ta.rsi(length=14, append=True)
-            df_15m.ta.bbands(length=20, std=2, append=True) 
+            df_15m.ta.bbands(length=20, std=self.bollinger_std, append=True) 
             
             last_row_4h = df_4h.iloc[-1]
             last_row_1h = df_1h.iloc[-1]
@@ -414,17 +430,30 @@ class Strategy:
             
             bullish_15m_micro_candle = bool(last_row_15m['close'] > last_row_15m['open'])
             
-            # Novo Radar de Retrovisor: Verifica as ultimas 2 velas de 1H
-            touched_lower_band_1h = any(
-                bool(float(row['low']) <= float(row.get('BBL_20_2.0', 0.0))) and float(row.get('BBL_20_2.0', 0.0)) > 0
-                for _, row in df_1h.tail(2).iterrows()
-            )
+            bbl_1h_col = f"BBL_20_{std_str}"
+            bbl_15m_col = f"BBL_20_{std_str}"
             
-            # Novo Radar de Retrovisor: Verifica as ultimas 3 velas de 15m
-            touched_lower_band_15m = any(
-                bool(float(row['low']) <= float(row.get('BBL_20_2.0', 0.0))) and float(row.get('BBL_20_2.0', 0.0)) > 0
-                for _, row in df_15m.tail(3).iterrows()
-            )
+            lowest_1h_val = float('inf')
+            bbl_1h_target = 0.0
+            touched_lower_band_1h = False
+            for _, row in df_1h.tail(2).iterrows():
+                l_val = float(row['low'])
+                b_val = float(row.get(bbl_1h_col, 0.0))
+                if l_val < lowest_1h_val: lowest_1h_val = l_val
+                if b_val > 0: bbl_1h_target = b_val
+                if l_val <= b_val and b_val > 0:
+                    touched_lower_band_1h = True
+                    
+            lowest_15m_val = float('inf')
+            bbl_15m_target = 0.0
+            touched_lower_band_15m = False
+            for _, row in df_15m.tail(3).iterrows():
+                l_val = float(row['low'])
+                b_val = float(row.get(bbl_15m_col, 0.0))
+                if l_val < lowest_15m_val: lowest_15m_val = l_val
+                if b_val > 0: bbl_15m_target = b_val
+                if l_val <= b_val and b_val > 0:
+                    touched_lower_band_15m = True
             
             try:
                 avg_vol_10_candles = df_15m['vol'].tail(11).head(10).mean()
@@ -472,6 +501,10 @@ class Strategy:
                 "macd_histogram_1h_positive": macd_histogram_1h_positive, 
                 "touched_lower_band_1h": touched_lower_band_1h,
                 "touched_lower_band_15m": touched_lower_band_15m,
+                "bbl_1h_target": bbl_1h_target,
+                "lowest_1h_val": lowest_1h_val,
+                "bbl_15m_target": bbl_15m_target,
+                "lowest_15m_val": lowest_15m_val,
                 "rsi_1h_slope": round(rsi_1h_slope_val, 2), 
                 "rsi_MACRO_4h": round(rsi_4h, 2),
                 "rsi_INTER_1h": round(rsi_1h, 2),
@@ -644,10 +677,11 @@ class Strategy:
             market_symbol = f"{self.current_operation_coin}{self.base_coin}"
             
             try:
+                std_str = f"{self.bollinger_std:.1f}"
                 klines_hist = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=50)
                 df_chart = pandas.DataFrame(klines_hist, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
                 for col in ['open', 'high', 'low', 'close']: df_chart[col] = pandas.to_numeric(df_chart[col])
-                df_chart.ta.bbands(length=20, std=2, append=True)
+                df_chart.ta.bbands(length=20, std=self.bollinger_std, append=True)
                 
                 df_last_30 = df_chart.tail(30)
                 new_cache = []
@@ -657,9 +691,9 @@ class Strategy:
                         "h": float(row['high']),
                         "l": float(row['low']),
                         "c": float(row['close']),
-                        "bbu": float(row.get('BBU_20_2.0', row['high'])),
-                        "bbm": float(row.get('BBM_20_2.0', row['close'])),
-                        "bbl": float(row.get('BBL_20_2.0', row['low']))
+                        "bbu": float(row.get(f'BBU_20_{std_str}', row['high'])),
+                        "bbm": float(row.get(f'BBM_20_{std_str}', row['close'])),
+                        "bbl": float(row.get(f'BBL_20_{std_str}', row['low']))
                     })
                 self.chart_data_cache = new_cache
             except Exception as e: 
@@ -961,7 +995,8 @@ class Strategy:
             "full_ai_report": self.full_ai_report,
             "daily_history": self.daily_history,
             "last_dossier": self.last_dossier,
-            "motor_cooldown_minutes": self.motor_cooldown_minutes
+            "motor_cooldown_minutes": self.motor_cooldown_minutes,
+            "bollinger_std": self.bollinger_std
         }
 
         try:

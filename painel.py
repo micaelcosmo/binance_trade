@@ -37,6 +37,7 @@ class BinanceBotGUI:
         self.locked_at_trade_count = -1
         self.in_operation = False
         self.current_motor_cooldown = 15
+        self.current_bb_std = 2.0
         self._load_gui_state()
         
         self.bg_main = "#0b0e11" 
@@ -78,6 +79,9 @@ class BinanceBotGUI:
         
         self.btn_cooldown = tk.Button(self.tools_frame, text=f"⏱️ Scan: {self.current_motor_cooldown}m", command=self.cycle_cooldown, bg="#2b3139", fg=self.accent_green, font=("Segoe UI", 9, "bold"), width=15)
         self.btn_cooldown.pack(side=tk.LEFT, padx=5)
+
+        self.btn_bb = tk.Button(self.tools_frame, text=f"📏 BB STD: {self.current_bb_std}", command=self.cycle_bb_std, bg="#2b3139", fg=self.accent_green, font=("Segoe UI", 9, "bold"), width=15)
+        self.btn_bb.pack(side=tk.LEFT, padx=5)
         
         self.btn_add_trade = tk.Button(self.tools_frame, text="🔋 +1 Tentativa Hoje", command=self.add_trade_chance, bg=self.accent_green, fg="black", font=("Segoe UI", 9, "bold"), width=20)
         self.btn_add_trade.pack(side=tk.RIGHT, padx=0)
@@ -242,6 +246,18 @@ class BinanceBotGUI:
         except Exception as e:
             self.log_message(f"\n[ERROR] Falha ao ajustar tempo de scan: {e}\n")
 
+    def cycle_bb_std(self):
+        cycle = {2.0: 1.8, 1.8: 1.5, 1.5: 2.0}
+        next_std = cycle.get(self.current_bb_std, 2.0)
+        self.current_bb_std = next_std
+        self.btn_bb.config(text=f"📏 BB STD: {next_std}")
+        try:
+            with open("bb_std.flag", "w") as f:
+                f.write(str(next_std))
+            self.log_message(f"\n[+] Desvio Padrão de Bollinger ajustado para {next_std}.\n")
+        except Exception as e:
+            self.log_message(f"\n[ERROR] Falha ao ajustar Bollinger: {e}\n")
+
     def add_trade_chance(self):
         with open("add_trade.flag", "w") as f:
             f.write("1")
@@ -314,7 +330,7 @@ class BinanceBotGUI:
     def show_dossier(self):
         top = tk.Toplevel(self.root)
         top.title("Dossiê do Motor Quantitativo")
-        top.geometry("750x550")
+        top.geometry("850x650")
         top.configure(bg=self.bg_frame)
         top.transient(self.root)
         top.grab_set()
@@ -331,9 +347,9 @@ class BinanceBotGUI:
         else:
             for item in dossier:
                 coin = item.get("coin", "N/A")
-                txt.insert(tk.END, f"=========================================\n")
+                txt.insert(tk.END, f"=================================================================\n")
                 txt.insert(tk.END, f" 🪙 MOEDA: {coin}\n")
-                txt.insert(tk.END, f"=========================================\n")
+                txt.insert(tk.END, f"=================================================================\n")
                 txt.insert(tk.END, f" 💵 Preço Atual: ${item.get('current_price', 0):.6f}\n")
                 txt.insert(tk.END, f" 📉 Variação 24h: {item.get('change_24h_pct', '0%')}\n")
                 txt.insert(tk.END, f" 🕳️ Fundo 24h (Queda Máxima): {item.get('min_24h_change_pct', '0%')}\n")
@@ -341,8 +357,14 @@ class BinanceBotGUI:
                 
                 b_15 = "SIM" if item.get("touched_lower_band_15m") else "NÃO"
                 b_1h = "SIM" if item.get("touched_lower_band_1h") else "NÃO"
-                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (15m): {b_15}\n")
-                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (1H): {b_1h}\n")
+                
+                l_15 = item.get("lowest_15m_val", 0)
+                t_15 = item.get("bbl_15m_target", 0)
+                l_1h = item.get("lowest_1h_val", 0)
+                t_1h = item.get("bbl_1h_target", 0)
+
+                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (15m): {b_15} | Mínima: ${l_15:.6f} | Banda: ${t_15:.6f}\n")
+                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (1H): {b_1h} | Mínima: ${l_1h:.6f} | Banda: ${t_1h:.6f}\n")
                 
                 macd_1h = "SIM" if item.get("macd_1h_shifting_up") else "NÃO"
                 macd_15m = "SIM" if item.get("macd_histogram_15m_positive") else "NÃO"
@@ -351,7 +373,9 @@ class BinanceBotGUI:
                 
                 vol_15m = "SIM" if item.get("volume_15m_above_avg") else "NÃO"
                 txt.insert(tk.END, f" 📊 Volume 15m Acima da Média: {vol_15m}\n")
-                txt.insert(tk.END, f" 📏 Distância da EMA21 (1H): {item.get('ema21_1h_distance_pct', '0%')}\n")
+                
+                ema_dist = item.get('ema21_1h_distance_pct', '0%')
+                txt.insert(tk.END, f" 📏 Distância da EMA21 (1H): {ema_dist} | Esperado: < -1.00%\n")
                 
                 txt.insert(tk.END, "\n")
         txt.config(state=tk.DISABLED)
@@ -505,6 +529,11 @@ class BinanceBotGUI:
                         if getattr(self, 'current_motor_cooldown', 15) != m_cd:
                             self.current_motor_cooldown = m_cd
                             self.btn_cooldown.config(text=f"⏱️ Scan: {m_cd}m")
+
+                        bb_std = state_data.get('bollinger_std', 2.0)
+                        if getattr(self, 'current_bb_std', 2.0) != bb_std:
+                            self.current_bb_std = bb_std
+                            self.btn_bb.config(text=f"📏 BB STD: {bb_std}")
                         
                         last_hb_ts = state_data.get("last_heartbeat_ts", 0.0)
                         if last_hb_ts > 0:
