@@ -46,6 +46,7 @@ class BinanceBotGUI:
         self.accent_blue = "#8ab4f8"
         self.accent_green = "#0ecb81" 
         self.accent_red = "#f6465d" 
+        self.accent_orange = "#ff7043" 
         self.accent_yellow = "#fcd535" 
         self.btc_gold = "#f2a900"
         self.neutral_obs = "#eaecef"
@@ -330,52 +331,64 @@ class BinanceBotGUI:
     def show_dossier(self):
         top = tk.Toplevel(self.root)
         top.title("Dossiê do Motor Quantitativo")
-        top.geometry("850x650")
+        top.geometry("900x650")
         top.configure(bg=self.bg_frame)
         top.transient(self.root)
         top.grab_set()
 
-        lbl = tk.Label(top, text="Ativos Pré-Filtrados (Matemática)", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
+        lbl = tk.Label(top, text="Ativos Pré-Filtrados (Auditoria)", bg=self.bg_frame, fg=self.accent_blue, font=("Segoe UI", 12, "bold"))
         lbl.pack(pady=(15, 5))
 
-        txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", fg=self.fg_text, font=("Consolas", 10))
+        txt = scrolledtext.ScrolledText(top, wrap=tk.WORD, bg="#000000", font=("Consolas", 10))
         txt.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        
+        txt.tag_config("pass", foreground=self.accent_green)
+        txt.tag_config("fail", foreground=self.accent_orange)
+        txt.tag_config("info", foreground=self.accent_blue)
+        txt.tag_config("default", foreground=self.fg_text)
 
         dossier = getattr(self, 'current_dossier', [])
         if not dossier:
-            txt.insert(tk.END, "Nenhum dossiê foi retido na memória. O mercado não apresentou quedas agudas suficientes no último ciclo.")
+            txt.insert(tk.END, "Nenhum dossiê foi retido na memória. O mercado não apresentou quedas agudas suficientes no último ciclo.\n", "default")
         else:
             for item in dossier:
                 coin = item.get("coin", "N/A")
-                txt.insert(tk.END, f"=================================================================\n")
-                txt.insert(tk.END, f" 🪙 MOEDA: {coin}\n")
-                txt.insert(tk.END, f"=================================================================\n")
-                txt.insert(tk.END, f" 💵 Preço Atual: ${item.get('current_price', 0):.6f}\n")
-                txt.insert(tk.END, f" 📉 Variação 24h: {item.get('change_24h_pct', '0%')}\n")
-                txt.insert(tk.END, f" 🕳️ Fundo 24h (Queda Máxima): {item.get('min_24h_change_pct', '0%')}\n")
-                txt.insert(tk.END, f" 📏 Fundo ATR Exigido: {item.get('required_atr_bottom_pct', '0%')}\n")
+                txt.insert(tk.END, f"=================================================================\n", "info")
+                txt.insert(tk.END, f" 🪙 MOEDA: {coin}\n", "info")
+                txt.insert(tk.END, f"=================================================================\n", "info")
                 
-                b_15 = "SIM" if item.get("touched_lower_band_15m") else "NÃO"
-                b_1h = "SIM" if item.get("touched_lower_band_1h") else "NÃO"
+                txt.insert(tk.END, f" 💵 Preço Atual: ${item.get('current_price', 0):.6f}\n", "default")
+                txt.insert(tk.END, f" 📉 Variação 24h: {item.get('change_24h_pct', '0%')}\n", "default")
                 
-                l_15 = item.get("lowest_15m_val", 0)
-                t_15 = item.get("bbl_15m_target", 0)
-                l_1h = item.get("lowest_1h_val", 0)
-                t_1h = item.get("bbl_1h_target", 0)
+                min_24h = float(str(item.get('min_24h_change_pct', '0')).replace('%', '').replace('+', ''))
+                req_atr = float(str(item.get('required_atr_bottom_pct', '0')).replace('%', '').replace('+', ''))
+                atr_tag = "pass" if min_24h <= req_atr else "fail"
+                txt.insert(tk.END, f" 🕳️ Fundo 24h (Queda Máxima): {item.get('min_24h_change_pct', '0%')} | Exigido: {item.get('required_atr_bottom_pct', '0%')}\n", atr_tag)
+                
+                b_15_bool = item.get("touched_lower_band_15m")
+                tag_15 = "pass" if b_15_bool else "fail"
+                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (15m): {'SIM' if b_15_bool else 'NÃO'} | Mínima: ${item.get('lowest_15m_val', 0):.6f} | Banda: ${item.get('bbl_15m_target', 0):.6f}\n", tag_15)
 
-                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (15m): {b_15} | Mínima: ${l_15:.6f} | Banda: ${t_15:.6f}\n")
-                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (1H): {b_1h} | Mínima: ${l_1h:.6f} | Banda: ${t_1h:.6f}\n")
+                b_1h_bool = item.get("touched_lower_band_1h")
+                tag_1h = "pass" if b_1h_bool else "fail"
+                txt.insert(tk.END, f" 🎯 Tocou Bollinger Inferior (1H): {'SIM' if b_1h_bool else 'NÃO'} | Mínima: ${item.get('lowest_1h_val', 0):.6f} | Banda: ${item.get('bbl_1h_target', 0):.6f}\n", tag_1h)
                 
-                macd_1h = "SIM" if item.get("macd_1h_shifting_up") else "NÃO"
-                macd_15m = "SIM" if item.get("macd_histogram_15m_positive") else "NÃO"
-                txt.insert(tk.END, f" 📈 MACD 1H Perdendo Força Vendedora: {macd_1h}\n")
-                txt.insert(tk.END, f" 🚀 MACD 15m Positivo (Momentum): {macd_15m}\n")
+                macd_1h_bool = item.get("macd_1h_shifting_up")
+                tag_m1h = "pass" if macd_1h_bool else "fail"
+                txt.insert(tk.END, f" 📈 MACD 1H Perdendo Força Vendedora: {'SIM' if macd_1h_bool else 'NÃO'}\n", tag_m1h)
                 
-                vol_15m = "SIM" if item.get("volume_15m_above_avg") else "NÃO"
-                txt.insert(tk.END, f" 📊 Volume 15m Acima da Média: {vol_15m}\n")
+                macd_15m_bool = item.get("macd_histogram_15m_positive")
+                tag_m15 = "pass" if macd_15m_bool else "fail"
+                txt.insert(tk.END, f" 🚀 MACD 15m Positivo (Momentum): {'SIM' if macd_15m_bool else 'NÃO'}\n", tag_m15)
                 
-                ema_dist = item.get('ema21_1h_distance_pct', '0%')
-                txt.insert(tk.END, f" 📏 Distância da EMA21 (1H): {ema_dist} | Esperado: < -1.00%\n")
+                vol_bool = item.get("volume_15m_above_avg")
+                tag_vol = "pass" if vol_bool else "fail"
+                txt.insert(tk.END, f" 📊 Volume 15m Acima da Média: {'SIM' if vol_bool else 'NÃO'}\n", tag_vol)
+                
+                ema_str = item.get('ema21_1h_distance_pct', '0%')
+                ema_val = float(str(ema_str).replace('%', '').replace('+', ''))
+                tag_ema = "pass" if ema_val < -1.00 else "fail"
+                txt.insert(tk.END, f" 📏 Distância da EMA21 (1H): {ema_str} | Esperado: < -1.00%\n", tag_ema)
                 
                 txt.insert(tk.END, "\n")
         txt.config(state=tk.DISABLED)

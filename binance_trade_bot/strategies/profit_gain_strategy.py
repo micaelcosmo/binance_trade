@@ -100,7 +100,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.6.0"
+            return "v3.6.1"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -367,8 +367,6 @@ class Strategy:
     def get_enriched_data(self, target_symbol):
         """ Extrai metricas quantitativas avancadas (Contexto 12h e Bandas de Bollinger). """
         try:
-            std_str = f"{self.bollinger_std:.1f}"
-            
             klines_4h = self.binance_client.get_klines(symbol=target_symbol, interval='4h', limit=30)
             df_4h = pandas.DataFrame(klines_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
             for col in ['close']: df_4h[col] = pandas.to_numeric(df_4h[col])
@@ -430,8 +428,8 @@ class Strategy:
             
             bullish_15m_micro_candle = bool(last_row_15m['close'] > last_row_15m['open'])
             
-            bbl_1h_col = f"BBL_20_{std_str}"
-            bbl_15m_col = f"BBL_20_{std_str}"
+            bbl_1h_col = next((c for c in df_1h.columns if c.startswith('BBL_')), 'BBL')
+            bbl_15m_col = next((c for c in df_15m.columns if c.startswith('BBL_')), 'BBL')
             
             lowest_1h_val = float('inf')
             bbl_1h_target = 0.0
@@ -677,11 +675,14 @@ class Strategy:
             market_symbol = f"{self.current_operation_coin}{self.base_coin}"
             
             try:
-                std_str = f"{self.bollinger_std:.1f}"
                 klines_hist = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=50)
                 df_chart = pandas.DataFrame(klines_hist, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
                 for col in ['open', 'high', 'low', 'close']: df_chart[col] = pandas.to_numeric(df_chart[col])
                 df_chart.ta.bbands(length=20, std=self.bollinger_std, append=True)
+                
+                bbu_col = next((c for c in df_chart.columns if c.startswith('BBU_')), 'BBU')
+                bbm_col = next((c for c in df_chart.columns if c.startswith('BBM_')), 'BBM')
+                bbl_col = next((c for c in df_chart.columns if c.startswith('BBL_')), 'BBL')
                 
                 df_last_30 = df_chart.tail(30)
                 new_cache = []
@@ -691,9 +692,9 @@ class Strategy:
                         "h": float(row['high']),
                         "l": float(row['low']),
                         "c": float(row['close']),
-                        "bbu": float(row.get(f'BBU_20_{std_str}', row['high'])),
-                        "bbm": float(row.get(f'BBM_20_{std_str}', row['close'])),
-                        "bbl": float(row.get(f'BBL_20_{std_str}', row['low']))
+                        "bbu": float(row.get(bbu_col, row['high'])),
+                        "bbm": float(row.get(bbm_col, row['close'])),
+                        "bbl": float(row.get(bbl_col, row['low']))
                     })
                 self.chart_data_cache = new_cache
             except Exception as e: 
