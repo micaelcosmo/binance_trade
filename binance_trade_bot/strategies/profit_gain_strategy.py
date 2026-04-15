@@ -100,7 +100,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.6.3"
+            return "v3.6.4"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -645,40 +645,10 @@ class Strategy:
         self.hot_cache = sorted(temp_hot_list)
         self.cold_cache = sorted(temp_cold_list)
         
-        if not self.in_operation and dossier_cache:
-            self.last_dossier = dossier_cache
-
-        if not self.in_operation:
-            self.active_current_price, self.active_target_price = 0.0, 0.0
-            self.chart_data_cache = []
-            self.operation_time_string = "0h 0m"
-            base_coin_balance = balances_dict.get(self.base_coin, 0.0)
-            
-            if base_coin_balance < 5.0:
-                coin_scan_order = ["BTC"] + [check_coin for check_coin in self.system_configuration.SUPPORTED_COIN_LIST if check_coin not in ["BTC", self.base_coin]]
-                for check_coin in coin_scan_order:
-                    coin_qty = balances_dict.get(check_coin, 0.0)
-                    if coin_qty > 0:
-                        try:
-                            ticker_data = self.binance_client.get_symbol_ticker(symbol=f"{check_coin}{self.base_coin}")
-                            converted_usd_val = coin_qty * float(ticker_data['price'])
-                            if converted_usd_val >= 5.0:
-                                self.system_logger.info(f"🔄 Recuperação de Estado: Assumindo controle de {check_coin}.")
-                                self.in_operation = True
-                                self.current_operation_coin = check_coin
-                                self.active_altcoin_quantity = coin_qty
-                                if getattr(self, 'operation_start_time', 0.0) == 0.0:
-                                    self.operation_start_time = time.time()
-                                    self.last_switch_time = time.time()
-                                self._save_state()
-                                break
-                        except Exception: pass
-
         if self.in_operation:
             market_symbol = f"{self.current_operation_coin}{self.base_coin}"
             
             try:
-                std_str = f"{self.bollinger_std:.1f}"
                 klines_hist = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=50)
                 df_chart = pandas.DataFrame(klines_hist, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
                 for col in ['open', 'high', 'low', 'close']: df_chart[col] = pandas.to_numeric(df_chart[col])
@@ -701,7 +671,7 @@ class Strategy:
                         "bbl": float(row.get(bbl_col, row['low']))
                     })
                 self.chart_data_cache = new_cache
-            except Exception as e: 
+            except Exception: 
                 pass
 
             try:
@@ -923,6 +893,8 @@ class Strategy:
 
                 analyzed_coins_str = ", ".join([asset['coin'] for asset in ai_batch_payload])
                 self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n📦 Lote Submetido à IA: {analyzed_coins_str}\n\n🏆 Vencedora Avaliada: {ai_winning_coin} ({ai_final_confidence}%)\n\n🧠 Parecer Detalhado Institucional:\n{ai_decision_summary}"
+                
+                self.last_dossier = dossier_cache
 
                 if ai_winning_coin != "NENHUMA" and ai_final_confidence >= 90:
                     self.last_ai_verdict = f"✅ COMPRA {ai_winning_coin} ({ai_final_confidence}%): {ai_decision_summary.splitlines()[0]}"
@@ -950,6 +922,9 @@ class Strategy:
                 self.system_logger.info("======================================================")
 
                 self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛑 VETADO PELO MOTOR PYTHON\n\nNenhum ativo do mercado tocou na banda inferior de Bollinger (15m ou 1H) neste ciclo. Dossiê retido na camada matemática para economizar recursos da API."
+                
+                self.last_dossier = dossier_cache
+                
                 self.last_ai_verdict = "🛑 MERCADO VETADO: Filtro Matemático (Sem Agulhada)."
                 self.system_status_ui = "Aguardando próxima análise..."
                 self.ai_cooldown_until = time.time() + (self.motor_cooldown_minutes * 60)
