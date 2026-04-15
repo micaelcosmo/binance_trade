@@ -1,7 +1,6 @@
-Markdown
 # 📈 Binance Trade Bot Pro - AI Edition
 
-<img src="https://img.shields.io/badge/version-v3.4.2-blue" alt="Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/python-3.9+-yellow" alt="Python">
+<img src="https://img.shields.io/badge/version-v3.6.0-blue" alt="Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/python-3.9+-yellow" alt="Python">
 
 Um terminal de trading algorítmico automatizado para a corretora Binance. O projeto utiliza uma arquitetura quantitativa avançada focada em Swing Trade, unindo **Matemática de Indicadores (Pandas-TA)** e um **Comitê de Inteligência Artificial Institucional (Google Gemini)** para gestão de risco, análise de lote e maximização de lucros.
 
@@ -9,13 +8,14 @@ Um terminal de trading algorítmico automatizado para a corretora Binance. O pro
 
 ## ✨ Principais Funcionalidades
 
-* 🧠 **Gestor Institucional IA (Visão Profunda):** O bot não gasta tokens analisando ruídos. Ele compila um *Dossiê Quantitativo* com histórico de Price Action das últimas 12 horas (Macro), distanciamento da EMA (1H) e cruzamento de MACD (15m), enviando o lote em formato JSON para o **Gemini 2.5 Flash-Lite**. A IA audita a estrutura e aprova a melhor assimetria matemática.
-* 🛡️ **Filtros Dinâmicos de Proteção (ATR):** Fim dos "achismos" de porcentagem. O bot calcula o True Bottom exigindo que a moeda caia mais que 2x o seu próprio ATR (Average True Range).
-* 🎯 **Risco/Retorno Elástico & Trailing Stop:** O bot arma um gatilho invisível buscando +1.50% de alvo, protegido por um Stop Loss elástico adaptado à volatilidade do mercado (limite máximo de -7.00% para Altcoins e -10.50% para BTC). Ele persegue o preço para cima e corta as perdas em quebras de estrutura.
-* 🔄 **Auto-Updater Seguro (One-Click):** Sincronize o código-fonte direto do repositório oficial (GitHub) pelo próprio painel da UI. O sistema possui uma trava institucional que agenda a atualização, aguardando o encerramento seguro de qualquer operação em andamento antes de reiniciar o processo na rota absoluta correta.
-* 🚨 **Manual Override (Panic Button):** Assuma o controle. Um botão de Venda Forçada na interface permite que o usuário feche a operação a mercado instantaneamente, registrando o P/L no histórico de forma transparente.
-* 👑 **Regra de Ouro (Tribunal de Swap):** Se o bot ficar preso em uma moeda, o Tribunal de Swap da IA avalia se vale a pena assumir o prejuízo atual para migrar para um setup novo com 95%+ de confiança.
-* 💻 **Dashboard Interativo (UI):** Interface nativa (Tkinter) com P/L real, gráficos de velas, placar de Win/Loss diário, histórico de execução e o parecer auditado ao vivo do comitê de Inteligência Artificial.
+* 🧠 **Gestor Institucional IA (Visão Profunda):** O bot não gasta tokens analisando ruídos. Após a matemática local validar as agulhadas estatísticas, o motor compila um *Dossiê Quantitativo* com histórico de Price Action das últimas 12 horas (Macro), distanciamento da EMA (1H) e cruzamento de MACD (15m), enviando o lote em formato JSON para o **Gemini 2.5 Flash-Lite**. A IA atua exclusivamente projetando se o ativo possui força para bater +2.00% de lucro nas próximas horas.
+* 🛡️ **O Porteiro Python (Filtro Dinâmico):** Fim dos "achismos" de porcentagem. O bot calcula o True Bottom exigindo que a moeda caia mais que 2x o seu próprio ATR (Average True Range) e, obrigatoriamente, fure a banda inferior de Bollinger (Radar Retroativo de 15m/1H) localmente, poupando processamento e blindando a IA contra alucinações.
+* 🎛️ **Controle de Agressividade em Tempo Real:** O painel permite "apertar ou afrouxar os parafusos" da estratégia com o mercado rodando. Cicla o Desvio Padrão do Bollinger (BB STD) entre 2.0 (Sniper), 1.8 (Moderado) ou 1.5 (Agressivo) e ajusta o Cooldown do motor instantaneamente, adaptando o robô a mercados de sangramento lento (*slow bleed*).
+* 🔍 **Transparência de Caixa Branca (Dossiê Visual):** Chega de caixas pretas. O painel traduz e exibe o JSON do motor quantitativo em uma janela humanizada (PT-BR), permitindo auditar o valor exato da mínima, o alvo da banda exigido e a distância da EMA de todos os ativos analisados naquele minuto.
+* 🎯 **Risco/Retorno Elástico & Trailing Stop:** O bot arma um gatilho invisível buscando +1.50% de alvo, protegido por um Stop Loss dinâmico atrelado à volatilidade do mercado (limite máximo de -7.00% para Altcoins e -10.50% para BTC). Ele persegue o preço para cima e corta as perdas em quebras de estrutura.
+* 👑 **Regra de Ouro (Tribunal de Swap):** Se o bot ficar preso em uma moeda, o Tribunal de Swap da IA avalia se vale a pena assumir o prejuízo atual para migrar para um setup novo com 95%+ de confiança, caso a estrutura matemática seja perfeita.
+* 🔄 **Auto-Updater Seguro (One-Click):** Sincronize o código-fonte direto do repositório oficial (GitHub) pelo próprio painel da UI. O sistema agenda a atualização, aguardando o encerramento seguro de operações antes de reiniciar na rota absoluta correta.
+* 🚨 **Manual Override (Panic Button):** Assuma o controle. Um botão de Venda Forçada na interface permite fechar a operação a mercado instantaneamente.
 
 ---
 
@@ -68,7 +68,7 @@ Com o ambiente ativado e os arquivos configurados, inicie a interface gráfica d
 ```bash
 python painel.py
 ```
-O Dashboard será renderizado. Selecione sua estratégia e clique no botão **"RUN > Iniciar Bot"**. Acompanhe a varredura do mercado, a auditoria de tokens da API e os diagnósticos da IA diretamente na tela.
+O Dashboard será renderizado. Selecione sua estratégia e clique no botão **"RUN > Iniciar Bot"**. Acompanhe a varredura do mercado, a auditoria de tokens da API e os diagnósticos matemáticos diretamente na tela.
 
 Para baixar atualizações futuras de forma automática, utilize o botão "🔄 Atualizar Versão" diretamente no painel.
 
