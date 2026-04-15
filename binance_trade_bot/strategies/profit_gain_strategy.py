@@ -100,7 +100,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.6.1"
+            return "v3.6.3"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -847,7 +847,8 @@ class Strategy:
                                             
                                             self.system_logger.warning(f"👑 TRIBUNAL APROVOU SWAP! Assumindo prejuízo para migrar com {ai_confidence}% de chance para {winning_swap_coin}.")
                                             
-                                            self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n⚖️ TRIBUNAL DE SWAP APROVADO\n🏆 Vencedora: {winning_swap_coin} ({ai_confidence}%)\n\n🧠 Parecer:\n{swap_decision_desc}"
+                                            swap_coins_str = ", ".join([asset['coin'] for asset in swap_payload])
+                                            self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n📦 Lote Avaliado pelo Tribunal: {swap_coins_str}\n\n⚖️ TRIBUNAL DE SWAP APROVADO\n🏆 Vencedora: {winning_swap_coin} ({ai_confidence}%)\n\n🧠 Parecer:\n{swap_decision_desc}"
                                             self._print_ai_verdict(swap_decision_desc)
                                             
                                             self._unlock_balance(market_symbol) 
@@ -878,7 +879,8 @@ class Strategy:
                                         return
                                     else:
                                         self.system_logger.info(f"🛡️ TRIBUNAL ORDENOU HOLD. Critérios rigorosos de confiança (95%+) não atingidos.")
-                                        self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🛡️ TRIBUNAL DE SWAP RECUSADO (HOLD)\n⚖️ Veredito: Nenhuma moeda com 95%+ de chance detectada. Segurando {self.current_operation_coin}.\n\n🧠 Parecer:\n{swap_decision_desc}"
+                                        swap_coins_str = ", ".join([asset['coin'] for asset in swap_payload])
+                                        self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n📦 Lote Avaliado pelo Tribunal: {swap_coins_str}\n\n🛡️ TRIBUNAL DE SWAP RECUSADO (HOLD)\n⚖️ Veredito: Nenhuma moeda com 95%+ de chance detectada. Segurando {self.current_operation_coin}.\n\n🧠 Parecer:\n{swap_decision_desc}"
                                         self._print_ai_verdict(swap_decision_desc)
                                         self.last_switch_time = time.time() 
                                         self._save_state()
@@ -915,7 +917,8 @@ class Strategy:
                 self._print_ai_verdict(ai_decision_summary)
                 self.system_logger.info("======================================================")
 
-                self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n🏆 Vencedora Avaliada: {ai_winning_coin} ({ai_final_confidence}%)\n\n🧠 Parecer Detalhado Institucional:\n{ai_decision_summary}"
+                analyzed_coins_str = ", ".join([asset['coin'] for asset in ai_batch_payload])
+                self.full_ai_report = f"[{datetime.now().strftime('%H:%M:%S')}]\n\n📦 Lote Submetido à IA: {analyzed_coins_str}\n\n🏆 Vencedora Avaliada: {ai_winning_coin} ({ai_final_confidence}%)\n\n🧠 Parecer Detalhado Institucional:\n{ai_decision_summary}"
 
                 if ai_winning_coin != "NENHUMA" and ai_final_confidence >= 90:
                     self.last_ai_verdict = f"✅ COMPRA {ai_winning_coin} ({ai_final_confidence}%): {ai_decision_summary.splitlines()[0]}"
