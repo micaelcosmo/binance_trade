@@ -382,8 +382,9 @@ class BinanceBotGUI:
                 txt.insert(tk.END, f" 🚀 MACD 15m Positivo (Momentum): {'SIM' if macd_15m_bool else 'NÃO'}\n", tag_m15)
                 
                 vol_bool = item.get("volume_15m_above_avg")
+                vol_pct_val = item.get("volume_15m_pct", 0.0)
                 tag_vol = "pass" if vol_bool else "fail"
-                txt.insert(tk.END, f" 📊 Volume 15m Acima da Média: {'SIM' if vol_bool else 'NÃO'}\n", tag_vol)
+                txt.insert(tk.END, f" 📊 Volume 15m (>= 80% Média): {'SIM' if vol_bool else 'NÃO'} | Atual: {vol_pct_val:.2f}% | Esperado: >= 80.00%\n", tag_vol)
                 
                 ema_str = item.get('ema21_1h_distance_pct', '0%')
                 ema_val = float(str(ema_str).replace('%', '').replace('+', ''))

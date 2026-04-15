@@ -100,7 +100,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.6.3"
+            return "v3.6.4"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -456,9 +456,11 @@ class Strategy:
             try:
                 avg_vol_10_candles = df_15m['vol'].tail(11).head(10).mean()
                 current_vol_candle = df_15m['vol'].iloc[-1]
-                volume_15m_above_avg = bool(current_vol_candle > avg_vol_10_candles)
+                vol_pct = (current_vol_candle / avg_vol_10_candles) * 100 if avg_vol_10_candles > 0 else 0.0
+                volume_15m_above_avg = bool(vol_pct >= 80.0)
             except Exception:
                 volume_15m_above_avg = False
+                vol_pct = 0.0
 
             ema21_1h_distance_pct = ((current_price - ema21_1h) / ema21_1h) * 100 if ema21_1h > 0 else 0.0
             price_vs_ema9_1h_pct = ((current_price - ema9_1h) / ema9_1h) * 100 if ema9_1h > 0 else 0.0
@@ -514,6 +516,7 @@ class Strategy:
                 "bullish_15m_micro_candle": bullish_15m_micro_candle,
                 "volume_24h_usdt": round(volume_24h_usdt, 2),
                 "volume_15m_above_avg": volume_15m_above_avg,
+                "volume_15m_pct": round(vol_pct, 2),
                 "ema21_1h_distance_pct": f"{ema21_1h_distance_pct:+.2f}%",
                 "price_vs_ema9_1h_pct": f"{price_vs_ema9_1h_pct:+.2f}%", 
                 "suggested_atr_stop_loss": round(dynamic_stop_val, 2)
@@ -675,6 +678,7 @@ class Strategy:
             market_symbol = f"{self.current_operation_coin}{self.base_coin}"
             
             try:
+                std_str = f"{self.bollinger_std:.1f}"
                 klines_hist = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=50)
                 df_chart = pandas.DataFrame(klines_hist, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
                 for col in ['open', 'high', 'low', 'close']: df_chart[col] = pandas.to_numeric(df_chart[col])
