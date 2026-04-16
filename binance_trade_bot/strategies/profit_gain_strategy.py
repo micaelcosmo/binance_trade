@@ -100,7 +100,7 @@ class Strategy:
             ).strip()
             return version
         except Exception:
-            return "v3.6.4"
+            return "v3.6.5"
 
     def _load_state(self):
         if os.path.exists("profit_gain_state.json"):
@@ -491,9 +491,15 @@ class Strategy:
             else:
                 dynamic_stop_val = max(4.0, min(dynamic_stop_val, self.base_stop_loss_pct)) 
             
+            band_touches = []
+            if touched_lower_band_15m: band_touches.append("15m")
+            if touched_lower_band_1h: band_touches.append("1H")
+            bollinger_context = " + ".join(band_touches) if band_touches else "Nenhuma"
+
             ai_payload_dict = {
                 "coin": target_symbol.replace(self.base_coin, ""),
                 "current_price": current_price,
+                "bollinger_touch_timeframe": bollinger_context,
                 "bullish_1h_candle": bullish_1h_candle,
                 "bottom_rejection_1h": bottom_rejection_1h,
                 "price_action_1h_last_12": price_action_1h_last_12, 
@@ -634,10 +640,18 @@ class Strategy:
                     req_bottom_flt = float(str(enriched_data.get('required_atr_bottom_pct', '0')).replace('%', '').replace('+', ''))
                     
                     bollinger_ok = enriched_data.get('touched_lower_band_1h', False) or enriched_data.get('touched_lower_band_15m', False)
+                    vol_ok = enriched_data.get('volume_15m_above_avg', False)
+                    
+                    ema_str = str(enriched_data.get('ema21_1h_distance_pct', '0%')).replace('%', '').replace('+', '')
+                    try:
+                        ema_flt = float(ema_str)
+                    except Exception:
+                        ema_flt = 0.0
+                    ema_ok = bool(ema_flt < -1.00)
                     
                     if min_change_flt <= req_bottom_flt and -self.disaster_stop_pct <= cur_change_flt <= 2.50:
                         dossier_cache.append(enriched_data)
-                        if bollinger_ok:
+                        if bollinger_ok and vol_ok and ema_ok:
                             ai_batch_payload.append(enriched_data)
                 except Exception:
                     pass
@@ -645,10 +659,40 @@ class Strategy:
         self.hot_cache = sorted(temp_hot_list)
         self.cold_cache = sorted(temp_cold_list)
         
+        if not self.in_operation and dossier_cache:
+            self.last_dossier = dossier_cache
+
+        if not self.in_operation:
+            self.active_current_price, self.active_target_price = 0.0, 0.0
+            self.chart_data_cache = []
+            self.operation_time_string = "0h 0m"
+            base_coin_balance = balances_dict.get(self.base_coin, 0.0)
+            
+            if base_coin_balance < 5.0:
+                coin_scan_order = ["BTC"] + [check_coin for check_coin in self.system_configuration.SUPPORTED_COIN_LIST if check_coin not in ["BTC", self.base_coin]]
+                for check_coin in coin_scan_order:
+                    coin_qty = balances_dict.get(check_coin, 0.0)
+                    if coin_qty > 0:
+                        try:
+                            ticker_data = self.binance_client.get_symbol_ticker(symbol=f"{check_coin}{self.base_coin}")
+                            converted_usd_val = coin_qty * float(ticker_data['price'])
+                            if converted_usd_val >= 5.0:
+                                self.system_logger.info(f"🔄 Recuperação de Estado: Assumindo controle de {check_coin}.")
+                                self.in_operation = True
+                                self.current_operation_coin = check_coin
+                                self.active_altcoin_quantity = coin_qty
+                                if getattr(self, 'operation_start_time', 0.0) == 0.0:
+                                    self.operation_start_time = time.time()
+                                    self.last_switch_time = time.time()
+                                self._save_state()
+                                break
+                        except Exception: pass
+
         if self.in_operation:
             market_symbol = f"{self.current_operation_coin}{self.base_coin}"
             
             try:
+                std_str = f"{self.bollinger_std:.1f}"
                 klines_hist = self.binance_client.get_klines(symbol=market_symbol, interval='15m', limit=50)
                 df_chart = pandas.DataFrame(klines_hist, columns=['timestamp', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qav', 'trades', 'tbbav', 'tbqav', 'ignore'])
                 for col in ['open', 'high', 'low', 'close']: df_chart[col] = pandas.to_numeric(df_chart[col])
@@ -796,7 +840,13 @@ class Strategy:
                                             
                                             if float(min_change_str) <= float(req_bottom_str) and float(cur_change_str) <= -0.50:
                                                 bollinger_ok = asset.get('touched_lower_band_1h', False) or asset.get('touched_lower_band_15m', False)
-                                                if bollinger_ok:
+                                                vol_ok = asset.get('volume_15m_above_avg', False)
+                                                ema_str = str(asset.get('ema21_1h_distance_pct', '0%')).replace('%', '').replace('+', '')
+                                                try: ema_flt = float(ema_str)
+                                                except Exception: ema_flt = 0.0
+                                                ema_ok = bool(ema_flt < -1.00)
+                                                
+                                                if bollinger_ok and vol_ok and ema_ok:
                                                     swap_payload.append(asset)
                                         except Exception: pass
                                 

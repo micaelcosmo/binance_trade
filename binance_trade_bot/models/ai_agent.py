@@ -1,163 +1,140 @@
 import json
-import os
-
-from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-
-
-load_dotenv("user.cfg")
-
+from binance_trade_bot.config import Config
 
 class MarketAnalyzer:
     """
-    Agente de IA responsável pela auditoria quantitativa de ativos e análise de risco.
-    Utiliza processamento de linguagem natural estruturado para confirmar setups de reversão macro e micro.
+    Comitê de Risco e Previsão Quantitativa Institucional.
+    Atua APÓS o motor matemático ter filtrado as condições absolutas.
     """
-
-    def __init__(self, system_logger):
-        self.system_logger = system_logger
-        
-        google_api_key = os.getenv('GOOGLE_API_KEY')
-
-        if not google_api_key:
-            self.system_logger.warning("⚠️ GOOGLE_API_KEY não encontrada! O Agente IA vai rodar em modo 'cego' (Bypass automático).")
+    def __init__(self, logger):
+        self.logger = logger
+        self.config = Config()
+        try:
+            self.client = genai.Client(api_key=self.config.GOOGLE_API_KEY)
+        except Exception as e:
+            self.logger.error(f"Erro ao inicializar Google GenAI Client: {e}")
             self.client = None
-        else:
-            self.client = genai.Client(api_key=google_api_key)
 
-        self.system_instruction_normal = """Você é um Analista Quantitativo Sênior e Auditor de Risco de um Hedge Fund Institucional. O capital do cliente é real e você é EXTREMAMENTE conservador.
-Sua missão é avaliar um lote de ativos pré-filtrados (todos já passaram na auditoria estatística de Bandas de Bollinger pelo motor Python) e selecionar EXATAMENTE UMA moeda para compra, ou NENHUMA.
-
-OBJETIVO ESTRATÉGICO: "PREVER 2% DE LUCRO EM ATÉ 14 HORAS"
-O motor enviou moedas com quedas profundas. Seu trabalho é realizar a 'Cruzadinha Profunda', analisando a estrutura e o Momentum de 1H vs 15m.
-Você SÓ DEVE aprovar a compra se a matemática dos indicadores confirmar que o ativo tem força estrutural, momentum e liquidez para buscar um Take Profit de +2.00% nas próximas 14 horas. Se não tiver essa certeza absoluta de reversão rápida, VETE a moeda.
-
-REGRAS DE VETO ABSOLUTO (LIMITES MATEMÁTICOS INEGOCIÁVEIS):
-ATENÇÃO: É ESTRITAMENTE PROIBIDO inventar justificativas como "não aplicável" ou contornar as regras. Falhou na regra, a moeda ESTÁ ELIMINADA.
-
-1. A Lei do Fundo Volátil: SE a 'min_24h_change_pct' for MAIOR ou IGUAL a 'required_atr_bottom_pct', VETE.
-2. A Lei da Exaustão Macro: SE 'macd_1h_shifting_up' == FALSE, VETE. A força vendedora ainda domina.
-3. A Lei da Estrutura (Price Action 1H): SE ('bullish_1h_candle' == FALSE E 'bottom_rejection_1h' == FALSE), VETE. O ativo está em colapso.
-4. A Lei do Momentum Micro: SE 'macd_histogram_15m_positive' == FALSE, VETE.
-5. A Lei da Liquidez e Micro: SE ('volume_24h_usdt' < 250000 OU 'bullish_15m_micro_candle' == FALSE), VETE.
-6. A Lei do Elástico: SE 'ema21_1h_distance_pct' for MAIOR ou IGUAL a -1.00%, VETE.
-7. A Lei do Volume Micro: SE 'volume_15m_above_avg' == FALSE, VETE IMEDIATAMENTE. Falsos rompimentos não são tolerados para a meta de 14h.
-
-MÉTODO DE ANÁLISE OBRIGATÓRIO (O TORNEIO DE ELIMINAÇÃO EM 4 PASSOS):
-- Passo 1: Filtragem Individual. Analise CADA moeda contra as 7 Regras de Veto Absoluto.
-- Passo 2: O Duelo dos Sobreviventes. Compare APENAS as moedas que não sofreram veto. Cruze a força do MACD e RSI.
-- Passo 3: Projeção de Tempo. O ativo selecionado tem liquidez e volatilidade real para subir 2% em 14 horas?
-- Passo 4: O Veredito de Risco. 
-  * Se NENHUMA moeda for perfeita para a meta: Defina "winning_coin" como "NENHUMA", "final_confidence" < 90.
-  * Se HOUVER vencedora: Defina "winning_coin" com o símbolo, "final_confidence" >= 90.
-
-FORMATO DE SAÍDA JSON ESPERADO (OBRIGATÓRIO E ESTRITO):
-{
-  "detailed_analysis": [
-    {
-      "coin": "string",
-      "step_1_fundo": "string",
-      "step_2_macro_structure": "string",
-      "step_3_micro_momentum_e_projecao": "string",
-      "approved": boolean
-    }
-  ],
-  "winning_coin": "string (Símbolo ou 'NENHUMA')",
-  "final_confidence": 0 a 100,
-  "decision_summary": "string (OBRIGATÓRIO formatar em uma única linha contendo os caracteres '\\n' para gerar quebras de linha e tópicos. Ex: '🛑 Veredito: Nenhuma selecionada. \\n📉 Motivo: ...')"
-}"""
-
-        self.system_instruction_swap = """Você é o Tribunal de Auditoria de Swap (Gestão de Risco Institucional).
-O robô está segurando uma moeda no prejuízo há pelo menos 10 horas. 
-
-SUA MISSÃO:
-Julgar se o robô deve fazer "HOLD" ou aprovar um "SWAP" para uma das candidatas do lote (que já tocaram nas Bandas de Bollinger e foram pré-filtradas pelo motor Python).
-
-LIMITES MATEMÁTICOS INEGOCIÁVEIS (Obrigatório para aprovar Swap):
-1. Teto de Prejuízo (O Escudo): Se o Prejuízo Atual da operação for MAIS NEGATIVO que -2.00% (ex: -2.50%, -3.00%), NÃO PODE aprovar o Swap. O custo de saída é alto demais. Retorne HOLD.
-2. Troca de Alta Convicção: Se o prejuízo atual for aceitável (entre 0% e -1.99%), só aprove a troca se a nova candidata tiver Confiança >= 95, MACD positivo, e apresentar potencial real e explosivo de gerar 2% de lucro rápido para cobrir o loss.
-
-FORMATO DE SAÍDA JSON ESPERADO (RESPONDA APENAS O JSON):
-{
-  "current_position_audit": "string (Análise)",
-  "candidates_audit": "string (Análise quantitativa das candidatas)",
-  "winning_coin": "string (Símbolo da nova moeda perfeita ou 'HOLD')",
-  "final_confidence": 0 a 100,
-  "decision_summary": "string (Formatar com '\\n')"
-}"""
+    def _clean_payload_for_ai(self, batch_data):
+        """ Higieniza o Dossiê para economizar tokens e focar a IA apenas em métricas preditivas """
+        clean_batch = []
+        for asset in batch_data:
+            clean_asset = {
+                "coin": asset["coin"],
+                "current_price": asset["current_price"],
+                "bollinger_touch_timeframe": asset.get("bollinger_touch_timeframe", "15m"),
+                "volume_15m_pct": asset.get("volume_15m_pct", 100.0),
+                "ema21_1h_distance_pct": asset.get("ema21_1h_distance_pct", "0%"),
+                "change_24h_pct": asset.get("change_24h_pct", "0%"),
+                "price_action_1h_last_12": asset.get("price_action_1h_last_12", []),
+                "bullish_1h_candle": asset.get("bullish_1h_candle", False),
+                "bottom_rejection_1h": asset.get("bottom_rejection_1h", False),
+                "macd_1h_shifting_up": asset.get("macd_1h_shifting_up", False),
+                "macd_histogram_1h_positive": asset.get("macd_histogram_1h_positive", False),
+                "macd_histogram_15m_positive": asset.get("macd_histogram_15m_positive", False),
+                "bullish_15m_micro_candle": asset.get("bullish_15m_micro_candle", False),
+                "rsi_MACRO_4h": asset.get("rsi_MACRO_4h", 50.0),
+                "rsi_INTER_1h": asset.get("rsi_INTER_1h", 50.0),
+                "rsi_MICRO_15m": asset.get("rsi_MICRO_15m", 50.0)
+            }
+            clean_batch.append(clean_asset)
+        return clean_batch
 
     def analyze_batch(self, batch_data):
         if not self.client:
-            return {"winning_coin": "COMPRA_TESTE", "final_confidence": 100, "decision_summary": "Modo Bypass (Sem API Key configurada)"}
+            return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": "API Client not initialized."}
+        
+        clean_batch = self._clean_payload_for_ai(batch_data)
+        
+        prompt = f"""
+        Você é um Analista Quantitativo Institucional Sênior avaliando um lote de criptomoedas para Swing Trade curto.
+        As moedas deste JSON já passaram por um rigoroso filtro algorítmico.
+        Assuma como FATO que TODAS as moedas apresentadas possuem liquidez suficiente (Volume), queda esticada (EMA) e toque extremo em fundo (Bollinger).
 
+        === REGRAS INQUEBRÁVEIS ===
+        REGRA 1: PROIBIÇÃO DE VETO MATEMÁTICO: Não rejeite moedas alegando regras matemáticas primárias (ex: falta de liquidez ou distância de EMA). Seu foco é a Previsão Analítica (Predictive Analytics).
+        REGRA 2: FOCO NA REVERSÃO: Você busca uma estrutura com "Exaustão Vendedora" confirmada e iminente repique de alta para atingir +2.00% em 14h. Não compre facas caindo sem freio.
+        REGRA 3: EXIGÊNCIA DE CONFIANÇA: Para aprovar uma compra, a "final_confidence" DEVE ser maior ou igual a 90. Se o risco for alto demais, o vencedor DEVE ser "NENHUMA".
+
+        === PASSOS DE EXECUÇÃO ===
+        PASSO 1: CONTEXTO MACRO (Price Action 12h)
+        Analise o array `price_action_1h_last_12`. A moeda está consolidando um fundo lateral após a queda, ou os candles continuam derretendo agressivamente? Priorize a absorção de queda.
+
+        PASSO 2: O PESO DO FUNDO (Bollinger Context)
+        Avalie o `bollinger_touch_timeframe`. Se a moeda furou as bandas de "15m + 1H" simultaneamente, a probabilidade de um repique violento é exponencialmente maior do que apenas "15m".
+
+        PASSO 3: MOMENTUM E GATILHO (MACD e Absorção)
+        Verifique a confluência de momentum: O MACD de 1H está virando para cima (`macd_1h_shifting_up`)? O MACD 15m está apontando aceleração (`macd_histogram_15m_positive`)? Há defesa compradora (`bottom_rejection_1h`)?
+
+        PASSO 4: VEREDITO
+        Cruze as informações dos Passos 1, 2 e 3. Escolha a única moeda com a estrutura mais explosiva para o repique, ou declare "NENHUMA".
+        
+        Retorne ESTRITAMENTE o formato JSON nativo, sem marcações markdown de bloco de código (```json):
+        {{
+            "winning_coin": "TICKER_AQUI",
+            "final_confidence": 0 a 100,
+            "decision_summary": "Seu parecer analítico justificando a previsão através do Price Action, Momentum e Contexto de Fundo."
+        }}
+        
+        DADOS DO LOTE (Higienizado e Pré-Filtrado):
+        {json.dumps(clean_batch, indent=2)}
+        """
+        
         try:
-            batch_json_string = json.dumps(batch_data, indent=2)
-            prompt_text = f"Por favor, execute o Torneio de Eliminação no lote de dados quantitativos profundos abaixo e retorne a sua decisão final em JSON.\n\nLOTE DE DADOS DE HOJE:\n{batch_json_string}"
-            
             response = self.client.models.generate_content(
-                model='gemini-2.5-flash-lite',
-                contents=prompt_text,
+                model='gemini-2.5-flash',
+                contents=prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction_normal,
-                    temperature=0.1,
-                    max_output_tokens=8192,
                     response_mime_type="application/json",
-                )
+                ),
             )
+            return json.loads(response.text)
+        except Exception as e:
+            self.logger.error(f"Erro na IA: {e}")
+            return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": f"Falha de comunicacao com API: {e}"}
 
-            usage = response.usage_metadata
-            if usage:
-                tokens_in = getattr(usage, 'prompt_token_count', 0)
-                tokens_out = getattr(usage, 'candidates_token_count', 0)
-                total_tokens = getattr(usage, 'total_token_count', 0)
-                self.system_logger.info(f"📊 [API AUDIT] Tokens (Caça Diária) -> Input: {tokens_in} | Output: {tokens_out} | Total: {total_tokens}")
-            
-            raw_response = response.text
-            clean_response = raw_response.strip('`').replace('json\n', '').strip()
-            return json.loads(clean_response)
-
-        except Exception as execution_error:
-            error_str = str(execution_error)
-            if "503" in error_str or "UNAVAILABLE" in error_str:
-                return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": "Servidor sobrecarregado."}
-            
-            self.system_logger.error(f"Erro no Parser JSON/API da IA: {execution_error}")
-            return {"winning_coin": "NENHUMA", "final_confidence": 0, "decision_summary": "Falha na comunicação ou resposta mal formatada."}
-
-    def analyze_swap(self, batch_data, current_coin, current_loss, hold_time_hours):
+    def analyze_swap(self, batch_data, current_coin, drop_pct, locked_hours):
         if not self.client:
-            return {"winning_coin": "HOLD", "final_confidence": 0, "decision_summary": "Modo Bypass (Sem API Key)"}
+            return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": "API Client not initialized."}
+        
+        clean_batch = self._clean_payload_for_ai(batch_data)
+        
+        prompt = f"""
+        Você é o Tribunal de Risco Institucional avaliando um SWAP de Reversão de Média.
+        A operação atual ({current_coin}) está presa em carteira há {locked_hours:.1f}h acumulando um rebaixamento de {drop_pct:.2f}%.
+        As moedas candidatas no JSON já foram validadas pelo motor matemático e possuem liquidez, extensão e toque no fundo do Bollinger adequados.
 
+        === REGRAS DO TRIBUNAL ===
+        REGRA 1: MIGRAÇÃO DE EXTREMO RISCO: Você só deve aprovar a troca se a candidata tiver uma configuração de reversão inegavelmente superior à operação atual.
+        REGRA 2: CONFIANÇA MÁXIMA: A "final_confidence" na candidata DEVE ser MAIOR OU IGUAL a 95 para justificar a realização do prejuízo atual de {drop_pct:.2f}%. Caso contrário, a decisão é "HOLD".
+
+        === PASSOS DE EXECUÇÃO ===
+        PASSO 1: AVALIAR ESTRUTURA MACRO: Analise o `price_action_1h_last_12` da candidata. Ela formou um fundo sólido em exaustão?
+        PASSO 2: PESO DO BOLLINGER: Priorize candidatas cujo `bollinger_touch_timeframe` seja forte (ex: "15m + 1H").
+        PASSO 3: MOMENTUM: Confirme se a aceleração (`macd_1h_shifting_up`, `macd_histogram_15m_positive`) suporta uma retomada rápida.
+
+        Retorne ESTRITAMENTE o JSON nativo, sem marcações markdown:
+        {{
+            "winning_coin": "TICKER_OU_HOLD",
+            "final_confidence": 0 a 100,
+            "decision_summary": "Justificativa preditiva cruzando Price Action e Momentum para validar o swap ou manter a operação."
+        }}
+        
+        DADOS DO LOTE CANDIDATO:
+        {json.dumps(clean_batch, indent=2)}
+        """
+        
         try:
-            batch_json_string = json.dumps(batch_data, indent=2)
-            prompt_text = f"SITUAÇÃO DO OPERADOR:\n- Moeda Atual em Carteira: {current_coin}\n- Prejuízo Atual: {current_loss:.2f}%\n- Tempo na Operação: {hold_time_hours:.1f} horas\n\nLOTE DE DADOS PRÉ-FILTRADOS PARA SWAP:\n{batch_json_string}\n\nJulgue com base nas Leis do Tribunal e retorne a decisão em JSON."
-            
             response = self.client.models.generate_content(
-                model='gemini-2.5-flash-lite',
-                contents=prompt_text,
+                model='gemini-2.5-flash',
+                contents=prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction_swap,
-                    temperature=0.1,
-                    max_output_tokens=4096,
                     response_mime_type="application/json",
-                )
+                ),
             )
-
-            usage = response.usage_metadata
-            if usage:
-                tokens_in = getattr(usage, 'prompt_token_count', 0)
-                tokens_out = getattr(usage, 'candidates_token_count', 0)
-                self.system_logger.info(f"⚖️ [API AUDIT] Tokens (Tribunal de Swap) -> Total: {tokens_in + tokens_out}")
-            
-            raw_response = response.text
-            clean_response = raw_response.strip('`').replace('json\n', '').strip()
-            return json.loads(clean_response)
-
-        except Exception as execution_error:
-            error_str = str(execution_error)
-            if "503" in error_str or "UNAVAILABLE" in error_str:
-                return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": "Servidor sobrecarregado."}
-                
-            self.system_logger.error(f"Erro no Tribunal de Swap da IA: {execution_error}")
-            return {"winning_coin": "HOLD", "final_confidence": 0, "decision_summary": "Falha de comunicação no Tribunal. Decisão automática: HOLD."}
+            return json.loads(response.text)
+        except Exception as e:
+            self.logger.error(f"Erro na IA Swap: {e}")
+            return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": f"Falha de comunicacao com API: {e}"}
