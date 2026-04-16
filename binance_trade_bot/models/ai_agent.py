@@ -1,20 +1,46 @@
 import json
+import os
+import configparser
+
 from google import genai
 from google.genai import types
-from binance_trade_bot.config import Config
+
 
 class MarketAnalyzer:
     """
     Comitê de Risco e Previsão Quantitativa Institucional.
     Atua APÓS o motor matemático ter filtrado as condições absolutas.
     """
+
     def __init__(self, logger):
         self.logger = logger
-        self.config = Config()
+        
+        # 1. Tenta pegar a chave diretamente da variável de ambiente do OS
+        api_key = os.getenv("GOOGLE_API_KEY")
+        
+        # 2. Se não achou no OS, tenta ler direto do arquivo user.cfg como plano B
+        if not api_key:
+            try:
+                config_parser = configparser.ConfigParser()
+                if os.path.exists("user.cfg"):
+                    config_parser.read("user.cfg")
+                    # Lê a chave ignorando se é maiúscula ou minúscula no arquivo
+                    if config_parser.has_option("binance_user_config", "google_api_key"):
+                        api_key = config_parser.get("binance_user_config", "google_api_key")
+                    elif config_parser.has_option("binance_user_config", "GOOGLE_API_KEY"):
+                        api_key = config_parser.get("binance_user_config", "GOOGLE_API_KEY")
+            except Exception as cfg_error:
+                self.logger.warning(f"Aviso: Não foi possível ler user.cfg para extrair GOOGLE_API_KEY: {cfg_error}")
+
         try:
-            self.client = genai.Client(api_key=self.config.GOOGLE_API_KEY)
+            if api_key and api_key.strip():
+                self.client = genai.Client(api_key=api_key.strip())
+                self.logger.info("✅ Cérebro da IA (Gemini) conectado e armado para análise gráfica.")
+            else:
+                self.logger.warning("⚠️ GOOGLE_API_KEY ausente (Nem no OS, nem no user.cfg). Motor de IA operará em modo cego.")
+                self.client = None
         except Exception as e:
-            self.logger.error(f"Erro ao inicializar Google GenAI Client: {e}")
+            self.logger.error(f"Erro Crítico ao inicializar Google GenAI Client: {e}")
             self.client = None
 
     def _clean_payload_for_ai(self, batch_data):
@@ -71,7 +97,7 @@ class MarketAnalyzer:
         PASSO 4: VEREDITO
         Cruze as informações dos Passos 1, 2 e 3. Escolha a única moeda com a estrutura mais explosiva para o repique, ou declare "NENHUMA".
         
-        Retorne ESTRITAMENTE o formato JSON nativo, sem marcações markdown de bloco de código (```json):
+        Retorne ESTRITAMENTE o formato JSON nativo, sem marcações markdown de bloco de código:
         {{
             "winning_coin": "TICKER_AQUI",
             "final_confidence": 0 a 100,
