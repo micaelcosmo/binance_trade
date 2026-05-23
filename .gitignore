@@ -1,3 +1,7 @@
+.env
+config/user.cfg
+config/supported_coin_list.txt
+
 *.log
 .current_coin
 .current_coin_table
@@ -7,6 +11,7 @@ nohup.out
 user.cfg
 .idea/
 .vscode/
+.cursor/
 .replit
 venv/
 crypto_trading.db

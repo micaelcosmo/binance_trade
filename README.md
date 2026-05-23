@@ -74,6 +74,38 @@ Para baixar atualizações futuras de forma automática, utilize o botão "🔄 
 
 ---
 
+## 🐳 Docker (GUI via noVNC)
+
+Requisitos: [Docker](https://docs.docker.com/get-docker/) e Docker Compose v2. Dependências da imagem em [`requirements-docker.txt`](requirements-docker.txt) (separado do `requirements.txt` local).
+
+1. Prepare a configuração (veja também [`config/README.md`](config/README.md)):
+
+```bash
+cp config/user.cfg.exemple config/user.cfg
+cp config/supported_coin_list.exemple config/supported_coin_list.txt
+cp .env.example .env
+```
+
+Edite `config/user.cfg` (chaves Binance, `testnet`) e `.env` (`GOOGLE_API_KEY` apenas). Não use `TESTNET` no `.env`.
+
+2. Suba o container:
+
+```bash
+docker compose up -d --build
+```
+
+3. Abra o painel no navegador: `http://localhost:6080/vnc.html` (senha em `VNC_PASSWORD` no `.env`).
+
+4. No noVNC, clique em **RUN > Iniciar Bot**. Logs: `docker compose logs -f bot`.
+
+**Notas:**
+
+- O botão **Atualizar Versão** (`git pull`) não funciona dentro da imagem imutável; use `docker compose up -d --build` para atualizar o código.
+- Estado persistente: volumes `bot-data` (SQLite) e `bot-state` (JSON, flags).
+- Não exponha a porta 6080 na internet sem proteção (senha VNC forte ou reverse proxy com TLS).
+
+---
+
 ## ❓ FAQ & Solução de Problemas (Troubleshooting)
 Se o bot não iniciar ou apresentar erros no console, confira as soluções para os incidentes de ambiente mais comuns:
 
