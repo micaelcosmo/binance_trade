@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Trade Bot Pro - Terminal Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-deep: #030407;
+            --bg-panel: #0d1017;
+            --bg-hover: #161a22;
+            --text-main: #c9d1d9;
+            --border-color: #21262d;
+            
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --accent-yellow: #d29922;
+            --accent-purple: #bc8cff;
+            --btc-gold: #f78166;
+        }
+
+        body { 
+            background-color: var(--bg-deep); 
+            color: var(--text-main); 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .glass-panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .btn-tool { background: transparent; border: 1px solid var(--border-color); color: #8b949e; transition: all 0.2s; }
+        .btn-tool:hover { background: var(--bg-hover); color: var(--text-main); border-color: #30363d; }
+        
+        .btn-run { background: rgba(88, 166, 255, 0.1); border: 1px solid var(--accent-blue); color: var(--accent-blue); }
+        .btn-run:hover { background: rgba(88, 166, 255, 0.2); box-shadow: 0 0 10px rgba(88,166,255,0.3); }
+        
+        .btn-stop { background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-red); color: var(--accent-red); }
+        .btn-stop:hover { background: rgba(248, 81, 73, 0.2); box-shadow: 0 0 10px rgba(248,81,73,0.3); }
+
+        .btn-action { background: var(--accent-green); color: #000; border: none; font-weight: bold; }
+        .btn-action:hover { opacity: 0.8; box-shadow: 0 0 10px rgba(63,185,80,0.4); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #484f58; }
+        
+        #log-area { font-family: 'Consolas', 'Courier New', monospace; font-size: 12.5px; color: #3fb950; white-space: pre-wrap; line-height: 1.4; background-color: #010409; }
+        .list-box-container { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; background-color: #010409; }
+        
+        canvas { background-color: #010409; border-radius: 4px; display: block; width: 100%; height: 100%; }
+        #modal-overlay { display: none; }
+        
+        .label-sm { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; font-weight: 600; }
+        .val-lg { font-size:clamp(16px, 2vw, 20px); font-weight: 800; letter-spacing: -0.02em; }
+
+        .glitch-text {
+            color: #ffffff;
+            font-weight: 900;
+            text-shadow: 2px 0 0 rgba(255, 0, 0, 0.75), -2px 0 0 rgba(0, 255, 255, 0.75);
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body class="min-h-screen xl:h-screen flex flex-col p-2 sm:p-3 gap-3 overflow-x-hidden xl:overflow-hidden">
+
+    <div class="glass-panel px-3 sm:px-4 py-2.5 flex flex-col xl:flex-row justify-between items-center gap-4 shrink-0">
+        
+        <div class="flex flex-wrap justify-center xl:justify-start items-center gap-3 md:gap-4 w-full xl:w-auto">
+            <h1 class="text-base sm:text-lg flex items-center gap-2 glitch-text uppercase whitespace-nowrap">
+                BINANCE BOT 
+                <span class="border border-blue-500/50 text-blue-400 bg-blue-500/10 text-[9px] px-1.5 py-0.5 rounded uppercase tracking-widest font-bold" style="text-shadow: none;">
+                    {{ versao }}
+                </span>
+            </h1>
+            <div class="flex gap-2">
+                <button onclick="socket.emit('start_bot')" class="btn-run text-[11px] sm:text-xs font-bold px-3 sm:px-5 py-1.5 rounded transition">▶ START</button>
+                <button onclick="socket.emit('stop_bot')" class="btn-stop text-[11px] sm:text-xs font-bold px-3 sm:px-5 py-1.5 rounded transition">⏹ STOP</button>
+            </div>
+            <div class="hidden sm:block w-px h-5 bg-[#21262d] mx-1"></div>
+            <div class="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase">Modo: <span class="text-yellow-400">{{ strategy }}</span></div>
+        </div>
+
+        <div class="flex flex-wrap justify-center items-center gap-2 w-full xl:w-auto">
+            <button onclick="socket.emit('request_ai_report')" class="btn-tool text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded flex items-center gap-1">🧠 Parecer</button>
+            <button onclick="socket.emit('request_dossier')" class="btn-tool text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded flex items-center gap-1">📊 Dossiê</button>
+            <button onclick="socket.emit('request_daily_history')" class="btn-tool text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded flex items-center gap-1">📜 Histórico</button>
+            
+            <div class="hidden sm:block w-px h-5 bg-[#21262d] mx-1"></div>
+            
+            <button id="btn_cooldown" onclick="cycleSetting('cooldown')" class="btn-tool text-[10px] sm:text-[11px] font-semibold text-[#3fb950] px-2 sm:px-3 py-1.5 rounded border-[#3fb950]/30 hover:border-[#3fb950]">⏱️ Scan: 15m</button>
+            <button id="btn_bb" onclick="cycleSetting('bb_std')" class="btn-tool text-[10px] sm:text-[11px] font-semibold text-[#3fb950] px-2 sm:px-3 py-1.5 rounded border-[#3fb950]/30 hover:border-[#3fb950]">📏 BB STD: 2.0</button>
+        </div>
+        
+        <div class="flex flex-wrap justify-center xl:justify-end items-center gap-2 w-full xl:w-auto">
+            <button onclick="socket.emit('reset_scoreboard')" class="text-[#8b949e] hover:text-white text-[10px] sm:text-[11px] font-semibold px-1 sm:px-2 transition">Zerar Placar</button>
+            <button onclick="socket.emit('reset_initial_balance')" class="text-[#8b949e] hover:text-white text-[10px] sm:text-[11px] font-semibold px-1 sm:px-2 transition">Atualizar Inicial</button>
+            <div class="hidden sm:block w-px h-5 bg-[#21262d] mx-1"></div>
+            <button onclick="socket.emit('request_update')" class="btn-tool text-[#58a6ff] border-[#58a6ff]/30 hover:border-[#58a6ff] text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded">🔄 Up</button>
+            <button onclick="confirmForceSell()" class="btn-stop text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded">🚨 Venda Forçada</button>
+            <button id="btn_add_trade" onclick="socket.emit('add_trade_chance')" class="btn-action text-[10px] sm:text-[11px] px-3 sm:px-4 py-1.5 rounded flex items-center gap-1">🔋 +1 Tentativa</button>
+        </div>
+    </div>
+
+    <div class="glass-panel grid grid-cols-1 xl:grid-cols-2 shrink-0">
+        
+        <div class="p-3.5 flex flex-col justify-center border-b xl:border-r xl:border-b-0 border-[#21262d]">
+            <div class="flex justify-between items-start w-full">
+                <div class="flex-1 flex flex-col">
+                    <div class="label-sm mb-1">Performance Total</div>
+                    <div class="flex items-end gap-3 flex-wrap">
+                        <div id="lbl_pl" class="val-lg text-white truncate">0.00%</div>
+                        <div class="flex flex-col pb-0.5">
+                            <span id="lbl_inicial" class="text-[10px] text-gray-500 truncate">Inicial: $0.00</span>
+                            <span id="lbl_atual" class="text-[11px] text-gray-300 font-semibold truncate">Atual: $0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="w-px bg-[#21262d] mx-3 md:mx-4 h-auto self-stretch"></div>
+                
+                <div class="flex-1 flex flex-col">
+                    <div class="label-sm mb-1 flex justify-between">
+                        <span>Placar Diário</span>
+                        <span id="score_rate" class="text-[#bc8cff] font-bold">0.0%</span>
+                    </div>
+                    <div class="flex items-end gap-3 flex-wrap">
+                        <div id="lbl_trades" class="val-lg text-white truncate">0</div>
+                        <div class="flex gap-2 pb-1 text-[11px] font-bold">
+                            <span id="score_w" class="text-[#3fb950]">W: 0</span>
+                            <span id="score_l" class="text-[#f85149]">L: 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-3.5 flex flex-col justify-center">
+            <div class="label-sm mb-1">Bitcoin (BTC)</div>
+            <div id="lbl_btc" class="val-lg text-[#d29922] truncate">$--</div>
+        </div>
+
+    </div>
+
+    <div class="flex flex-col xl:flex-row gap-3 shrink-0">
+        
+        <div class="glass-panel w-full xl:w-[440px] flex flex-col divide-y divide-[#21262d] shrink-0">
+            
+            <div class="p-3.5 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div class="label-sm">Status do Sistema</div>
+                    <div class="flex items-center gap-2">
+                        <span id="lbl_ping" class="text-gray-600 normal-case font-normal text-[9px] truncate">PING: -- ms</span>
+                        <span id="lbl_heartbeat" class="text-[10px] text-[#3fb950] font-mono truncate">💓 --:--</span>
+                    </div>
+                </div>
+                <div id="lbl_status" class="val-lg text-gray-500 truncate mt-1">Offline</div>
+                <div id="lbl_countdown" class="text-[10px] text-[#58a6ff] font-semibold mt-1 truncate">⏳ Próxima Análise: --</div>
+            </div>
+
+            <div class="p-3.5 flex flex-col justify-between flex-1 bg-[#010409]/30">
+                <div class="mb-3">
+                    <div class="label-sm">Moeda em Foco</div>
+                    <div id="lbl_cur_coin" class="text-[20px] font-black text-white leading-none mt-1 break-words">BUSCANDO...</div>
+                </div>
+                <div class="flex flex-col gap-1.5 border-l-2 border-[#21262d] pl-2 sm:pl-3 overflow-hidden">
+                    <div id="lbl_buy_price" class="text-[10px] sm:text-[11px] font-mono text-gray-400 truncate">
+                        <span class="text-gray-600">[🛒] Compra:</span> $0.000000 | 0.00 USDT
+                    </div>
+                    <div id="lbl_cur_price" class="text-[10px] sm:text-[11px] font-mono text-[#58a6ff] truncate">
+                        <span class="text-blue-900/80">[💲] Atual:</span> $0.000000 | 0.00 USDT
+                    </div>
+                    <div id="lbl_tgt_price" class="text-[10px] sm:text-[11px] font-mono text-[#3fb950] truncate">
+                        <span class="text-green-900/80">[🎯] Alvo (V):</span> $0.000000 | 0.00 USDT
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="glass-panel flex-1 flex flex-col overflow-hidden h-[300px] xl:h-auto min-h-[250px]">
+            <div class="bg-[#0d1017] px-3 py-1.5 border-b border-[#21262d] flex justify-between items-center shrink-0">
+                <span class="label-sm">System Live Logs</span>
+                <button onclick="document.getElementById('log-area').innerHTML=''" class="text-[10px] text-gray-500 hover:text-white transition">Clear Console</button>
+            </div>
+            <div id="log-area" class="flex-1 p-2 sm:p-3 custom-scrollbar overflow-x-auto overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <div class="glass-panel bg-blue-900/10 border-blue-900/30 px-3 sm:px-4 py-2 flex items-center overflow-x-auto custom-scrollbar shrink-0">
+        <span class="text-[10px] sm:text-[11px] font-bold text-blue-400 tracking-wide uppercase mr-2 sm:mr-3 whitespace-nowrap">⚖️ ÚLTIMO VEREDITO:</span>
+        <span id="lbl_det_atu" class="text-[10.5px] sm:text-[11.5px] font-mono text-gray-300 whitespace-nowrap">Aguardando varredura e cruzamento de dados...</span>
+    </div>
+
+    <div class="flex-1 flex flex-col xl:flex-row gap-3 min-h-[250px] xl:min-h-0">
+        
+        <div class="flex-1 glass-panel flex flex-col overflow-hidden bg-[#010409]/30 min-h-[250px] xl:min-h-0">
+            <div class="bg-[#0d1017] px-3 py-1.5 border-b border-[#21262d] flex justify-between items-center shrink-0">
+                <span class="label-sm text-[#bc8cff]">Análise Gráfica Avançada (15m)</span>
+                <div id="lbl_chart_title" class="text-[9px] text-gray-600 font-bold uppercase truncate ml-2">Inativo</div>
+            </div>
+            <div class="w-full flex-1 relative" id="canvas-container">
+                <canvas id="miniChart" class="absolute inset-0"></canvas>
+            </div>
+        </div>
+
+        <div class="w-full xl:w-[250px] flex flex-col sm:flex-row xl:flex-col gap-3 shrink-0">
+            <div class="flex-1 glass-panel flex flex-col overflow-hidden h-[180px] xl:h-auto min-h-0">
+                <div class="bg-[#010409] px-3 py-1.5 border-b border-green-900/30 text-center shrink-0">
+                    <span class="label-sm text-[#3fb950]">🟢 Tendência de Alta</span>
+                </div>
+                <ul id="list_hot" class="flex-1 list-box-container text-[#c9d1d9] p-1.5 custom-scrollbar overflow-y-auto"></ul>
+            </div>
+            
+            <div class="flex-1 glass-panel flex flex-col overflow-hidden h-[180px] xl:h-auto min-h-0">
+                <div class="bg-[#010409] px-3 py-1.5 border-b border-[#21262d] text-center shrink-0">
+                    <span class="label-sm text-gray-500">❄️ Tendência de Baixa</span>
+                </div>
+                <ul id="list_cold" class="flex-1 list-box-container text-gray-500 p-1.5 custom-scrollbar overflow-y-auto"></ul>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modal-overlay" class="fixed inset-0 bg-[#030407]/80 flex justify-center items-center z-50 backdrop-blur-sm p-4">
+        <div class="glass-panel w-full max-w-4xl h-full max-h-[85vh] flex flex-col border border-[#30363d] shadow-2xl">
+            <div class="p-3 sm:p-4 border-b border-[#30363d] flex justify-between items-center bg-[#0d1017] rounded-t-lg shrink-0">
+                <h2 id="modal-title" class="text-[#58a6ff] text-base sm:text-lg font-bold flex items-center gap-2 truncate">Título</h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-red-400 transition font-bold text-xl px-2">✕</button>
+            </div>
+            <div class="p-3 sm:p-4 flex-1 overflow-hidden bg-[#010409] rounded-b-lg">
+                <div id="modal-content-html" class="w-full h-full text-[#c9d1d9] custom-scrollbar font-mono text-[11px] sm:text-[13px] overflow-y-auto pr-2 break-words"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const logArea = document.getElementById('log-area');
+        const btnAddTrade = document.getElementById('btn_add_trade');
+        const canvas = document.getElementById('miniChart');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+        
+        let currentCooldown = 15;
+        let currentBB = 2.0;
+
+        window.lastChartData = [];
+        window.lastCoinSym = null;
+        window.lastBuyPrice = 0;
+
+        // Memória de Cache do Saldo Inicial
+        let cachedInicial = localStorage.getItem('saldo_inicial');
+        if (cachedInicial) {
+            document.getElementById('lbl_inicial').innerText = `Inicial: $${parseFloat(cachedInicial).toFixed(2)}`;
+        }
+
+        function resizeCanvas() {
+            if(!container) return;
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width; 
+            canvas.height = rect.height || 200; 
+            
+            if(window.lastChartData && window.lastChartData.length > 0) {
+                drawMiniChart(window.lastChartData, window.lastCoinSym, window.lastBuyPrice, false);
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100);
+
+        function confirmForceSell() {
+            if(confirm("ATENÇÃO: VENDA FORÇADA\n\nConfirma o encerramento manual e imediato da operacao financeira vigente?")) {
+                socket.emit('force_sell_action');
+            }
+        }
+
+        function cycleSetting(type) {
+            if (type === 'cooldown') socket.emit('cycle_cooldown', {current: currentCooldown});
+            if (type === 'bb_std') socket.emit('cycle_bb_std', {current: currentBB});
+        }
+
+        function drawMiniChart(dataPoints, coinSymbol, buyPrice, saveState = true) {
+            if(saveState) {
+                window.lastChartData = dataPoints;
+                window.lastCoinSym = coinSymbol;
+                window.lastBuyPrice = buyPrice;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const lblTitle = document.getElementById('lbl_chart_title');
+
+            if (!dataPoints || dataPoints.length < 2) {
+                lblTitle.innerText = "INATIVO";
+                return;
+            }
+
+            const padding = 15;
+            const w = canvas.width;
+            const h = canvas.height;
+            const isNewFormat = typeof dataPoints[0] === 'object';
+            
+            lblTitle.innerText = `ATIVO (${coinSymbol})`;
+            lblTitle.className = "text-[9px] sm:text-[10px] text-[#3fb950] font-bold uppercase tracking-widest truncate ml-2";
+
+            let minVal, maxVal, range;
+            
+            if (isNewFormat) {
+                minVal = Math.min(...dataPoints.map(p => Math.min(p.l, p.bbl)));
+                maxVal = Math.max(...dataPoints.map(p => Math.max(p.h, p.bbu)));
+                range = (maxVal - minVal) === 0 ? 1 : (maxVal - minVal);
+                const xStep = (w - 2 * padding) / (dataPoints.length - 1);
+                
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                
+                ctx.beginPath(); ctx.strokeStyle = '#30363d';
+                dataPoints.forEach((p, i) => {
+                    const x = padding + i * xStep;
+                    const y = padding + (h - 2 * padding) * (1 - (p.bbu - minVal) / range);
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }); ctx.stroke();
+
+                ctx.beginPath(); ctx.strokeStyle = '#1f6feb';
+                dataPoints.forEach((p, i) => {
+                    const x = padding + i * xStep;
+                    const y = padding + (h - 2 * padding) * (1 - (p.bbm - minVal) / range);
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }); ctx.stroke();
+
+                ctx.beginPath(); ctx.strokeStyle = '#30363d';
+                dataPoints.forEach((p, i) => {
+                    const x = padding + i * xStep;
+                    const y = padding + (h - 2 * padding) * (1 - (p.bbl - minVal) / range);
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }); ctx.stroke();
+
+                ctx.setLineDash([]);
+                
+                const candleW = Math.max(1, Math.min(xStep * 0.7, 8));
+                
+                dataPoints.forEach((p, i) => {
+                    const x = padding + i * xStep;
+                    const yo = padding + (h - 2 * padding) * (1 - (p.o - minVal) / range);
+                    const yh = padding + (h - 2 * padding) * (1 - (p.h - minVal) / range);
+                    const yl = padding + (h - 2 * padding) * (1 - (p.l - minVal) / range);
+                    const yc = padding + (h - 2 * padding) * (1 - (p.c - minVal) / range);
+                    
+                    const color = p.c >= p.o ? '#3fb950' : '#f85149';
+                    ctx.strokeStyle = color;
+                    ctx.fillStyle = color;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, yh);
+                    ctx.lineTo(x, yl);
+                    ctx.stroke();
+                    
+                    let by1 = Math.min(yo, yc);
+                    let by2 = Math.max(yo, yc);
+                    if (by2 - by1 < 1) by2 = by1 + 1;
+                    ctx.fillRect(x - candleW/2, by1, candleW, by2 - by1);
+                });
+
+            } else {
+                minVal = Math.min(...dataPoints);
+                maxVal = Math.max(...dataPoints);
+                range = (maxVal - minVal) === 0 ? 1 : (maxVal - minVal);
+                const isUp = dataPoints[dataPoints.length - 1] >= dataPoints[0];
+                const gradient = ctx.createLinearGradient(0, 0, 0, h);
+                gradient.addColorStop(0, isUp ? 'rgba(63, 185, 80, 0.3)' : 'rgba(248, 81, 73, 0.3)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                ctx.strokeStyle = isUp ? '#3fb950' : '#f85149';
+                ctx.lineWidth = 1.5;
+                ctx.lineJoin = 'round';
+
+                ctx.beginPath();
+                const xStep = (w - 2 * padding) / (dataPoints.length - 1);
+                
+                dataPoints.forEach((val, i) => {
+                    const x = padding + i * xStep;
+                    const y = padding + (h - 2 * padding) * (1 - (val - minVal) / range);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                
+                ctx.stroke();
+                ctx.lineTo(padding + (dataPoints.length - 1) * xStep, h);
+                ctx.lineTo(padding, h);
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+
+            if (buyPrice > 0 && buyPrice >= minVal && buyPrice <= maxVal) {
+                const yBuy = padding + (h - 2 * padding) * (1 - (buyPrice - minVal) / range);
+                ctx.strokeStyle = '#d29922';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(padding, yBuy);
+                ctx.lineTo(w - padding, yBuy);
+                ctx.stroke();
+                ctx.setLineDash([]); 
+            }
+        }
+
+        socket.on('new_log', (data) => {
+            logArea.innerHTML += data.message + '\n';
+            logArea.scrollTop = logArea.scrollHeight;
+            let lines = logArea.innerHTML.split('\n');
+            if (lines.length > 1500) logArea.innerHTML = lines.slice(-500).join('\n');
+        });
+
+        socket.on('update_balance', (data) => {
+            if (data.inicial !== undefined) {
+                localStorage.setItem('saldo_inicial', data.inicial);
+                document.getElementById('lbl_inicial').innerText = `Inicial: $${data.inicial.toFixed(2)}`;
+            }
+            if (data.atual !== undefined) document.getElementById('lbl_atual').innerText = `Atual: $${data.atual.toFixed(2)}`;
+            if (data.pl !== undefined) {
+                document.getElementById('lbl_pl').innerText = `${data.pl >= 0 ? '+' : ''}${data.pl_perc.toFixed(2)}%`;
+                document.getElementById('lbl_pl').className = `val-lg truncate ${data.pl >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]'}`;
+            }
+            if (data.ping !== undefined) document.getElementById('lbl_ping').innerText = `PING: ${data.ping} ms`;
+        });
+
+        socket.on('status_parado', () => {
+            document.getElementById('lbl_status').innerHTML = 'Offline';
+            document.getElementById('lbl_status').className = 'val-lg text-gray-600 truncate mt-1';
+            document.getElementById('lbl_det_atu').innerText = 'Sistema em repouso.';
+        });
+
+        socket.on('lock_add_trade', () => {
+            btnAddTrade.disabled = true;
+            btnAddTrade.className = "text-[#8b949e] border border-[#30363d] bg-[#161a22] text-[10px] sm:text-[11px] px-3 sm:px-4 py-1.5 rounded flex items-center gap-1 opacity-50 cursor-not-allowed";
+        });
+
+        socket.on('update_button_states', (data) => {
+            if (data.cooldown !== undefined) {
+                currentCooldown = data.cooldown;
+                document.getElementById('btn_cooldown').innerText = `⏱️ Scan: ${currentCooldown}m`;
+            }
+            if (data.bb_std !== undefined) {
+                currentBB = data.bb_std;
+                document.getElementById('btn_bb').innerText = `📏 BB STD: ${currentBB}`;
+            }
+        });
+
+        socket.on('update_metrics', (data) => {
+            if(data.countdown_str) document.getElementById('lbl_countdown').innerText = data.countdown_str;
+            
+            if(data.unlock_add_trade && btnAddTrade.disabled) {
+                btnAddTrade.disabled = false;
+                btnAddTrade.className = "btn-action text-[10px] sm:text-[11px] px-3 sm:px-4 py-1.5 rounded flex items-center gap-1 cursor-pointer";
+            }
+
+            if(data.status) {
+                let colorClass = "text-[#58a6ff]";
+                if (data.status.includes("Em Operação")) colorClass = "text-[#d29922]";
+                if (data.status.includes("Crash") || data.status.includes("⚠️")) colorClass = "text-[#f85149]";
+                document.getElementById('lbl_status').innerHTML = `<span class="${colorClass}">${data.status}</span>`;
+            }
+
+            const coinSym = data.coin || 'BUSCANDO...';
+            let coinDisplay = coinSym;
+            
+            if (data.current_price && coinSym !== "USDT" && coinSym !== "BTC" && data.status && data.status.includes("Em Operação")) {
+                const varColor = data.current_coin_change >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
+                coinDisplay = `${coinSym} <span class="text-[11px] sm:text-[13px] font-mono text-gray-500 ml-2 whitespace-nowrap">$${data.current_price.toFixed(4)}</span> <span class="text-[11px] sm:text-[13px] font-mono ${varColor} whitespace-nowrap">${data.current_coin_change > 0 ? '+' : ''}${data.current_coin_change}%</span>`;
+            }
+            document.getElementById('lbl_cur_coin').innerHTML = coinDisplay;
+            
+            if (data.btc_price !== undefined) {
+                const btcCor = data.btc_change >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
+                document.getElementById('lbl_btc').innerHTML = `$${parseFloat(data.btc_price).toLocaleString('en-US', {minimumFractionDigits:2})} <span class="text-[12px] sm:text-[14px] ${btcCor} ml-1 font-semibold">${data.btc_change > 0 ? '▲' : '▼'} ${data.btc_change}%</span>`;
+            }
+            
+            if (data.hb_str) {
+                document.getElementById('lbl_heartbeat').innerHTML = `💓 ${data.hb_str}`;
+                document.getElementById('lbl_heartbeat').style.color = data.hb_color;
+            }
+
+            if (data.current_motor_cooldown !== undefined) {
+                currentCooldown = data.current_motor_cooldown;
+                document.getElementById('btn_cooldown').innerText = `⏱️ Scan: ${currentCooldown}m`;
+            }
+            if (data.current_bb_std !== undefined) {
+                currentBB = data.current_bb_std;
+                document.getElementById('btn_bb').innerText = `📏 BB STD: ${currentBB}`;
+            }
+
+            const w = data.trades_won || 0;
+            const l = data.trades_lost || 0;
+            const t = w + l;
+            const wr = t > 0 ? (w / t) * 100 : 0;
+            
+            document.getElementById('lbl_trades').innerText = t;
+            document.getElementById('score_w').innerText = `W: ${w}`;
+            document.getElementById('score_l').innerText = `L: ${l}`;
+            document.getElementById('score_rate').innerText = `${wr.toFixed(1)}%`;
+
+            const buyPrice = data.buy_price || 0.0;
+            const curPrice = data.current_price || 0.0;
+            const tgtPrice = data.target_price || 0.0;
+            const qty = data.active_qty || 0.0;
+
+            if (buyPrice > 0 && qty > 0) {
+                document.getElementById('lbl_buy_price').innerHTML = `<span class="text-gray-600">[🛒] Compra:</span> $${buyPrice.toFixed(6)} | ${(buyPrice*qty).toFixed(2)} USDT ⇌ ${qty.toFixed(4)} ${coinSym}`;
+                document.getElementById('lbl_cur_price').innerHTML = `<span class="text-blue-900/80">[💲] Atual:</span> $${curPrice.toFixed(6)} | ${(curPrice*qty).toFixed(2)} USDT ⇌ ${qty.toFixed(4)} ${coinSym}`;
+                document.getElementById('lbl_tgt_price').innerHTML = `<span class="text-green-900/80">[🎯] Alvo (V):</span> $${tgtPrice.toFixed(6)} | ${(tgtPrice*qty).toFixed(2)} USDT ⇌ ${qty.toFixed(4)} ${coinSym}`;
+            } else {
+                document.getElementById('lbl_buy_price').innerHTML = "<span class='text-gray-600'>[🛒] Compra:</span> $0.000000 | 0.00 USDT";
+                document.getElementById('lbl_cur_price').innerHTML = "<span class='text-blue-900/80'>[💲] Atual:</span> $0.000000 | 0.00 USDT";
+                document.getElementById('lbl_tgt_price').innerHTML = "<span class='text-green-900/80'>[🎯] Alvo (V):</span> $0.000000 | 0.00 USDT";
+            }
+
+            if(data.current_detail) document.getElementById('lbl_det_atu').innerText = data.current_detail;
+
+            if(data.chart_data && data.chart_data.length > 0) {
+                drawMiniChart(data.chart_data, coinSym, buyPrice);
+            } else {
+                drawMiniChart([], null, 0);
+            }
+
+            if(data.hot_cache) {
+                document.getElementById('list_hot').innerHTML = data.hot_cache.map(i => `<li class="py-1 px-2 hover:bg-[#161a22] border-b border-[#21262d] last:border-0 truncate">${i}</li>`).join('');
+            }
+            if(data.cold_cache) {
+                document.getElementById('list_cold').innerHTML = data.cold_cache.map(i => `<li class="py-1 px-2 hover:bg-[#161a22] border-b border-[#21262d] last:border-0 truncate">${i}</li>`).join('');
+            }
+        });
+
+        socket.on('show_modal_html', (data) => {
+            document.getElementById('modal-title').innerHTML = data.title;
+            document.getElementById('modal-content-html').innerHTML = data.content;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        });
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
