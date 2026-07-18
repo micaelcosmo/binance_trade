@@ -10,6 +10,7 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO
 from binance.client import Client
 from binance_trade_bot.config import Config
+from binance_trade_bot.atomic_io import atomic_write_json, atomic_write_text
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -44,8 +45,7 @@ def _load_gui_state():
 def _save_gui_state():
     global saldo_inicial
     try:
-        with open(GUI_STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump({"saldo_inicial": saldo_inicial}, f)
+        atomic_write_json(GUI_STATE_FILE, {"saldo_inicial": saldo_inicial})
     except Exception:
         pass
 
@@ -260,9 +260,8 @@ def handle_start():
     socketio.emit('new_log', {'message': '[INFO] Inicializando ambiente em modo seguro (Cloud)...\n'})
     
     status_file = os.path.join(BASE_DIR, "bot_status.json")
-    with open(status_file, "w", encoding="utf-8") as f: 
-        json.dump({}, f)
-    
+    atomic_write_json(status_file, {})
+
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONPATH"] = BASE_DIR 
@@ -313,26 +312,23 @@ def handle_reset_initial():
 @socketio.on('reset_scoreboard')
 def handle_reset_scoreboard():
     try:
-        with open(os.path.join(BASE_DIR, "reset_trades.flag"), "w", encoding="utf-8") as f:
-            f.write("reset")
-            
+        atomic_write_text(os.path.join(BASE_DIR, "reset_trades.flag"), "reset")
+
         status_file = os.path.join(BASE_DIR, "bot_status.json")
         if os.path.exists(status_file):
             with open(status_file, "r", encoding="utf-8") as f:
                 state_data = json.load(f)
             state_data["trades_won"] = 0
             state_data["trades_lost"] = 0
-            with open(status_file, "w", encoding="utf-8") as f:
-                json.dump(state_data, f, ensure_ascii=False, indent=2)
-                
+            atomic_write_json(status_file, state_data, ensure_ascii=False, indent=2)
+
         pg_file = os.path.join(BASE_DIR, "profit_gain_state.json")
         if os.path.exists(pg_file):
             with open(pg_file, "r", encoding="utf-8") as f:
                 pg_state = json.load(f)
             pg_state["trades_won"] = 0
             pg_state["trades_lost"] = 0
-            with open(pg_file, "w", encoding="utf-8") as f:
-                json.dump(pg_state, f)
+            atomic_write_json(pg_file, pg_state)
 
         socketio.emit('new_log', {'message': '\n[OK] Placar financeiro e estatisticas reiniciados.\n'})
     except Exception as e:
@@ -343,9 +339,8 @@ def handle_reset_scoreboard():
 def handle_add_trade():
     global locked_at_trade_count
     
-    with open(os.path.join(BASE_DIR, "add_trade.flag"), "w", encoding="utf-8") as f:
-        f.write("1")
-        
+    atomic_write_text(os.path.join(BASE_DIR, "add_trade.flag"), "1")
+
     current_trades = 0
     status_file = os.path.join(BASE_DIR, "bot_status.json")
     if os.path.exists(status_file):
@@ -369,8 +364,7 @@ def handle_cycle_cooldown(data):
     current_motor_cooldown = next_cd
     
     try:
-        with open(os.path.join(BASE_DIR, "cooldown.flag"), "w", encoding="utf-8") as f:
-            f.write(str(next_cd))
+        atomic_write_text(os.path.join(BASE_DIR, "cooldown.flag"), str(next_cd))
         socketio.emit('new_log', {'message': f'\n[+] Tempo de verificacao basica ajustado para {next_cd} minutos.\n'})
         socketio.emit('update_button_states', {'cooldown': next_cd})
     except Exception as e:
@@ -385,8 +379,7 @@ def handle_cycle_bb_std(data):
     current_bb_std = next_std
     
     try:
-        with open(os.path.join(BASE_DIR, "bb_std.flag"), "w", encoding="utf-8") as f:
-            f.write(str(next_std))
+        atomic_write_text(os.path.join(BASE_DIR, "bb_std.flag"), str(next_std))
         socketio.emit('new_log', {'message': f'\n[+] Desvio Padrão de Bollinger ajustado para {next_std}.\n'})
         socketio.emit('update_button_states', {'bb_std': next_std})
     except Exception as e:
@@ -396,8 +389,7 @@ def handle_cycle_bb_std(data):
 @socketio.on('force_sell_action')
 def handle_force_sell():
     try:
-        with open(os.path.join(BASE_DIR, "force_sell.flag"), "w", encoding="utf-8") as f:
-            f.write("trigger_manual_sell")
+        atomic_write_text(os.path.join(BASE_DIR, "force_sell.flag"), "trigger_manual_sell")
         socketio.emit('new_log', {'message': '\n[INFO] Diretiva de venda manual interceptada. Aguardando execucao.\n'})
     except Exception as e:
         socketio.emit('new_log', {'message': f'\n[ERROR] Falha na emissao do comando: {e}\n'})
@@ -406,8 +398,7 @@ def handle_force_sell():
 @socketio.on('request_update')
 def handle_request_update():
     try:
-        with open(os.path.join(BASE_DIR, "update_pending.flag"), "w", encoding="utf-8") as f:
-            f.write("pending")
+        atomic_write_text(os.path.join(BASE_DIR, "update_pending.flag"), "pending")
         socketio.emit('new_log', {'message': '\n[INFO] Flag de atualizacao gerada. O bot processara o git pull.\n'})
     except Exception as e:
         socketio.emit('new_log', {'message': f'\n[ERROR] Falha na flag de atualizacao: {e}\n'})

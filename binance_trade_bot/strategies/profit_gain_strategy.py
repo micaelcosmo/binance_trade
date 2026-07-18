@@ -9,6 +9,7 @@ import pandas
 import pandas_ta
 from binance.enums import *
 
+from binance_trade_bot.atomic_io import atomic_write_json
 from binance_trade_bot.models.ai_agent import MarketAnalyzer
 
 
@@ -131,25 +132,24 @@ class Strategy:
 
     def _save_state(self):
         try:
-            with open("profit_gain_state.json", "w") as file_handler:
-                json.dump({
-                    "operation_start_time": self.operation_start_time,
-                    "last_switch_time": self.last_switch_time,
-                    "active_altcoin_quantity": self.active_altcoin_quantity,
-                    "trades_won": self.trades_won,
-                    "trades_lost": self.trades_lost,
-                    "active_buy_price": self.active_buy_price,
-                    "peak_profit_pct": self.peak_profit_pct,
-                    "active_dynamic_stop_loss": self.active_dynamic_stop_loss,
-                    "current_date": self.current_date,
-                    "daily_profit_pct": self.daily_profit_pct,
-                    "daily_trades": self.daily_trades,
-                    "daily_history": self.daily_history,
-                    "full_ai_report": self.full_ai_report,
-                    "max_daily_trades": self.max_daily_trades,
-                    "motor_cooldown_minutes": self.motor_cooldown_minutes,
-                    "bollinger_std": self.bollinger_std
-                }, file_handler)
+            atomic_write_json("profit_gain_state.json", {
+                "operation_start_time": self.operation_start_time,
+                "last_switch_time": self.last_switch_time,
+                "active_altcoin_quantity": self.active_altcoin_quantity,
+                "trades_won": self.trades_won,
+                "trades_lost": self.trades_lost,
+                "active_buy_price": self.active_buy_price,
+                "peak_profit_pct": self.peak_profit_pct,
+                "active_dynamic_stop_loss": self.active_dynamic_stop_loss,
+                "current_date": self.current_date,
+                "daily_profit_pct": self.daily_profit_pct,
+                "daily_trades": self.daily_trades,
+                "daily_history": self.daily_history,
+                "full_ai_report": self.full_ai_report,
+                "max_daily_trades": self.max_daily_trades,
+                "motor_cooldown_minutes": self.motor_cooldown_minutes,
+                "bollinger_std": self.bollinger_std
+            })
         except Exception as write_error:
             self.system_logger.error(f"Erro ao salvar estado local: {write_error}")
 
@@ -1033,7 +1033,6 @@ class Strategy:
         }
 
         try:
-            with open("bot_status.json", "w", encoding="utf-8") as file_handler: 
-                json.dump(state_data_payload, file_handler, ensure_ascii=False, indent=2)
+            atomic_write_json("bot_status.json", state_data_payload, ensure_ascii=False, indent=2)
         except Exception:
             pass
