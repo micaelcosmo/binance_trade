@@ -1,4 +1,5 @@
 *.log
+.env
 .current_coin
 .current_coin_table
 *.pyc
