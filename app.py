@@ -503,8 +503,12 @@ def handle_dossier():
 if __name__ == '__main__':
     if sys.platform == 'win32':
         sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-        
+
     _load_gui_state()
     socketio.start_background_task(monitor_bot_status)
     socketio.start_background_task(update_stats_loop)
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+
+    # APP_DEBUG=0 desliga debugger/reloader do Werkzeug (obrigatório em Docker;
+    # pré-implementação do R2 da spec 001). Default "1" preserva o dev local.
+    debug_mode = os.environ.get("APP_DEBUG", "1") == "1"
+    socketio.run(app, debug=debug_mode, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)

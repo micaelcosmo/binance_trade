@@ -1,0 +1,20 @@
+# Contexto de build enxuto — nada disto entra na imagem.
+# (Em runtime o bind mount do compose fornece o repo completo.)
+venv/
+.git/
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+data/
+docs/
+
+# Segredos e estado NUNCA entram na imagem (entram só via bind mount).
+user.cfg
+.env
+*.json
+!app.json
+*.flag
+supported_coin_list

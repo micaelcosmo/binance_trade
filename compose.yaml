@@ -1,0 +1,33 @@
+# =============================================================================
+# Binance Trade Bot Pro — painel web em Docker
+#
+#   subir:     docker compose up -d --build
+#   logs:      docker compose logs -f
+#   derrubar:  docker compose down
+#
+# O repositório é montado em /app: user.cfg, supported_coin_list e os JSONs de
+# estado vivem no HOST (a imagem não carrega segredos) e o auto-updater
+# (git pull) continua funcionando de dentro do painel.
+# =============================================================================
+services:
+  web:
+    build: .
+    image: binance-trade-bot-pro:web
+    container_name: binance_bot_web
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      # Fuso do reset diário de metas (meia-noite local do bot).
+      # Ajuste se necessário: America/Sao_Paulo, America/Fortaleza, UTC...
+      - TZ=America/Fortaleza
+      # Werkzeug debugger/reloader desligados no container (pré-spec 001).
+      - APP_DEBUG=0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
