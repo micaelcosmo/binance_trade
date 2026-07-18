@@ -5,6 +5,8 @@ import configparser
 from google import genai
 from google.genai import types
 
+from binance_trade_bot.ai_validation import normalize_verdict
+
 
 class MarketAnalyzer:
     """
@@ -116,7 +118,8 @@ class MarketAnalyzer:
                     response_mime_type="application/json",
                 ),
             )
-            return json.loads(response.text)
+            batch_coins = [asset["coin"] for asset in clean_batch]
+            return normalize_verdict(json.loads(response.text), batch_coins, mode="batch", audit=self.logger.warning)
         except Exception as e:
             self.logger.error(f"Erro na IA: {e}")
             return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": f"Falha de comunicacao com API: {e}"}
@@ -160,7 +163,8 @@ class MarketAnalyzer:
                     response_mime_type="application/json",
                 ),
             )
-            return json.loads(response.text)
+            batch_coins = [asset["coin"] for asset in clean_batch]
+            return normalize_verdict(json.loads(response.text), batch_coins, mode="swap", audit=self.logger.warning)
         except Exception as e:
             self.logger.error(f"Erro na IA Swap: {e}")
             return {"winning_coin": "ERROR_503", "final_confidence": 0, "decision_summary": f"Falha de comunicacao com API: {e}"}
