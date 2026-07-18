@@ -2,13 +2,19 @@
 import time
 import asyncio
 import sys
-import codecs
 
-# Força o Windows a usar o SelectorEventLoop e UTF-8
+# Força o Windows a usar o SelectorEventLoop e UTF-8.
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+    # reconfigure() em vez de detach(): mesmo efeito (stdout/stderr em UTF-8),
+    # mas sem destacar o buffer subjacente — o que quebrava streams substituídos
+    # (captura do pytest, pipes de subprocess). Ignorado com segurança quando o
+    # stream não suporta reconfigure (ex.: objeto de captura de teste).
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
 
 from .config import Config
 from .database import Database
