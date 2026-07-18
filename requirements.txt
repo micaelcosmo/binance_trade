@@ -17,3 +17,6 @@ pandas
 pandas-ta
 python-dotenv
 google-genai
+
+# --- Desenvolvimento / Testes ---
+pytest
