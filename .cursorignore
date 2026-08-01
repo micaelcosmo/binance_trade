@@ -1,0 +1,13 @@
+﻿# Credentials and local secrets — excluded from Cursor indexing and agent file access
+.env
+.env.*
+!.env.example
+
+user.cfg
+config/user.cfg
+
+# Runtime / local state (may contain account data)
+profit_gain_state.json
+bot_status.json
+gui_state.json
+apprise.yml

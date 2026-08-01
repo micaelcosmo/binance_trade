@@ -1,0 +1,36 @@
+services:
+  bot:
+    build: .
+    container_name: binance-trade-bot
+    restart: unless-stopped
+    ports:
+      - "${NOVNC_PORT:-6080}:6080"
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DISPLAY: ":99"
+      TZ: ${TZ:-America/Sao_Paulo}
+      NOVNC_PORT: "6080"
+      VNC_PASSWORD: ${VNC_PASSWORD:-}
+      # Binance keys and testnet: config/user.cfg only (do not set TESTNET/API_KEY in .env — see .env.example)
+      STRATEGY: ${STRATEGY:-profit_gain}
+    volumes:
+      - ./config/user.cfg:/app/user.cfg:ro
+      - ./config/supported_coin_list.txt:/app/supported_coin_list.txt:ro
+      - bot-data:/app/data
+      - bot-state:/app/runtime
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "painel.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+volumes:
+  bot-data:
+  bot-state:

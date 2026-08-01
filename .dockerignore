@@ -1,0 +1,43 @@
+venv/
+.venv/
+.git/
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.idea/
+.vscode/
+.replit
+.DS_Store
+.bot/
+terminals/
+
+# Secrets and local runtime (never bake into image)
+.env
+.env.*
+!.env.example
+user.cfg
+config/user.cfg
+apprise.yml
+
+# Ephemeral state
+*.log
+*.json
+*.flag
+nohup.out
+.current_coin
+.current_coin_table
+bot_status.json
+profit_gain_state.json
+gui_state.json
+data/
+logs/
+crypto_trading.db
+
+# Docker build context noise
+docker-compose.override.yml
+*.md
+!config/README.md
+docs/
