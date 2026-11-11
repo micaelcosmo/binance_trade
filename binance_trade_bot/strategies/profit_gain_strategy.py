@@ -52,6 +52,11 @@ class Strategy:
         self.trailing_drop_pct = float(self.params.trailing_drop_pct)
         self.golden_rule_cooldown_seconds = self.params.golden_rule_cooldown_seconds
 
+        # T-040: cache do gate de regime SMA200 diário (simbolo -> dict) e
+        # controle de log 1x/dia por (simbolo, motivo).
+        self._daily_regime_cache = {}
+        self._regime_log_days = {}
+
         self.active_dynamic_stop_loss = 0.0
         self.active_monitor_drop_pct = 0.0 
         
@@ -526,6 +531,78 @@ class Strategy:
             self.system_logger.error(f"Erro na extração de métricas de {target_symbol}: {fetch_error}")
             return None, False
 
+    REGIME_ERROR_RETRY_SECONDS = 900      # erro de rede: tenta de novo em 15 min (fail-closed ate la)
+    DAY_MS = 86_400_000
+
+    def _daily_regime(self, market_symbol, now=None):
+        """Regime diario do ativo: ultima vela 1d FECHADA vs SMA(regime_sma_period) diaria.
+
+        Mesmo calculo do gate ``sma200=asset`` da sim-001 (simulation/engine.py):
+        SMA sobre os fechamentos das velas fechadas, incluindo a ultima.
+        Cache em memoria por simbolo ate a proxima virada de dia UTC (no maximo
+        24h → 1 chamada/dia/moeda); erro de rede fica em cache so 15 min.
+        Retorna dict: ok (dados validos), above, distance_pct, reason.
+        """
+        now = time.time() if now is None else float(now)
+        cached = self._daily_regime_cache.get(market_symbol)
+        if cached and now < cached["expires_at"]:
+            return cached
+
+        period = int(self.params.regime_sma_period)
+        now_ms = int(now * 1000)
+        next_utc_day = (now_ms // self.DAY_MS + 1) * self.DAY_MS / 1000.0
+        regime = {"ok": False, "above": None, "distance_pct": None, "reason": "",
+                  "expires_at": min(now + 86400.0, next_utc_day + 60.0)}
+        try:
+            klines_1d = self.binance_client.get_klines(symbol=market_symbol, interval='1d', limit=period + 5)
+            closed_closes = [float(k[4]) for k in (klines_1d or []) if int(k[6]) < now_ms]
+            if len(closed_closes) < period:
+                regime["reason"] = f"histórico diário insuficiente ({len(closed_closes)}/{period} velas fechadas)"
+            else:
+                sma_value = sum(closed_closes[-period:]) / period
+                last_close = closed_closes[-1]
+                if sma_value <= 0:
+                    regime["reason"] = "SMA diária inválida"
+                else:
+                    regime.update(ok=True, above=bool(last_close > sma_value),
+                                  distance_pct=round((last_close - sma_value) / sma_value * 100, 2))
+        except Exception as fetch_error:
+            regime["reason"] = f"erro ao buscar klines 1d: {fetch_error}"
+            regime["expires_at"] = now + self.REGIME_ERROR_RETRY_SECONDS
+
+        self._daily_regime_cache[market_symbol] = regime
+        return regime
+
+    def _log_regime_once(self, market_symbol, kind, message):
+        today = datetime.now().strftime("%Y-%m-%d")
+        if self._regime_log_days.get((market_symbol, kind)) != today:
+            self._regime_log_days[(market_symbol, kind)] = today
+            self.system_logger.info(message)
+
+    def _regime_allows_entry(self, market_symbol, asset_payload=None):
+        """Gate de regime (T-040). True = pode comprar. Fail-closed sem dados.
+
+        Se ``asset_payload`` for passado, anota above_sma200_daily e
+        sma200_daily_distance_pct (aparecem no dossie; o prompt da IA usa
+        lista branca de campos e nao muda).
+        """
+        if not self.params.regime_filter_sma200:
+            return True
+        regime = self._daily_regime(market_symbol)
+        if asset_payload is not None:
+            asset_payload["above_sma200_daily"] = regime["above"]
+            asset_payload["sma200_daily_distance_pct"] = regime["distance_pct"]
+        period = int(self.params.regime_sma_period)
+        if not regime["ok"]:
+            self._log_regime_once(market_symbol, "fail_closed",
+                                  f"🧭 [REGIME] {market_symbol} bloqueada (fail-closed): {regime['reason']}.")
+            return False
+        if not regime["above"]:
+            self._log_regime_once(market_symbol, "below",
+                                  f"🧭 [REGIME] {market_symbol} abaixo da SMA{period} diária ({regime['distance_pct']:+.2f}%): compra bloqueada.")
+            return False
+        return True
+
     def execute_real_trade(self, coin_symbol, target_price, calculated_atr_stop):
         market_symbol = f"{coin_symbol}{self.base_coin}"
         available_base_balance = self._get_balance(self.base_coin)
@@ -806,7 +883,8 @@ class Strategy:
                     
                     if min_change_flt <= req_bottom_flt and -self.disaster_stop_pct <= cur_change_flt <= self.params.change_24h_max_pct:
                         dossier_cache.append(enriched_data)
-                        if bollinger_ok and vol_ok and ema_ok:
+                        # T-040: gate de regime SMA200 diario antes da IA (economiza tokens)
+                        if bollinger_ok and vol_ok and ema_ok and self._regime_allows_entry(market_symbol, enriched_data):
                             ai_batch_payload.append(enriched_data)
                 except Exception:
                     pass
@@ -903,7 +981,8 @@ class Strategy:
                                             except Exception: ema_flt = 0.0
                                             ema_ok = bool(ema_flt < self.params.ema21_max_distance_pct)
                                                 
-                                            if bollinger_ok and vol_ok and ema_ok:
+                                            # T-040: gate de regime tambem no Tribunal (cache → sem chamada extra)
+                                            if bollinger_ok and vol_ok and ema_ok and self._regime_allows_entry(f"{asset['coin']}{self.base_coin}"):
                                                 swap_payload.append(asset)
                                     except Exception: pass
                                 

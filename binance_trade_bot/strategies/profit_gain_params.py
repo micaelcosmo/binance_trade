@@ -36,6 +36,13 @@ class ProfitGainParams:
     change_24h_max_pct: float = 2.5          # variação 24h ≤ X% (limite inferior = -disaster_stop_pct)
     swap_change_24h_max_pct: float = -0.5    # Tribunal: candidata precisa ter variação 24h ≤ X%
 
+    # ------------------------------------------- Gate de regime (T-040)
+    # sim-001: único ajuste robusto IS e OOS. Só COMPRA se o fechamento da última
+    # vela DIÁRIA fechada estiver acima da SMA(N) diária. Defensivo: nunca vende,
+    # só bloqueia entradas (Porteiro e Tribunal). Fail-closed sem dados.
+    regime_filter_sma200: bool = True
+    regime_sma_period: int = 200
+
     # ---------------------------------------------------------------- IA
     ai_min_confidence_entry: int = 90        # confiança mínima para compra
     ai_min_confidence_swap: int = 95         # confiança mínima para o Tribunal aprovar swap
@@ -80,6 +87,7 @@ _BOUNDS = {
     "ema21_max_distance_pct": (-100.0, 100.0),
     "change_24h_max_pct": (-100.0, 1000.0),
     "swap_change_24h_max_pct": (-100.0, 1000.0),
+    "regime_sma_period": (2, 990),            # limit de klines da Binance = 1000
     "ai_min_confidence_entry": (0, 100),
     "ai_min_confidence_swap": (0, 100),
     "swap_min_candidates": (1, 1000),
@@ -117,11 +125,24 @@ LEGACY_CONFIG_ATTRS = (
 )
 
 
+_TRUE_WORDS = {"1", "true", "yes", "on", "sim", "s"}
+_FALSE_WORDS = {"0", "false", "no", "off", "nao", "não", "n"}
+
+
 def _coerce(name, raw, kind):
     """Converte ``raw`` para ``kind`` validando finitude e faixa. Levanta ValueError."""
+    if kind is bool and isinstance(raw, bool):
+        return raw
     text = str(raw).strip()
     if text == "":
         raise ValueError("vazio")
+    if kind is bool:
+        lowered = text.lower()
+        if lowered in _TRUE_WORDS:
+            return True
+        if lowered in _FALSE_WORDS:
+            return False
+        raise ValueError("booleano esperado (true/false)")
     if kind is int:
         as_float = float(text)
         if not math.isfinite(as_float) or as_float != int(as_float):
@@ -138,7 +159,15 @@ def _coerce(name, raw, kind):
 
 
 def _field_kinds():
-    return {f.name: (int if f.type in ("int", int) else float) for f in fields(ProfitGainParams)}
+    kinds = {}
+    for f in fields(ProfitGainParams):
+        if f.type in ("bool", bool):
+            kinds[f.name] = bool
+        elif f.type in ("int", int):
+            kinds[f.name] = int
+        else:
+            kinds[f.name] = float
+    return kinds
 
 
 def _apply(base, values, origin, warn):

@@ -95,6 +95,15 @@ ai_cooldown_minutes=45
 # Tribunal: candidata ao swap precisa ter variacao 24h <= X%.
 # swap_change_24h_max_pct = -0.5
 #
+# --- Gate de regime (SMA200 diaria) — LIGADO por padrao ---
+# So compra (Porteiro e Tribunal) se o fechamento da ultima vela DIARIA fechada
+# estiver acima da media movel simples de N dias. Defensivo: nunca vende, so
+# bloqueia entradas. Sem dados suficientes (moeda com menos de N dias) ou erro
+# de rede, a moeda NAO e comprada (fail-closed). Origem: simulacao sim-001
+# (unico ajuste que melhorou dentro e fora da amostra). false desliga.
+# regime_filter_sma200 = true
+# regime_sma_period = 200
+#
 # --- Inteligencia Artificial ---
 # Confianca minima (%) para comprar.
 # ai_min_confidence_entry = 90

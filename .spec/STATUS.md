@@ -1,17 +1,17 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T00:44:26-03:00** · branch `check_strategies` · versão `v3.10.0` · 16/17 tasks concluídas.
+> Atualizado em **2026-11-11T00:56:22-03:00** · branch `check_strategies` · versão `v3.11.0` · 17/18 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | — | commit T-041 | 2026-11-11T00:44:24-03:00 |
+| orquestrador | Orquestrador | active | — | commit T-040 | 2026-11-11T00:55:53-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
-| ag-sim | Simulador | done | T-023 | concluído | 2026-11-11T00:42:36-03:00 |
+| ag-sim | Simulador | active | T-024 | sim-002 stage1: variação 10/53 (114s) | 2026-11-11T00:55:22-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
-| ag-calib | Calibrador | done | T-041 | concluído | 2026-11-11T00:43:19-03:00 |
+| ag-calib | Calibrador | done | T-040 | concluído T-040 | 2026-11-11T00:53:50-03:00 |
 
 ## Épicos
 
@@ -21,7 +21,7 @@
 | E1 | 1 | Reestruturar .spec (README, arch.yaml, ADRs, UNITs) | done |
 | E2 | 1 | Simulação ≥50 variações (mock) p/ calibrar previsão, entrada, stoploss/stopwin | done |
 | E3 | 2 | Repaginar página do app (amigável/futurista, sóbria) | done |
-| E4 | 2 | Aplicar calibração na profit_gain (após simulação) | todo |
+| E4 | 2 | Aplicar calibração na profit_gain (após simulação) | review |
 
 ## Tasks
 
@@ -41,9 +41,10 @@
 | T-023 | E2 | Relatório + recomendação de parâmetros | done | ag-sim | 3/3 |
 | T-030 | E3 | Redesign templates/index.html | done | ag-ui | 4/4 |
 | T-031 | E3 | Verificação visual com dados mock | done | ag-ui | 3/3 |
-| T-040 | E4 | Aplicar gate SMA200 diária (único ajuste robusto da sim-001), configurável | todo | — | 0/0 |
+| T-040 | E4 | Aplicar gate SMA200 diária (único ajuste robusto da sim-001), configurável | done | ag-calib | 5/5 |
 | T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | done | ag-calib | 6/6 |
 | T-004 | E0 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | done | orquestrador | 2/2 |
+| T-024 | E2 | sim-002: variações estruturais (R:R, confirmação, custos) | doing | ag-sim | 2/4 |
 
 ## Decisões para o Micael
 
@@ -64,31 +65,32 @@
 | D-404 | não | UNIT-006 item 7: daily_profit_pct soma % por trade (não compõe, ignora capital). Meta de 5% e hibernação disparam sobre número aproximado. Trocar? | A: retorno real do dia = equity atual / equity na 1ª operação do dia - 1 / B: produto composto (1+r1)(1+r2)...-1 / C: manter soma | pending | — |
 | D-405 | não | UNIT-006 item 8: entrada all-in (99% do saldo). Agora configurável via [profit_gain] entry_balance_fraction (default 0.99, comportamento inalterado). Mudar o default? | A: manter 0.99 / B: dimensionar por risco (ex. risco 1-2% do capital / stop ATR) / C: fração fixa menor (ex. 0.5) | pending | — |
 | D-406 | não | UNIT-006 item 9: maximum_hold_time_seconds = 7200 é definido e nunca usado (não há timeout de posição). O que fazer? | A: remover o atributo morto / B: implementar timeout de posição (venda após X h) parametrizado / C: manter | pending | — |
+| D-407 | não | Gate SMA200 diário ligado por padrão (regime_filter_sma200=true). Mantém? | Manter ligado / Desligar por padrão | pending | — |
 
 ## Últimos eventos
 
-- `2026-11-11T00:44:26-03:00` **orquestrador** — commit v3.10.0: profit_gain parametrizada; stop antes da varredura; fill real (62 testes)
-- `2026-11-11T00:44:24-03:00` **orquestrador** — status → active
-- `2026-11-11T00:43:48-03:00` **orquestrador** — status → waiting
-- `2026-11-11T00:43:30-03:00` **orquestrador** — commit v3.9.0: simulação 101 variações; baseline perde (−0,30%/trade); SMA200 é o único ganho robusto
-- `2026-11-11T00:43:29-03:00` **orquestrador** — status → active
-- `2026-11-11T00:43:19-03:00` **ag-calib** — status → done
-- `2026-11-11T00:43:19-03:00` **ag-calib** — T-041 concluída: 29 params extraídos, stop pré-mineração, fill médio; pytest 62 passed; decisões D-401..D-406 abertas
-- `2026-11-11T00:43:18-03:00` **ag-calib** — T-041 doing → done
-- `2026-11-11T00:43:18-03:00` **ag-calib** — T-041 ✓ Registrar decisões D-4xx (itens 4-9)
-- `2026-11-11T00:43:17-03:00` **ag-calib** — decisão aberta D-406: UNIT-006 item 9: maximum_hold_time_seconds = 7200 é definido e nunca usado (não há timeout de posição). O que fazer?
-- `2026-11-11T00:43:16-03:00` **ag-calib** — decisão aberta D-405: UNIT-006 item 8: entrada all-in (99% do saldo). Agora configurável via [profit_gain] entry_balance_fraction (default 0.99, comportamento inalterado). Mudar o default?
-- `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-404: UNIT-006 item 7: daily_profit_pct soma % por trade (não compõe, ignora capital). Meta de 5% e hibernação disparam sobre número aproximado. Trocar?
-- `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-403: UNIT-006 item 6: durante o cooldown do motor (ai_cooldown_until) a mineração pesada de klines continua rodando a cada scout; só a chamada à IA é poupada. Pular a mineração no cooldown quando fora de operação?
-- `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-402: UNIT-006 item 5: Tribunal de Swap exige >= 4 candidatas aprovadas ao mesmo tempo, então quase nunca convoca (e adia +45 min). Qual o mínimo?
-- `2026-11-11T00:43:14-03:00` **ag-calib** — decisão aberta D-401: UNIT-006 item 4: com USDT < $5 a recuperação de estado assume a 1ª moeda da carteira com valor >= $5, mesmo uma que o bot nunca comprou (e passa a vendê-la pelos stops). Corrigir?
+- `2026-11-11T00:56:22-03:00` **orquestrador** — commit v3.11.0: gate de regime SMA200 diária (89 testes)
+- `2026-11-11T00:55:53-03:00` **orquestrador** — status → active
+- `2026-11-11T00:53:50-03:00` **ag-calib** — status → done
+- `2026-11-11T00:53:35-03:00` **ag-calib** — T-040 concluída: gate SMA200 diário (Porteiro+Tribunal, fail-closed, cache diário) na profit_gain; D-407 aberta
+- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 doing → done
+- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 ✓ Decisão D-407
+- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 ✓ Atualizar arch.yaml e UNIT-012
+- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 ✓ Testes mock + suíte
+- `2026-11-11T00:53:25-03:00` **ag-calib** — decisão aberta D-407: Gate SMA200 diário ligado por padrão (regime_filter_sma200=true). Mantém?
+- `2026-11-11T00:53:12-03:00` **ag-sim** — sim-002: grade estrutural iniciada (53 var estágio 1 + combinações + 28 checagens de robustez), todas com gate SMA200
+- `2026-11-11T00:51:15-03:00` **ag-sim** — T-024 ✓ testes novos
+- `2026-11-11T00:51:13-03:00` **ag-sim** — T-024 ✓ estender engine: stop fixo, breakeven, parcial, time-stop, confirmação, maker
+- `2026-11-11T00:47:22-03:00` **ag-calib** — T-040 ✓ Gate SMA200 diário com cache 24h (Porteiro + Tribunal)
+- `2026-11-11T00:47:22-03:00` **ag-calib** — T-040 ✓ Params regime_filter_sma200/regime_sma_period
+- `2026-11-11T00:45:06-03:00` **ag-sim** — status → active
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.10.0
+  version: v3.11.0
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -99,10 +101,10 @@ agents:
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
   task: —
-  step: commit T-041
+  step: commit T-040
   kind: orchestrator
   status: active
-  heartbeat: '2026-11-11T00:44:24-03:00'
+  heartbeat: '2026-11-11T00:55:53-03:00'
   step_log:
   - at: '2026-11-10T23:49:29-03:00'
     step: construindo painel
@@ -126,6 +128,10 @@ agents:
     step: aguardando ag-calib (T-041) para encadear T-040
   - at: '2026-11-11T00:44:24-03:00'
     step: commit T-041
+  - at: '2026-11-11T00:44:56-03:00'
+    step: aguardando ag-calib (T-040 SMA200) e ag-sim (T-024 sim-002)
+  - at: '2026-11-11T00:55:53-03:00'
+    step: commit T-040
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -156,20 +162,12 @@ agents:
 - id: ag-sim
   name: Simulador
   role: Mock exchange + backtests de calibração
-  task: T-023
-  step: concluído
+  task: T-024
+  step: 'sim-002 stage1: variação 10/53 (114s)'
   kind: worker
-  status: done
-  heartbeat: '2026-11-11T00:42:36-03:00'
+  status: active
+  heartbeat: '2026-11-11T00:55:22-03:00'
   step_log:
-  - at: '2026-11-11T00:23:11-03:00'
-    step: 'stage1: variação 20/69 (477s)'
-  - at: '2026-11-11T00:24:35-03:00'
-    step: 'stage1: variação 25/69 (563s)'
-  - at: '2026-11-11T00:26:53-03:00'
-    step: 'stage1: variação 30/69 (701s)'
-  - at: '2026-11-11T00:27:25-03:00'
-    step: 'stage1: variação 35/69 (733s)'
   - at: '2026-11-11T00:29:32-03:00'
     step: 'stage1: variação 40/69 (861s)'
   - at: '2026-11-11T00:31:18-03:00'
@@ -202,6 +200,14 @@ agents:
     step: escrevendo relatório sim-001
   - at: '2026-11-11T00:42:36-03:00'
     step: concluído
+  - at: '2026-11-11T00:45:06-03:00'
+    step: estendendo engine (breakeven, parcial, confirmação, maker)
+  - at: '2026-11-11T00:51:28-03:00'
+    step: engine estendido, 24 testes ok; montando grade sim-002
+  - at: '2026-11-11T00:54:47-03:00'
+    step: 'sim-002 stage1: variação 5/53 (91s)'
+  - at: '2026-11-11T00:55:22-03:00'
+    step: 'sim-002 stage1: variação 10/53 (114s)'
 - id: ag-ui
   name: Designer do app
   role: Repagina templates/index.html
@@ -226,11 +232,11 @@ agents:
 - id: ag-calib
   name: Calibrador
   role: Parametriza profit_gain + correções de stop
-  task: T-041
-  step: concluído
+  task: T-040
+  step: concluído T-040
   kind: worker
   status: done
-  heartbeat: '2026-11-11T00:43:19-03:00'
+  heartbeat: '2026-11-11T00:53:50-03:00'
   step_log:
   - at: '2026-11-11T00:31:17-03:00'
     step: lendo estratégia
@@ -240,6 +246,12 @@ agents:
     step: escrevendo testes mock
   - at: '2026-11-11T00:43:19-03:00'
     step: concluído
+  - at: '2026-11-11T00:44:47-03:00'
+    step: lendo sim-001 e engine
+  - at: '2026-11-11T00:47:24-03:00'
+    step: testes do gate SMA200
+  - at: '2026-11-11T00:53:50-03:00'
+    step: concluído T-040
 epics:
 - id: E0
   title: Painel de acompanhamento do desenvolvimento
@@ -260,7 +272,8 @@ epics:
 - id: E4
   title: Aplicar calibração na profit_gain (após simulação)
   priority: 2
-  status: todo
+  status: review
+  note: Gate SMA200 aplicado; aguarda D-407 e D-201
 tasks:
 - id: T-001
   title: CLI track.py (STATUS/TEMPO com lock)
@@ -479,10 +492,26 @@ tasks:
 - id: T-040
   title: Aplicar gate SMA200 diária (único ajuste robusto da sim-001), configurável
   epic: E4
-  status: todo
-  steps: []
+  status: done
+  steps:
+  - name: Params regime_filter_sma200/regime_sma_period
+    done: true
+    at: '2026-11-11T00:47:22-03:00'
+  - name: Gate SMA200 diário com cache 24h (Porteiro + Tribunal)
+    done: true
+    at: '2026-11-11T00:47:22-03:00'
+  - name: Testes mock + suíte
+    done: true
+    at: '2026-11-11T00:53:27-03:00'
+  - name: Atualizar arch.yaml e UNIT-012
+    done: true
+    at: '2026-11-11T00:53:27-03:00'
+  - name: Decisão D-407
+    done: true
+    at: '2026-11-11T00:53:27-03:00'
   note: Trailing 0,2 / stop×3 NÃO aplicados (marginais, quebram com latência/slippage). Aguarda fim do T-041 (mesmo
     arquivo).
+  agent: ag-calib
 - id: T-041
   title: Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real
   epic: E4
@@ -519,6 +548,23 @@ tasks:
   - name: screenshots desktop/mobile
     done: true
     at: '2026-11-11T00:39:50-03:00'
+- id: T-024
+  title: 'sim-002: variações estruturais (R:R, confirmação, custos)'
+  epic: E2
+  agent: ag-sim
+  status: doing
+  steps:
+  - name: 'estender engine: stop fixo, breakeven, parcial, time-stop, confirmação, maker'
+    done: true
+    at: '2026-11-11T00:51:13-03:00'
+  - name: testes novos
+    done: true
+    at: '2026-11-11T00:51:15-03:00'
+  - name: grade estrutural >=50 var
+    done: false
+    doing: true
+  - name: relatório sim-002
+    done: false
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -688,6 +734,16 @@ decisions:
   status: pending
   blocking: false
   opened_at: '2026-11-11T00:43:17-03:00'
+- id: D-407
+  question: Gate SMA200 diário ligado por padrão (regime_filter_sma200=true). Mantém?
+  options:
+  - Manter ligado
+  - Desligar por padrão
+  recommendation: 'Manter ligado (sim-001: único ganho robusto IS e OOS)'
+  task: T-040
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:53:25-03:00'
 events:
 - at: '2026-11-10T23:49:14-03:00'
   who: orquestrador
@@ -1117,6 +1173,65 @@ events:
 - at: '2026-11-11T00:44:26-03:00'
   who: orquestrador
   msg: 'commit v3.10.0: profit_gain parametrizada; stop antes da varredura; fill real (62 testes)'
-updated_at: '2026-11-11T00:44:26-03:00'
+- at: '2026-11-11T00:44:40-03:00'
+  who: ag-calib
+  msg: T-040 todo → doing
+- at: '2026-11-11T00:44:47-03:00'
+  who: ag-calib
+  msg: status → active
+- at: '2026-11-11T00:44:56-03:00'
+  who: orquestrador
+  msg: status → waiting
+- at: '2026-11-11T00:45:05-03:00'
+  who: ag-sim
+  msg: T-024 todo → doing
+- at: '2026-11-11T00:45:06-03:00'
+  who: ag-sim
+  msg: status → active
+- at: '2026-11-11T00:47:22-03:00'
+  who: ag-calib
+  msg: T-040 ✓ Params regime_filter_sma200/regime_sma_period
+- at: '2026-11-11T00:47:22-03:00'
+  who: ag-calib
+  msg: T-040 ✓ Gate SMA200 diário com cache 24h (Porteiro + Tribunal)
+- at: '2026-11-11T00:51:13-03:00'
+  who: ag-sim
+  msg: 'T-024 ✓ estender engine: stop fixo, breakeven, parcial, time-stop, confirmação, maker'
+- at: '2026-11-11T00:51:15-03:00'
+  who: ag-sim
+  msg: T-024 ✓ testes novos
+- at: '2026-11-11T00:53:12-03:00'
+  who: ag-sim
+  msg: 'sim-002: grade estrutural iniciada (53 var estágio 1 + combinações + 28 checagens de robustez), todas com
+    gate SMA200'
+- at: '2026-11-11T00:53:25-03:00'
+  who: ag-calib
+  msg: 'decisão aberta D-407: Gate SMA200 diário ligado por padrão (regime_filter_sma200=true). Mantém?'
+- at: '2026-11-11T00:53:27-03:00'
+  who: ag-calib
+  msg: T-040 ✓ Testes mock + suíte
+- at: '2026-11-11T00:53:27-03:00'
+  who: ag-calib
+  msg: T-040 ✓ Atualizar arch.yaml e UNIT-012
+- at: '2026-11-11T00:53:27-03:00'
+  who: ag-calib
+  msg: T-040 ✓ Decisão D-407
+- at: '2026-11-11T00:53:27-03:00'
+  who: ag-calib
+  msg: T-040 doing → done
+- at: '2026-11-11T00:53:35-03:00'
+  who: ag-calib
+  msg: 'T-040 concluída: gate SMA200 diário (Porteiro+Tribunal, fail-closed, cache diário) na profit_gain; D-407
+    aberta'
+- at: '2026-11-11T00:53:50-03:00'
+  who: ag-calib
+  msg: status → done
+- at: '2026-11-11T00:55:53-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T00:56:22-03:00'
+  who: orquestrador
+  msg: 'commit v3.11.0: gate de regime SMA200 diária (89 testes)'
+updated_at: '2026-11-11T00:56:22-03:00'
 ```
 <!-- DATA:END -->

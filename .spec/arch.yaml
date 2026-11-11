@@ -375,14 +375,22 @@ strategies:
     indicators: {RSI: "14 (4h/1h/15m)", EMA: "9/21 (1h)", MACD: "12/26/9 (1h/15m)", ATR: "14 (1h)", Bollinger: "20 / bollinger_std (1h/15m)", volume: "15m vs média 10 velas"}
     gatekeeper:                       # Porteiro (scan_market)
       dossier_if: "min_24h_change_pct <= -2×ATR% AND -disaster_stop_pct <= change_24h <= +2.50%"
-      ai_batch_if: "dossier AND (tocou BB inferior 15m OR 1h) AND volume_15m >= 80% média AND ema21_1h_distance < -1.00%"
+      ai_batch_if: "dossier AND (tocou BB inferior 15m OR 1h) AND volume_15m >= 80% média AND ema21_1h_distance < -1.00% AND regime_gate"
+      regime_gate:                    # T-040 / sim-001 — aplicado antes da IA e no Tribunal
+        rule: "fechamento da última vela 1d FECHADA > SMA(regime_sma_period) diária dos fechamentos fechados"
+        params: {regime_filter_sma200: true, regime_sma_period: 200}
+        fail_closed: "histórico < N velas fechadas ou erro de rede → candidata bloqueada (log 1x/dia por moeda)"
+        data: "get_klines(1d, limit=N+5) só para quem passou o resto do Porteiro"
+        cache: "em memória por símbolo até a próxima virada de dia UTC (≤ 24h, 1 chamada/dia/moeda); erro em cache 15 min"
+        payload_fields: [above_sma200_daily, sma200_daily_distance_pct]   # dossiê/UI; o prompt da IA usa lista branca e não muda
+        only_blocks_entries: true
       hot_cold: "preço > EMA21 1h → hot_cache"
     ai_buy: {min_confidence: 90, sentinels: [NENHUMA, ERROR_503]}
     entry:
       order: MARKET
       size: "99% do saldo livre da base (all-in, fixo)"
       min_balance_usdt: 5.1
-      buy_price_recorded: "preço do scan (não o fill) — ver known_issues"
+      buy_price_recorded: "preço médio executado do fill (cummulativeQuoteQty/executedQty; fallback fills; depois preço do scan) — T-041"
     exits:                            # prioridade nesta ordem
       disaster_stop_pct: 15.0         # drop <= -15% → STOP_DESASTRE
       dynamic_stop:
@@ -414,7 +422,8 @@ strategies:
       post_sell_cooldown_s: 60
       error_cooldown_s: 300
     recovery: "com USDT < $5 assume a 1ª moeda da carteira com valor >= $5; preço via histórico de trades"
-    calibration: "pendente E2/E4 (UNIT-010, UNIT-012)"
+    params: "ProfitGainParams (binance_trade_bot/strategies/profit_gain_params.py); override opcional em [profit_gain] do user.cfg — T-041"
+    calibration: "sim-001 (simulation/reports/sim-001-calibracao.md): aplicado só o gate SMA200 diário (T-040). NÃO aplicados: trailing_drop 0,2 e stop_mult 3 (marginais; quebram com latência/slippage)"
   legacy:
     default: "rotação com momentum (24h >= 2%), modo sobrevivência BTC <= -2.5%, trailing global 3.5/0.4, timeout 120 min, geladeira 60 min — sem stop, estado em memória"
     multiple_coins: "upstream: jump por moeda com saldo; não escreve bot_status.json"

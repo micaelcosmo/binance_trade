@@ -17,6 +17,18 @@ from simulation.mock_exchange import MockExchange
 WORK_TMP_ROOT = r"D:\binance_trade_work\tmp"
 
 
+def daily_klines(closes, last_close_time_ms):
+    """Velas 1d com fechamentos ``closes``; a última fecha em ``last_close_time_ms``."""
+    day = 86_400_000
+    n = len(closes)
+    rows = []
+    for i, c in enumerate(closes):
+        close_time = last_close_time_ms - (n - 1 - i) * day
+        open_time = close_time - day + 1
+        rows.append([open_time, str(c), str(c), str(c), str(c), "1000", close_time, "0", 10, "0", "0", "0"])
+    return rows
+
+
 def _klines(price, n):
     """Velas sintéticas planas (formato get_klines da python-binance)."""
     rows = []
@@ -41,6 +53,7 @@ class FakeBinanceClient:
         self.order_response_mode = order_response_mode   # full | fills_only | empty
         self.calls = []
         self.orders = []
+        self.daily_klines = {}   # T-040: símbolo -> lista de klines 1d ou Exception a levantar
 
     def _price(self, symbol):
         return float(self.prices.get(symbol, 1.0))
@@ -56,7 +69,12 @@ class FakeBinanceClient:
         return {"price": str(self._price(symbol))}
 
     def get_klines(self, symbol, interval, limit):
-        self.calls.append(("get_klines", symbol))
+        self.calls.append(("get_klines", symbol, interval))
+        if interval == "1d" and symbol in self.daily_klines:
+            data = self.daily_klines[symbol]
+            if isinstance(data, Exception):
+                raise data
+            return data[-limit:]
         return _klines(self._price(symbol), limit)
 
     def get_asset_balance(self, asset):

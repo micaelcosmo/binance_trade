@@ -50,14 +50,18 @@ LEGACY_ENV_VARS = ["DAILY_PROFIT_TARGET_PCT", "MAX_DAILY_TRADES", "BASE_STOP_LOS
                    "AI_COOLDOWN_MINUTES"]
 
 
+# Adicionados na T-040 (gate de regime da sim-001; ligado por padrão — D-407).
+T040_VALUES = {"regime_filter_sma200": True, "regime_sma_period": 200}
+
+
 def test_defaults_match_historical_values():
     params = ProfitGainParams()
-    assert dataclasses.asdict(params) == OLD_VALUES
+    assert dataclasses.asdict(params) == {**OLD_VALUES, **T040_VALUES}
     assert params.golden_rule_cooldown_seconds == 2700.0
 
 
 def test_every_field_is_covered_by_old_values():
-    assert {f.name for f in dataclasses.fields(ProfitGainParams)} == set(OLD_VALUES)
+    assert {f.name for f in dataclasses.fields(ProfitGainParams)} == set(OLD_VALUES) | set(T040_VALUES)
 
 
 def test_strategy_with_default_config_keeps_old_attributes(make_strategy, exchange):
@@ -171,3 +175,18 @@ def test_strategy_uses_overridden_params(make_strategy, exchange):
     strat = make_strategy(FakeBinanceClient(exchange, {}), config=cfg)
     assert strat.trailing_activation_pct == 2.0
     assert strat.disaster_stop_pct == 10.0
+
+
+@pytest.mark.parametrize("raw, expected", [("false", False), ("no", False), ("0", False),
+                                           ("true", True), ("Yes", True), ("1", True)])
+def test_regime_filter_bool_parsing(raw, expected):
+    params = load_profit_gain_params(_parser(f"[profit_gain]\nregime_filter_sma200 = {raw}\n"))
+    assert params.regime_filter_sma200 is expected
+
+
+def test_regime_invalid_values_fall_back():
+    warnings = []
+    params = load_profit_gain_params(_parser(
+        "[profit_gain]\nregime_filter_sma200 = talvez\nregime_sma_period = 1\n"), warn=warnings.append)
+    assert params.regime_filter_sma200 is True and params.regime_sma_period == 200
+    assert len(warnings) == 2
