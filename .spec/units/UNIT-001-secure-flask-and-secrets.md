@@ -1,4 +1,16 @@
-# 001 · Blindagem do Painel Web (Flask) e Gestão de Segredos
+# UNIT-001 · Blindagem do painel web (Flask) e gestão de segredos
+
+- **Status:** Draft
+- **Épico/fase:** Fase A (blindagem) · **Prioridade:** P0 (CRÍTICO)
+- **ADRs:** ADR-0003, ADR-0005, ADR-0006
+- **Arquitetura:** `arch.yaml#runtime.processes.web`, `#events`, `#known_issues` (SEC-01, SEC-02)
+- **Origem:** `.spec/specs/001-secure-flask-and-secrets.md` (migrado integralmente em 2026-11-11, épico E1)
+
+> **Situação atual:** Parcial: `.env` já no `.gitignore` (commit a108e98); `APP_DEBUG` por env (commit 51757a9, pré-R2). Restante (R1, R3*, R4–R7) não implementado: `SECRET_KEY` hardcoded, `host='0.0.0.0'`, `allow_unsafe_werkzeug=True`, CORS `*`, sem `[panel_auth]` no `user.cfg.exemple`. Nota: as linhas `app.py:18/19/519` citadas abaixo se deslocaram (hoje 19/20/513).
+
+<details><summary>Metadados originais</summary>
+
+Título original: `001 · Blindagem do Painel Web (Flask) e Gestão de Segredos`
 
 > **Status:** Draft · **Prioridade:** P0 (CRÍTICO) · **Fase:** A (Blindagem)
 > **Depende de:** — · **Bloqueia:** qualquer exposição remota do painel
@@ -6,6 +18,8 @@
 > **Decisão-base:** acesso remoto ao painel está **planejado** → segurança vira pré-requisito, não opcional.
 > **Decisão-base (auth):** modelo **JWT com mentalidade AAA** (Authentication, Authorization, Accounting), **configurável via `user.cfg`**.
 > **Regra inviolável:** esta spec **não lê nem ecoa** `user.cfg`/`.env`. Quem lê `user.cfg` é o `config.py` em runtime; o agente só documenta chaves no `user.cfg.exemple` e estende o parser.
+
+</details>
 
 ---
 
@@ -62,9 +76,9 @@ Tornar o painel **seguro para exposição remota** sem alterar **nenhuma** lógi
 
 ### Não-objetivos (fora desta spec)
 
-- Refactor do motor (`ARCH-01`) → spec 005.
-- Validação da saída da IA (`AI-01`) → spec 002.
-- Escrita atômica de estado (`DATA-02`) → spec 003.
+- Refactor do motor (`ARCH-01`) → UNIT-005.
+- Validação da saída da IA (`AI-01`) → UNIT-002.
+- Escrita atômica de estado (`DATA-02`) → UNIT-003.
 - Multi-usuário/RBAC, painel admin avançado. Aqui: **single-user** basta.
 
 ---

@@ -1,6 +1,6 @@
 # TEMPO — estimado × gasto
 
-> Atualizado em **2026-11-10T23:56:15-03:00** · estimado total **590 min** · gasto total **20 min**. Tempos em minutos (relógio de parede).
+> Atualizado em **2026-11-11T00:27:14-03:00** · estimado total **590 min** · gasto total **150 min**. Tempos em minutos (relógio de parede).
 
 ## Por task
 
@@ -9,27 +9,27 @@
 | T-001 | CLI track.py (STATUS/TEMPO com lock) | 25.0 | 0.3 | -25 | 2026-11-10T23:49:14-03:00 | 2026-11-10T23:49:30-03:00 |
 | T-002 | Servidor + UI do painel de dev | 60.0 | 6.7 | -53 | 2026-11-10T23:49:31-03:00 | 2026-11-10T23:56:10-03:00 |
 | T-003 | Watchdog de heartbeat no servidor (agente parado = alerta) | 10.0 | — | — | 2026-11-10T23:56:12-03:00 | 2026-11-10T23:56:12-03:00 |
-| T-010 | Inventário .spec atual + plano de migração | 15.0 | 4.4 | -11 | 2026-11-10T23:51:53-03:00 | — |
-| T-011 | arch.yaml único (arquitetura do projeto inteiro) | 45.0 | — | — | — | — |
-| T-012 | ADRs (decisões existentes + novas) | 30.0 | — | — | — | — |
-| T-013 | UNITs (specs migradas + novas unidades) | 40.0 | — | — | — | — |
-| T-014 | .spec/README.md (convenções e índice) | 15.0 | — | — | — | — |
-| T-020 | Coleta de klines públicos (≥8 moedas, 1h/15m/4h/1d) | 30.0 | 4.1 | -26 | 2026-11-10T23:52:08-03:00 | — |
-| T-021 | Mock exchange + motor de simulação fiel à profit_gain | 90.0 | — | — | — | — |
-| T-022 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | 60.0 | — | — | — | — |
+| T-010 | Inventário .spec atual + plano de migração | 15.0 | 11.4 | -4 | 2026-11-10T23:51:53-03:00 | 2026-11-11T00:03:18-03:00 |
+| T-011 | arch.yaml único (arquitetura do projeto inteiro) | 45.0 | 3.1 | -42 | 2026-11-11T00:03:27-03:00 | 2026-11-11T00:06:32-03:00 |
+| T-012 | ADRs (decisões existentes + novas) | 30.0 | 4.5 | -26 | 2026-11-11T00:06:49-03:00 | 2026-11-11T00:11:16-03:00 |
+| T-013 | UNITs (specs migradas + novas unidades) | 40.0 | 5.0 | -35 | 2026-11-11T00:11:18-03:00 | 2026-11-11T00:16:15-03:00 |
+| T-014 | .spec/README.md (convenções e índice) | 15.0 | 2.0 | -13 | 2026-11-11T00:16:16-03:00 | 2026-11-11T00:18:19-03:00 |
+| T-020 | Coleta de klines públicos (≥8 moedas, 1h/15m/4h/1d) | 30.0 | 23.0 | -7 | 2026-11-10T23:52:08-03:00 | 2026-11-11T00:15:10-03:00 |
+| T-021 | Mock exchange + motor de simulação fiel à profit_gain | 90.0 | 16.9 | -73 | 2026-11-10T23:58:19-03:00 | 2026-11-11T00:15:12-03:00 |
+| T-022 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | 60.0 | 14.0 | -46 | 2026-11-11T00:13:17-03:00 | — |
 | T-023 | Relatório + recomendação de parâmetros | 30.0 | — | — | — | — |
-| T-030 | Redesign templates/index.html | 60.0 | 4.1 | -56 | 2026-11-10T23:52:10-03:00 | — |
-| T-031 | Verificação visual com dados mock | 20.0 | — | — | — | — |
+| T-030 | Redesign templates/index.html | 60.0 | 35.1 | -25 | 2026-11-10T23:52:10-03:00 | — |
+| T-031 | Verificação visual com dados mock | 20.0 | 28.5 | +8 | 2026-11-10T23:58:46-03:00 | — |
 | T-040 | Parametrizar profit_gain e aplicar calibração aprovada | 60.0 | — | — | — | — |
 
 ## Por agente
 
 | agente | criado | encerrado | vivo (min) |
 |---|---|---|---|
-| orquestrador | 2026-11-10T23:49:29-03:00 | — | 6.8 |
-| ag-spec | 2026-11-10T23:51:53-03:00 | — | 4.4 |
-| ag-sim | 2026-11-10T23:52:06-03:00 | — | 4.2 |
-| ag-ui | 2026-11-10T23:52:07-03:00 | — | 4.1 |
+| orquestrador | 2026-11-10T23:49:29-03:00 | — | 37.8 |
+| ag-spec | 2026-11-10T23:51:53-03:00 | 2026-11-11T00:18:26-03:00 | 26.6 |
+| ag-sim | 2026-11-10T23:52:06-03:00 | — | 35.1 |
+| ag-ui | 2026-11-10T23:52:07-03:00 | — | 35.1 |
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
@@ -51,58 +51,73 @@ tasks:
     finished_at: '2026-11-10T23:56:12-03:00'
   T-010:
     estimate_min: 15.0
-    spent_min: 4.4
+    spent_min: 11.4
     started_at: '2026-11-10T23:51:53-03:00'
+    finished_at: '2026-11-11T00:03:18-03:00'
   T-011:
     estimate_min: 45.0
-    spent_min: 0.0
+    spent_min: 3.1
+    started_at: '2026-11-11T00:03:27-03:00'
+    finished_at: '2026-11-11T00:06:32-03:00'
   T-012:
     estimate_min: 30.0
-    spent_min: 0.0
+    spent_min: 4.5
+    started_at: '2026-11-11T00:06:49-03:00'
+    finished_at: '2026-11-11T00:11:16-03:00'
   T-013:
     estimate_min: 40.0
-    spent_min: 0.0
+    spent_min: 5.0
+    started_at: '2026-11-11T00:11:18-03:00'
+    finished_at: '2026-11-11T00:16:15-03:00'
   T-014:
     estimate_min: 15.0
-    spent_min: 0.0
+    spent_min: 2.0
+    started_at: '2026-11-11T00:16:16-03:00'
+    finished_at: '2026-11-11T00:18:19-03:00'
   T-020:
     estimate_min: 30.0
-    spent_min: 4.1
+    spent_min: 23.0
     started_at: '2026-11-10T23:52:08-03:00'
+    finished_at: '2026-11-11T00:15:10-03:00'
   T-021:
     estimate_min: 90.0
-    spent_min: 0.0
+    spent_min: 16.9
+    started_at: '2026-11-10T23:58:19-03:00'
+    finished_at: '2026-11-11T00:15:12-03:00'
   T-022:
     estimate_min: 60.0
-    spent_min: 0.0
+    spent_min: 14.0
+    started_at: '2026-11-11T00:13:17-03:00'
   T-023:
     estimate_min: 30.0
     spent_min: 0.0
   T-030:
     estimate_min: 60.0
-    spent_min: 4.1
+    spent_min: 35.1
     started_at: '2026-11-10T23:52:10-03:00'
   T-031:
     estimate_min: 20.0
-    spent_min: 0.0
+    spent_min: 28.5
+    started_at: '2026-11-10T23:58:46-03:00'
   T-040:
     estimate_min: 60.0
     spent_min: 0.0
 agents:
   orquestrador:
     spawned_at: '2026-11-10T23:49:29-03:00'
-    alive_min: 6.8
+    alive_min: 37.8
   ag-spec:
     spawned_at: '2026-11-10T23:51:53-03:00'
-    alive_min: 4.4
+    alive_min: 26.6
+    ended_at: '2026-11-11T00:18:26-03:00'
   ag-sim:
     spawned_at: '2026-11-10T23:52:06-03:00'
-    alive_min: 4.2
+    alive_min: 35.1
   ag-ui:
     spawned_at: '2026-11-10T23:52:07-03:00'
-    alive_min: 4.1
+    alive_min: 35.1
 totals:
   estimate_min: 590.0
-  spent_min: 19.6
+  spent_min: 150.5
 ```
 <!-- DATA:END -->

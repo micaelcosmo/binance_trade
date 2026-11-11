@@ -1,8 +1,22 @@
-# 003 · Escrita Atômica de Estado (JSON e Flags)
+# UNIT-003 · Escrita atômica de estado (JSON e flags)
+
+- **Status:** Verified
+- **Épico/fase:** Fase A (blindagem) · **Prioridade:** P1
+- **ADRs:** ADR-0008
+- **Arquitetura:** `arch.yaml#components.atomic_io`, `#data_contracts`
+- **Origem:** `.spec/specs/003-atomic-state-io.md` (migrado integralmente em 2026-11-11, épico E1)
+
+> **Situação atual:** Implementado (commit 89faec9) em `profit_gain_strategy.py` e `app.py`; testado em `tests/test_atomic_io.py`. `painel.py` (deprecado, ADR-0004) continua com escrita não atômica.
+
+<details><summary>Metadados originais</summary>
+
+Título original: `003 · Escrita Atômica de Estado (JSON e Flags)`
 
 > **Status:** Implementado · **Prioridade:** P1 · **Fase:** A (Blindagem)
 > **Issue coberta:** `DATA-02` (race de I/O — leitura de JSON parcial)
-> **Relaciona:** contrato `state-and-flags.md`
+> **Relaciona:** `arch.yaml#data_contracts`
+
+</details>
 
 ---
 
@@ -62,7 +76,7 @@ Leitura permanece com `try/except` (defesa em profundidade); com `os.replace` o 
 
 ---
 
-## 4. Verificação (spec 004)
+## 4. Verificação (UNIT-004)
 
 ```yaml
 tests:

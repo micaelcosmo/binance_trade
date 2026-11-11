@@ -1,9 +1,23 @@
-# 002 · Validação Rígida da Saída da IA (Gemini) + Fallback Seguro
+# UNIT-002 · Validação rígida da saída da IA (Gemini) + fallback seguro
+
+- **Status:** Verified
+- **Épico/fase:** Fase A (blindagem) · **Prioridade:** P1
+- **ADRs:** ADR-0007
+- **Arquitetura:** `arch.yaml#components` (ai_agent, ai_validation), `#external_services.gemini`
+- **Origem:** `.spec/specs/002-ai-output-validation.md` (migrado integralmente em 2026-11-11, épico E1)
+
+> **Situação atual:** Implementado como função pura `normalize_verdict` em `binance_trade_bot/ai_validation.py` (commit 206af01) — em vez do método privado `_normalize_verdict` proposto em §5 —, chamada por `analyze_batch`/`analyze_swap` com `audit=logger.warning`. Coberto por `tests/test_ai_validation.py` (commit 281ee17). Pendências §9 seguem abertas (defaults adotados: veto silencioso auditado, 4000 chars, arredondar para int).
+
+<details><summary>Metadados originais</summary>
+
+Título original: `002 · Validação Rígida da Saída da IA (Gemini) + Fallback Seguro`
 
 > **Status:** Draft · **Prioridade:** P1 · **Fase:** A (Blindagem)
-> **Depende de:** — · **Relaciona:** contrato `state-and-flags.md`
+> **Depende de:** — · **Relaciona:** `arch.yaml#data_contracts`
 > **Issue coberta:** `AI-01` (saída da IA confiada sem schema rígido)
 > **Princípio:** a IA é um **conselheiro não-confiável**. Sua saída entra num caminho que move **capital real** — nenhum campo dela pode ser usado sem validação. Em dúvida, **vetar** (`NENHUMA`/`HOLD`).
+
+</details>
 
 ---
 
@@ -65,7 +79,7 @@ Inserir uma **camada de validação/normalização** entre `json.loads(...)` e o
 ### Não-objetivos
 - Mudar os prompts ou o modelo (`gemini-2.5-flash`) — fora do escopo.
 - Alterar os limiares de decisão (90%/95%) — vivem na estratégia, intocados.
-- Refatorar a estratégia (spec 005).
+- Refatorar a estratégia (UNIT-005).
 
 ---
 
@@ -145,14 +159,14 @@ integration:
   - "   raw = json.loads(response.text); return self._normalize_verdict(raw, coins, mode)"
   - "manter o try/except externo (parse/IO) retornando ERROR_503"
 notes:
-  - "função PURA e determinística => trivial de testar (spec 004)"
+  - "função PURA e determinística => trivial de testar (UNIT-004)"
   - "não depende de rede; recebe batch já montado"
   - "base_coin vem de quem chama (passar p/ remover sufixo) — ou normalizar no MarketAnalyzer"
 ```
 
 ---
 
-## 6. Verificação (matriz — roda na spec 004)
+## 6. Verificação (matriz — roda na UNIT-004)
 
 ```yaml
 test_cases:
@@ -211,7 +225,7 @@ risks:
 - [ ] Fail-closed comprovado: nenhuma entrada inválida abre/troca posição (V1–V9).
 - [ ] Regressão V10 ok: caminho feliz inalterado.
 - [ ] Correções de validação auditadas sem vazar a chave da API.
-- [ ] Testes da matriz seção 6 passando (executados na spec 004).
+- [ ] Testes da matriz seção 6 passando (executados na UNIT-004).
 - [ ] Revisado e aprovado pelo Micael.
 
 ---

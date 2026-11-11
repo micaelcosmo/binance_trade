@@ -1,0 +1,506 @@
+# =============================================================================
+# arch.yaml — ÚNICO arquivo de arquitetura do projeto inteiro.
+# Fonte: leitura do código em 2026-11-11 (branch check_strategies, HEAD v3.7.0).
+# Regra: mudou a arquitetura → atualize este arquivo no mesmo commit.
+# Decisões → .spec/adr/ ; unidades de trabalho → .spec/units/ (ver README.md).
+# =============================================================================
+
+meta:
+  name: "Binance Trade Bot Pro — AI Edition"
+  repo_root: "D:\\binance_trade"            # ADR-0012
+  version: "v3.7.0"                         # git describe --tags (HEAD)
+  branch: "check_strategies"
+  main_branch: "main"
+  updated_at: "2026-11-11"
+  language: "Python 3.13 (Docker: python:3.13-slim)"
+  doc_language: "pt-BR"
+
+system_context:
+  summary: >
+    Terminal de trading algorítmico para swing trade curto de cripto (spot) na
+    Binance. Decisão em duas camadas: Porteiro matemático (determinístico,
+    barato) filtra; Comitê de IA (Gemini, probabilístico, caro) só decide sobre
+    o que passou. Operador (Micael) supervisiona por painel web em tempo real e
+    pode intervir (venda forçada, cooldown, desvio Bollinger, +1 trade, update).
+  actors:
+    operador: "Micael — único usuário; usa o painel web (app.py)"
+    agentes_dev: "agentes de IA de desenvolvimento coordenados por orquestrador (ADR-0010)"
+  external: [binance_rest, gemini]          # ver external_services
+  capital: "REAL (spot). Testes/simulação somente com mock (ADR-0013)"
+  topology: |
+    Navegador ──socket.io──► app.py (Flask+SocketIO :5000)
+                               │ cria *.flag          ▲ lê bot_status.json (poll 1s)
+                               ▼                      │
+                    [ raiz do repo: *.flag, bot_status.json, *_state.json ]
+                               │ consome+apaga flags  ▲ escreve estado (atômico)
+                               ▼                      │
+           subprocess: python -m binance_trade_bot (motor, SafeScheduler)
+                               ├── profit_gain Strategy.scout() a cada scout_sleep_time
+                               ├── get_enriched_data() → pandas-ta (4h/1h/15m)
+                               ├── scan_market() → Porteiro + orquestração
+                               ├── MarketAnalyzer (Gemini 2.5 Flash) + normalize_verdict
+                               └── execute_real_trade() → ordem MARKET (python-binance)
+
+runtime:
+  processes:
+    - id: web
+      cmd: "python app.py"
+      bind: "0.0.0.0:5000"                  # hardcoded; ver known_issues SEC-01
+      threads: [monitor_bot_status (1s), update_stats_loop (15s), read_process_output]
+      debug: "APP_DEBUG env (default '1' local; '0' no Docker)"
+      owns: [gui_state.json]
+    - id: motor
+      cmd: "python -m binance_trade_bot"
+      spawned_by: "app.py handle_start (subprocess.Popen, cwd=BASE_DIR, PYTHONIOENCODING=utf-8)"
+      stdout: "capturado por app.py → evento socket new_log"
+      scheduler:
+        - "every SCOUT_SLEEP_TIME s (default 60) → trader.scout()"
+        - "every 1 min → trader.update_values()"
+        - "every 1 min → db.prune_scout_history()"
+        - "every 1 h  → db.prune_value_history()"
+      notes:
+        - "profit_gain: BinanceStreamManager substituído por FakeStreamManager (sem websocket) — crypto_trading.py"
+        - "Database SQLAlchemy ainda é criado/migrado no boot (legado; profit_gain persiste em JSON)"
+      stop: "app.py handle_stop → bot_process.kill()"
+    - id: devpanel
+      cmd: ".venv/Scripts/python devpanel/server.py [--port 5055]"
+      bind: "127.0.0.1:5055"
+      scope: "somente desenvolvimento; não faz parte do produto"
+    - id: api_server_legado
+      cmd: "binance_trade_bot/api_server.py (porta 5123, debug=True)"
+      status: legado   # upstream; não usado pelo fluxo profit_gain/app.py
+  config:
+    file: "user.cfg (seção [binance_user_config]) — NUNCA lido por agentes (ADR-0003); template: user.cfg.exemple"
+    precedence: "env var (NOME.upper()) > user.cfg > default"
+    keys:
+      api_key / api_secret_key: "env API_KEY / API_SECRET_KEY"
+      GOOGLE_API_KEY: "lido por models/ai_agent.py (env GOOGLE_API_KEY > user.cfg), fora do config.py"
+      bridge: {default: USDT, env: BRIDGE_SYMBOL}
+      strategy: {default: profit_gain}
+      scout_sleep_time: {default: 60}
+      testnet: {default: false}
+      tld: {default: com}
+      daily_profit_target_pct: {default: 5.0}
+      max_daily_trades: {default: 3}
+      base_stop_loss_pct: {default: 7.0}
+      disaster_stop_pct: {default: 15.0}
+      trailing_activation_pct: {default: 1.5}
+      trailing_drop_pct: {default: 0.3}
+      ai_cooldown_minutes: {default: 45.0, uso: "intervalo do Tribunal de Swap e cooldown pós-compra"}
+      legado: [scout_multiplier, scout_margin, hourToKeepScoutHistory, sell_timeout, buy_timeout, use_margin, current_coin]
+    coin_list: "env SUPPORTED_COIN_LIST (espaço) > supported_coin_list.txt > supported_coin_list (gitignored; template supported_coin_list.exemple)"
+    env_vars_app: {APP_DEBUG: "1|0", TZ: "fuso do reset diário (compose: America/Fortaleza)"}
+
+components:
+  # health: bom | ativo | alto-risco | legado | legado-herdado | pouco-usado | deprecado | dev
+  - id: motor_profit_gain
+    path: binance_trade_bot/strategies/profit_gain_strategy.py
+    loc: 1037
+    health: alto-risco          # ARCH-01 arquivo-deus
+    responsibility: "estado + indicadores + Porteiro + chamada IA + execução de ordem + persistência + payload da UI"
+    depends_on: [binance_api_manager (binance_client), ai_agent, atomic_io, pandas, pandas_ta]
+    key_methods: [_load_state, _save_state, _check_daily_reset, _check_ui_flags, _execute_forced_sell, scout, update_values, get_enriched_data, execute_real_trade, scan_market, _write_json_ui]
+  - id: ai_agent
+    path: binance_trade_bot/models/ai_agent.py
+    loc: 169
+    health: ativo
+    responsibility: "MarketAnalyzer: analyze_batch (compra) e analyze_swap (Tribunal); higieniza payload; chama Gemini (gemini-2.5-flash, JSON); normaliza via ai_validation"
+    depends_on: [google-genai, ai_validation]
+  - id: ai_validation
+    path: binance_trade_bot/ai_validation.py
+    loc: 123
+    health: bom
+    responsibility: "normalize_verdict(raw, batch_coins, mode, audit) — função pura fail-closed (UNIT-002)"
+  - id: atomic_io
+    path: binance_trade_bot/atomic_io.py
+    loc: 41
+    health: bom
+    responsibility: "atomic_write_text / atomic_write_json (tmp no mesmo dir + fsync + os.replace) (UNIT-003)"
+  - id: config
+    path: binance_trade_bot/config.py
+    loc: 95
+    health: bom
+    responsibility: "parse anti-crash do user.cfg com fallbacks + override por env"
+  - id: crypto_trading
+    path: binance_trade_bot/crypto_trading.py
+    loc: 93
+    health: ativo
+    responsibility: "entrypoint do motor (main): UTF-8 no Windows via reconfigure, patch FakeStreamManager, Database, BinanceAPIManager, get_strategy, SafeScheduler"
+  - id: web_app
+    path: app.py
+    loc: 513
+    health: ativo                # UI canônica (ADR-0004); inseguro p/ exposição (UNIT-001)
+    responsibility: "Flask + SocketIO: serve templates/index.html, sobe/derruba motor, saldo/P&L, poll de bot_status.json, emite flags"
+    depends_on: [config, atomic_io, python-binance Client, flask_socketio]
+  - id: web_template
+    path: templates/index.html
+    loc: 840
+    health: ativo                # em repaginação (UNIT-011 / E3)
+    responsibility: "front do painel (socket.io 4.0.1 via cdnjs)"
+  - id: painel_tk
+    path: painel.py
+    loc: 766
+    health: deprecado            # ADR-0004: morre na v3; não evoluir
+    responsibility: "dashboard Tkinter legado; duplica lógica do app.py (ARCH-02); escrita NÃO atômica; único consumidor de update_pending.flag (git reset --hard + git pull)"
+  - id: binance_api_manager
+    path: binance_trade_bot/binance_api_manager.py
+    loc: 450
+    health: legado-herdado
+    responsibility: "wrapper python-binance (expõe binance_client usado pela profit_gain); buy_alt/sell_alt do upstream"
+  - id: binance_stream_manager
+    path: binance_trade_bot/binance_stream_manager.py
+    loc: 195
+    health: legado-herdado
+    responsibility: "websocket unicorn-binance (desligado na profit_gain)"
+  - id: database
+    path: binance_trade_bot/database.py
+    loc: 295
+    health: pouco-usado          # ADR-0009 deferred
+    responsibility: "SQLAlchemy sqlite:///data/crypto_trading.db (coins, pairs, scout/value history, trades)"
+  - id: models_orm
+    path: binance_trade_bot/models/{base,coin,coin_value,current_coin,pair,scout_history,trade}.py
+    health: pouco-usado
+  - id: auto_trader
+    path: binance_trade_bot/auto_trader.py
+    loc: 204
+    health: legado               # base das estratégias default/multiple_coins
+  - id: strategies_legadas
+    path: [binance_trade_bot/strategies/default_strategy.py (258), binance_trade_bot/strategies/multiple_coins_strategy.py (46)]
+    health: legado               # ADR-0009; análise em UNIT-006
+  - id: strategy_loader
+    path: binance_trade_bot/strategies/__init__.py
+    responsibility: "get_strategy(name): carrega <name>_strategy.py e retorna .Strategy"
+  - id: backtest_legado
+    path: [binance_trade_bot/backtest.py (208), backtest.py (18)]
+    health: legado
+    responsibility: "MockBinanceManager upstream + SqliteDict data/backtest_cache.db (abre no import)"
+    note: "importado por binance_trade_bot/__init__.py → qualquer import do pacote exige sqlitedict/binance"
+  - id: api_server
+    path: binance_trade_bot/api_server.py
+    loc: 153
+    health: legado
+    responsibility: "REST /api/* sobre o DB SQLAlchemy (upstream); CORS '*', debug=True, porta 5123"
+  - id: infra_misc
+    path: [binance_trade_bot/logger.py, binance_trade_bot/scheduler.py, binance_trade_bot/notifications.py]
+    responsibility: "Logger (logs/<service>.log + apprise), SafeScheduler (schedule), NotificationHandler (apprise.yml)"
+  - id: simulation
+    path: simulation/
+    health: dev                  # E2 em andamento (UNIT-010)
+    files: {data.py: "download/cache de klines públicos (data/sim/*.csv.gz)", mock_exchange.py: "exchange mock spot market c/ taxa+slippage", indicators.py: "indicadores", engine.py: "motor de simulação"}
+  - id: tests
+    path: tests/
+    health: bom
+    files: [test_atomic_io.py, test_ai_validation.py]
+  - id: devpanel
+    path: devpanel/
+    health: dev                  # E0 (UNIT-008)
+    files: {track.py: "CLI de rastreamento (471 LOC)", server.py: "painel :5055 (120 LOC)", static/index.html: "UI do painel"}
+  - id: deploy
+    path: [Dockerfile, compose.yaml, .dockerignore, requirements-docker.lock]
+  - id: docs_misc
+    path: [README.md, resume.md, docs/index.html, app.json, LICENSE]
+    health: legado
+
+data_contracts:
+  # Contrato DE FATO (congelado; refactors devem preservar). Origem: ex-.spec/contracts/state-and-flags.md.
+  location: "raiz do repo (cwd do motor = BASE_DIR do app); *.json e *.flag gitignored"
+  principles:
+    - "Unidirecional por canal: motor→UI via bot_status.json; UI→motor via *.flag"
+    - "Sem lock; escrita atômica (os.replace) no motor e no app.py (UNIT-003). painel.py ainda escreve sem atomicidade"
+    - "Best-effort: quase todo I/O em try/except: pass (falha silenciosa)"
+    - "bot_status.json: ensure_ascii=False, indent=2; demais JSON sem indent"
+  files:
+    bot_status.json:
+      producer: "motor _write_json_ui() — sobrescrita completa (não é merge) a cada scout/heartbeat"
+      also_written_by: "app.py: {} em start_bot; zera trades_won/lost em reset_scoreboard"
+      consumers: ["app.py monitor_bot_status (poll 1s) → update_metrics", "app.py handlers connect/request_*"]
+      schema:
+        coin: str                    # moeda em operação ou base_coin se parado
+        status: str                  # "Em Operação (BTC)", "Minerando métricas..." (app usa substring "Em Operação")
+        cooldown_until: float        # epoch (ai_cooldown_until)
+        last_heartbeat_ts: float
+        current_coin_change: float   # variação 24h %
+        btc_price: float
+        btc_change: float
+        buy_price: float
+        current_price: float
+        target_price: float          # gatilho trailing/take-profit
+        active_qty: float
+        buy_time: float              # operation_start_time
+        chart_data: "list[candle]"
+        trades_won: int
+        trades_lost: int
+        current_detail: str          # duração/SL/gatilho/meta
+        hot_cache: "list[str]"       # preço > EMA21 1h
+        cold_cache: "list[str]"
+        daily_trades: int
+        max_daily_trades: int
+        full_ai_report: str
+        daily_history: "list[trade_record]"
+        last_dossier: "list[dossier_item]"
+        motor_cooldown_minutes: "int (15|30|45)"
+        bollinger_std: "float (2.0|1.8|1.5)"
+      ui_derived:                    # adicionados por app.py antes de emitir; motor NUNCA escreve
+        countdown_str: str           # "⏳ Próxima Análise: MM:SS"
+        unlock_add_trade: bool
+        hb_str: str                  # HH:MM:SS
+        hb_color: "'#10b981' (<=80s) | '#f59e0b' (<=300s) | '#ef4444'"
+        current_motor_cooldown: int
+        current_bb_std: float
+      sub_schemas:
+        candle: {o: float, h: float, l: float, c: float, bbu: float, bbm: float, bbl: float}   # klines 15m, BB length 20, std=bollinger_std, últimos 30
+        trade_record:
+          time: "str HH:MM:SS"
+          coin: str
+          result: "str '+1.52%'|'-3.10%'"
+          reason: "TAKE_PROFIT | STOP_LOSS_DINAMICO | STOP_DESASTRE | VENDA_MANUAL(...) | SWAP_IA_95%"
+          compat: "UI aceita chaves legadas resultado/motivo"
+        dossier_item:                # campos exibidos; get_enriched_data produz mais (rsi_*, price_action_1h_last_12, ...)
+          coin: str
+          current_price: float
+          change_24h_pct: "str +/-N.NN%"
+          min_24h_change_pct: "str"
+          required_atr_bottom_pct: "str (−2×ATR%)"
+          touched_lower_band_15m: bool
+          touched_lower_band_1h: bool
+          lowest_15m_val: float
+          bbl_15m_target: float
+          lowest_1h_val: float
+          bbl_1h_target: float
+          macd_1h_shifting_up: bool
+          macd_histogram_15m_positive: bool
+          volume_15m_above_avg: bool
+          volume_15m_pct: float
+          ema21_1h_distance_pct: "str (esperado < -1.00%)"
+    profit_gain_state.json:
+      producer: "motor _save_state(); app.py reset_scoreboard zera trades_won/lost"
+      consumer: "motor _load_state() no boot"
+      schema:
+        operation_start_time: float
+        last_switch_time: float      # último ciclo do Tribunal
+        active_altcoin_quantity: float
+        trades_won: int              # acumulado (não diário)
+        trades_lost: int
+        active_buy_price: float
+        peak_profit_pct: float
+        active_dynamic_stop_loss: float
+        current_date: "str YYYY-MM-DD"
+        daily_profit_pct: float
+        daily_trades: int
+        daily_history: "list[trade_record]"
+        full_ai_report: str
+        max_daily_trades: int        # cresce via add_trade.flag
+        motor_cooldown_minutes: int
+        bollinger_std: float
+      rule: "campos diários só restaurados se current_date == hoje; senão _check_daily_reset() zera"
+    gui_state.json:
+      producer: "app.py _save_gui_state (e painel.py)"
+      consumer: "app.py _load_gui_state"
+      schema: {saldo_inicial: float}
+    logs/*.log:
+      producer: "Logger → logs/crypto_trading.log (gitignored)"
+  flags:                             # one-shot: UI cria, consumidor lê e APAGA; utf-8
+    force_sell.flag:   {payload: "trigger_manual_sell (ignorado)", producer: app.py, consumer: "motor _check_ui_flags → _execute_forced_sell", scope_alvo: "trade:sell"}
+    reset_trades.flag: {payload: reset, producer: app.py, consumer: motor, effect: "zera won/lost, metas e histórico diário", scope_alvo: "trade:control"}
+    add_trade.flag:    {payload: "1", producer: app.py, consumer: motor, effect: "max_daily_trades += 1; próxima análise em 60s", scope_alvo: "trade:control"}
+    cooldown.flag:     {payload: "15|30|45", producer: app.py, consumer: motor, effect: "motor_cooldown_minutes", scope_alvo: "trade:control"}
+    bb_std.flag:       {payload: "2.0|1.8|1.5", producer: app.py, consumer: motor, effect: "bollinger_std", scope_alvo: "trade:control"}
+    update_pending.flag:
+      payload: pending
+      producer: app.py
+      consumer: "SOMENTE painel.py (deprecado): git reset --hard HEAD + git pull + relança"
+      gap: "motor não consome; no modo web/Docker o botão 'Atualizar bot' não tem efeito"
+      scope_alvo: "system:update"
+    consumo: "motor checa em scout() e update_values() (_check_ui_flags)"
+  invariants:
+    - "bot_status.json atômico do ponto de vista do leitor"
+    - "nomes/tipos de campos estáveis — a UI depende literalmente"
+    - "flags one-shot e idempotentes; remover após consumir"
+    - "daily_history aceita result/reason e resultado/motivo até migração"
+    - "ui_derived é responsabilidade da UI"
+    - "reset diário depende de current_date == hoje"
+  gaps:
+    - {ref: DATA-01, issue: "contrato era implícito", fix: "este bloco + validação leve na borda (futuro)"}
+    - {ref: SEC-01, issue: "eventos sem auth/escopo", fix: "UNIT-001 (JWT/AAA)"}
+    - {ref: COMPAT, issue: "chaves legadas resultado/motivo", fix: "migração única e remover fallback"}
+    - {ref: UPD-01, issue: "update_pending.flag sem consumidor no fluxo web", fix: "a definir (UNIT-001 / roadmap)"}
+
+events:
+  transport: "Flask-SocketIO (async_mode=threading), cors_allowed_origins='*'; cliente socket.io 4.0.1"
+  client_to_server:                  # scope = contrato-alvo UNIT-001; hoje TODOS abertos
+    connect:               {scope: read, effect: "envia update_balance + último update_metrics ao sid"}
+    start_bot:             {scope: "trade:control", effect: "zera bot_status.json e sobe motor"}
+    stop_bot:              {scope: "trade:control", effect: "kill do subprocess"}
+    reset_initial_balance: {scope: "trade:control", effect: "saldo_inicial = saldo_atual"}
+    reset_scoreboard:      {scope: "trade:control", effect: "reset_trades.flag + zera placar nos JSONs"}
+    add_trade_chance:      {scope: "trade:control", effect: "add_trade.flag + lock_add_trade"}
+    cycle_cooldown:        {scope: "trade:control", args: {current: int}, cycle: "15→30→45→15"}
+    cycle_bb_std:          {scope: "trade:control", args: {current: float}, cycle: "2.0→1.8→1.5→2.0"}
+    force_sell_action:     {scope: "trade:sell"}
+    request_update:        {scope: "system:update"}
+    request_ai_report:     {scope: read}
+    request_daily_history: {scope: read}
+    request_dossier:       {scope: read}
+  server_to_client:
+    update_balance: {inicial: float, atual: float, pl: float, pl_perc: float, ping: int}   # parcial em alguns pontos
+    update_metrics: "bot_status.json + ui_derived"
+    new_log: {message: str}
+    status_parado: {}
+    lock_add_trade: {}
+    update_button_states: {"cooldown?": int, "bb_std?": float}
+    show_modal_html: {title: str, content: "str (HTML montado no servidor)"}
+  http_routes:
+    "GET /": "render index.html (strategy, versao=git describe; fallback hardcoded 'v3.6.6')"
+
+external_services:
+  binance_rest:
+    lib: python-binance (Client), tld=config
+    calls_motor: [get_account, get_klines (4h×30, 1h×60, 15m×60 por moeda/ciclo; 15m×50 em operação), get_ticker, create_order MARKET (quoteOrderQty na compra), trades history (_retrieve_real_buy_data)]
+    calls_web: [get_account, get_symbol_ticker (saldo total em USDT a cada 15s)]
+    websocket: "unicorn-binance-websocket-api — desligado na profit_gain (FakeStreamManager)"
+    public_klines_sim: "https://api.binance.com/api/v3/klines sem auth (simulation/data.py)"
+    rate_limit_note: "scout_sleep_time < 60 tende a bloquear por excesso de chamadas"
+  gemini:
+    lib: google-genai
+    model: gemini-2.5-flash
+    output: "response_mime_type JSON → json.loads → normalize_verdict"
+    key: GOOGLE_API_KEY
+    failure: "sem cliente/erro → ERROR_503 (veto + cooldown 5 min)"
+
+strategies:
+  active: profit_gain
+  profit_gain:
+    thesis: "reversão à média em queda aguda validada por ATR + confirmação IA"
+    timeframes: {regime: 4h, setup: 1h, gatilho: 15m}
+    indicators: {RSI: "14 (4h/1h/15m)", EMA: "9/21 (1h)", MACD: "12/26/9 (1h/15m)", ATR: "14 (1h)", Bollinger: "20 / bollinger_std (1h/15m)", volume: "15m vs média 10 velas"}
+    gatekeeper:                       # Porteiro (scan_market)
+      dossier_if: "min_24h_change_pct <= -2×ATR% AND -disaster_stop_pct <= change_24h <= +2.50%"
+      ai_batch_if: "dossier AND (tocou BB inferior 15m OR 1h) AND volume_15m >= 80% média AND ema21_1h_distance < -1.00%"
+      hot_cold: "preço > EMA21 1h → hot_cache"
+    ai_buy: {min_confidence: 90, sentinels: [NENHUMA, ERROR_503]}
+    entry:
+      order: MARKET
+      size: "99% do saldo livre da base (all-in, fixo)"
+      min_balance_usdt: 5.1
+      buy_price_recorded: "preço do scan (não o fill) — ver known_issues"
+    exits:                            # prioridade nesta ordem
+      disaster_stop_pct: 15.0         # drop <= -15% → STOP_DESASTRE
+      dynamic_stop:
+        formula: "4.0 × ATR%(1h)"
+        clamp_btc: [6.0, 10.5]
+        clamp_alts: [4.0, "base_stop_loss_pct (7.0)"]
+        fallback: base_stop_loss_pct
+        reason: STOP_LOSS_DINAMICO
+      trailing:
+        activation_pct: 1.5
+        drop_from_peak_pct: 0.3
+        reason: TAKE_PROFIT
+      manual: "force_sell.flag → VENDA_MANUAL"
+      timeout: "maximum_hold_time_seconds=7200 definido e NÃO usado"
+    swap_tribunal:
+      cadence: "ai_cooldown_minutes (45) desde last_switch_time"
+      conditions: "-2.50% <= drop < -0.15% AND posição >= 10h AND >= 4 candidatas (ai_batch + change_24h <= -0.50%)"
+      drop_below_-2.5: "reinicia relógio (não convoca)"
+      lt_4_candidates: "adia"
+      ai_min_confidence: 95
+      reason: "SWAP_IA_95%"
+      error_503: "nova tentativa em 5 min"
+    discipline:
+      daily_profit_target_pct: 5.0    # soma de % por trade (não composto)
+      max_daily_trades: 3             # +1 via add_trade.flag
+      hibernation: "até meia-noite local ao bater meta/limite"
+      motor_cooldown_minutes: "15|30|45 (UI) entre análises"
+      post_buy_cooldown: "ai_cooldown_minutes"
+      post_sell_cooldown_s: 60
+      error_cooldown_s: 300
+    recovery: "com USDT < $5 assume a 1ª moeda da carteira com valor >= $5; preço via histórico de trades"
+    calibration: "pendente E2/E4 (UNIT-010, UNIT-012)"
+  legacy:
+    default: "rotação com momentum (24h >= 2%), modo sobrevivência BTC <= -2.5%, trailing global 3.5/0.4, timeout 120 min, geladeira 60 min — sem stop, estado em memória"
+    multiple_coins: "upstream: jump por moeda com saldo; não escreve bot_status.json"
+  analysis_refs: [UNIT-006, UNIT-007]
+
+deploy:
+  docker:
+    image: "binance-trade-bot-pro:web (python:3.13-slim + git + curl)"
+    deps: "requirements-docker.lock + unicorn-binance-websocket-api==2.13.0 / unicorn-binance-rest-api==2.11.0 --no-deps"
+    cmd: "python app.py"
+    port: "5000:5000"
+    volume: ".:/app (user.cfg, coin list e JSONs ficam no host; imagem sem segredos)"
+    env: {TZ: America/Fortaleza, APP_DEBUG: "0", PYTHONUNBUFFERED: "1", PYTHONIOENCODING: utf-8}
+    healthcheck: "curl -fsS http://localhost:5000/ (30s)"
+    restart: unless-stopped
+    note: "git safe.directory /app p/ git describe e auto-update"
+  local: "python app.py (Windows/.venv)"
+  remote_exposure: "BLOQUEADA até UNIT-001 (auth + TLS)"
+
+quality:
+  tests:
+    runner: "python -m pytest -q"
+    suites:
+      test_atomic_io.py: "round-trip, sobrescrita válida, sem .tmp órfão, destino preservado em falha"
+      test_ai_validation.py: "matriz V1–V10 (UNIT-002)"
+    isolation: "tmp_path; sem rede"
+    caveat: "import de binance_trade_bot.* executa __init__ (backtest→sqlitedict, binance) → exige deps completas instaladas"
+    missing: [conftest.py (previsto na UNIT-004), testes do Porteiro/risco (pós UNIT-005), CI]
+  trading_tests_policy: "somente mock — sem saldo real (ADR-0013)"
+  lint: "nenhum configurado"
+
+dev_tooling:
+  devpanel:
+    track_cli: "devpanel/track.py — subcomandos agent|task|epic|decision|event|project|show; lock .spec/.track.lock (expira 30s) + escrita atômica"
+    server: "devpanel/server.py → http://127.0.0.1:5055 (GET /, /api/state, POST /api/decisions/<id>); alerta agente active sem heartbeat > 15 min"
+    files: {".spec/STATUS.md": "agentes, épicos, tasks, decisões, eventos (bloco YAML = fonte)", ".spec/TEMPO.md": "tempos por task/step"}
+    rule: "STATUS.md/TEMPO.md só via track.py (ADR-0010)"
+  git: "commits semânticos com versão; só minor/patch (ADR-0011); orquestrador commita"
+  workspace: "D:\\binance_trade; temporários em D:\\binance_trade_work\\tmp (ADR-0012)"
+
+roadmap:
+  principle: "endurecer antes de expandir: blindar → testar → refatorar (ADR-0005)"
+  phases:
+    A_blindagem: [UNIT-001 (Draft), UNIT-002 (Verified), UNIT-003 (Verified)]
+    B_testes: [UNIT-004 (Implemented)]
+    C_refactor_motor: [UNIT-005 (Draft)]
+    D_unificacao_ui: "app.py canônico (ADR-0004); extrair a 'linguagem de comandos' (flags) para módulo único compartilhado"
+    E_limpeza: "ADR-0009 (deferred): destino de SQLAlchemy/default/multiple_coins/api_server/backtest legado"
+  epics:
+    E0: {title: "Painel de acompanhamento do desenvolvimento (devpanel/)", unit: UNIT-008, priority: 0}
+    E1: {title: "Reestruturar .spec (README, arch.yaml, ADRs, UNITs)", unit: UNIT-009, priority: 1}
+    E2: {title: "Simulação >= 50 variações com mock exchange (previsão/entrada/stoploss/stopwin)", unit: UNIT-010, priority: 1}
+    E3: {title: "Repaginação da página do app (templates/index.html)", unit: UNIT-011, priority: 2}
+    E4: {title: "Aplicar calibração na profit_gain", unit: UNIT-012, priority: 2, depends_on: [E2]}
+
+strengths:                          # o que está BOM — manter/proteger (ex-planning §3)
+  - "Filtro em duas camadas (matemática → IA): reduz custo e risco (ADR-0002)"
+  - "Config anti-crash: fallbacks + override por env; sobrevive a user.cfg incompleto"
+  - "Resiliência: trata ConnectionError/timeout, persiste estado em JSON, recupera posição aberta no restart"
+  - "Desacoplamento UI↔motor: processos separados; UI só observa estado e emite flags (ADR-0008)"
+  - "Risco em camadas: trailing + stop ATR + desastre + Tribunal de Swap"
+  - "Caixa branca: dossiê + parecer da IA expostos no painel (auditável)"
+  - "Disciplina: hibernação diária e cooldown evitam overtrading"
+
+known_issues:
+  - {id: ARCH-01, sev: alta, title: "arquivo-deus profit_gain_strategy.py", ref: UNIT-005}
+  - {id: ARCH-02, sev: media, title: "lógica de UI duplicada painel.py vs app.py", ref: ADR-0004}
+  - {id: SEC-01, sev: CRITICA, title: "Flask inseguro: SECRET_KEY hardcoded, host 0.0.0.0, allow_unsafe_werkzeug, CORS '*', sem auth/TLS", ref: UNIT-001}
+  - {id: SEC-02, sev: alta, title: "segredos em user.cfg; .env já no .gitignore (a108e98)", ref: UNIT-001}
+  - {id: TEST-01, sev: alta, title: "cobertura mínima (só unidades puras)", ref: UNIT-004}
+  - {id: DATA-01, sev: media, title: "contrato implícito → formalizado em data_contracts", status: mitigado}
+  - {id: DATA-02, sev: media, title: "race de I/O → escrita atômica", ref: UNIT-003, status: resolvido (exceto painel.py)}
+  - {id: DEPS-01, sev: baixa, title: "unicorn fixa websockets antigo; requirements.txt pina unicorn_binance_websocket_api==2.10.2 vs Docker 2.13.0"}
+  - {id: DEAD-01, sev: baixa, title: "camada legada pouco usada", ref: ADR-0009}
+  - {id: AI-01, sev: media, title: "saída da IA sem schema", ref: UNIT-002, status: resolvido}
+  - {id: STRAT-01..09, title: "problemas de comportamento da profit_gain (stop só em software, latência do stop, buy price ≠ fill, sequestro de carteira na recuperação, Tribunal quase inerte, cooldown não poupa varredura, lucro diário somado, all-in fixo, hold timeout morto)", ref: UNIT-006}
+  - {id: UPD-01, sev: media, title: "update_pending.flag sem consumidor fora do painel.py"}
+  - {id: KEY-01, sev: baixa, title: "ai_agent.py lê user.cfg direto (GOOGLE_API_KEY) fora do config.py"}
+
+invariants:
+  - "Matemática antes da IA: a IA nunca decide sobre ativo que não passou no Porteiro (ADR-0002)"
+  - "Fail-closed na IA: qualquer anomalia vira veto (NENHUMA/HOLD/ERROR_503, confiança 0) (ADR-0007)"
+  - "Compra exige confiança IA >= 90; swap >= 95"
+  - "Stops (desastre, dinâmico, trailing) têm prioridade sobre qualquer decisão de IA"
+  - "Motor nunca depende da UI viva para operar/proteger posição"
+  - "Credenciais (user.cfg/.env/*.cfg reais) nunca lidas por ferramentas/agentes, logadas ou commitadas (ADR-0003)"
+  - "Contratos de data_contracts estáveis; mudança exige UNIT + atualização deste arquivo"
+  - "Testes/simulação de trading só com mock, nunca com saldo real (ADR-0013)"
+  - "Versão só sobe minor/patch (ADR-0011)"
