@@ -88,6 +88,19 @@ class MockExchange:
         self.fills.append(fill)
         return fill
 
+    def limit_buy_quote(self, symbol: str, quote_qty: float, limit_price: float, ts: int = 0,
+                        reason: str = "") -> Fill:
+        """Compra limit (maker) JÁ EXECUTADA ao preço limite: sem slippage.
+
+        Quem decide SE a ordem executou é o chamador (o motor exige que a
+        mínima atravesse o limite — regra conservadora)."""
+        slip, self.slippage = self.slippage, 0.0
+        try:
+            fill = self.market_buy_quote(symbol, quote_qty, limit_price, ts, reason)
+        finally:
+            self.slippage = slip
+        return fill
+
     def market_sell_qty(self, symbol: str, qty: float, ref_price: float, ts: int = 0,
                         reason: str = "") -> Fill:
         """Vende ``qty`` da moeda base a mercado."""

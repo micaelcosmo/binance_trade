@@ -88,6 +88,22 @@ class Params:
     check: str = "intrabar"        # intrabar | close
     fee: float = 0.001
     slippage: float = 0.0005
+    # ---- sim-002: variações estruturais (defaults = comportamento da sim-001)
+    stop_mode: str = "atr"         # atr | fixed
+    stop_fixed_pct: float = 2.0
+    be_trigger: Optional[float] = None   # pico >= x% → stop vai para breakeven
+    be_offset: float = 0.2         # breakeven = ref × (1 + be_offset%) (cobre taxas)
+    partial_frac: float = 0.0      # fração vendida no alvo 1 (0 = sem parcial)
+    partial_tp: float = 1.5        # alvo 1 (%)
+    be_after_partial: bool = False
+    time_stop_h: Optional[float] = None  # após x h, sai se o pico < time_stop_min_pct
+    time_stop_min_pct: float = 0.5
+    confirm: str = "none"          # none | break_high | above_ema9
+    confirm_bars: int = 4          # confirmação até N velas de 15m após o sinal
+    entry_type: str = "market"     # market | limit
+    limit_offset_pct: float = 0.0  # limite = close do scan × (1 − x%)
+    limit_bars: int = 2            # validade da ordem limit (velas de 15m)
+    limit_through_pct: float = 0.05  # exige a mínima ATRAVESSAR o limite em x% (conservador)
 
     def with_(self, **kw) -> "Params":
         return replace(self, **kw)
@@ -206,6 +222,8 @@ def build_features(symbol: str, d15: pd.DataFrame, d1h: pd.DataFrame, d4h: pd.Da
         "stoch_k": k.to_numpy(), "stoch_d": d.to_numpy(),
         "stoch_k_prev": k.shift(1).to_numpy(), "stoch_d_prev": d.shift(1).to_numpy(),
         "bullish_15m": (d15["close"] > d15["open"]).to_numpy(),
+        "ema9_15m": ind.ema(d15["close"], 9).to_numpy(),
+        "prev_high_15m": d15["high"].shift(1).to_numpy(),
         "ibs_1h": _take(d1h["ibs"].to_numpy(), idx1h),
         "rejection_1h": _take(d1h["rejection"].to_numpy(), idx1h),
         "macd_up_1h": _take(d1h["macd_up"].to_numpy(), idx1h),
@@ -274,26 +292,59 @@ def porteiro(f: Features, p: Params) -> np.ndarray:
     return ok
 
 
+def entry_mask(f: Features, p: Params) -> np.ndarray:
+    """Porteiro + (opcional) confirmação: entra na vela k se houve sinal do
+    Porteiro em alguma das ``confirm_bars`` velas anteriores e a vela k fechou
+    acima da máxima da anterior (break_high) ou acima da EMA9 15m."""
+    base = porteiro(f, p)
+    if p.confirm == "none":
+        return base
+    recent = pd.Series(base.astype(float)).shift(1).rolling(p.confirm_bars, min_periods=1).max()
+    recent = recent.fillna(0).to_numpy() > 0
+    x = f.cols
+    with np.errstate(invalid="ignore"):
+        if p.confirm == "break_high":
+            cond = f.c > x["prev_high_15m"]
+        elif p.confirm == "above_ema9":
+            cond = f.c > x["ema9_15m"]
+        else:
+            raise ValueError(p.confirm)
+        ok = recent & cond
+        if p.gate_sma200 in ("asset", "both"):
+            ok &= x["above_sma200"] > 0
+        if p.gate_sma200 in ("btc", "both"):
+            ok &= x["btc_above_sma200"] > 0
+    return ok & np.isfinite(x["atr_pct"])
+
+
 def stop_pct(f: Features, p: Params) -> np.ndarray:
+    if p.stop_mode == "fixed":
+        return np.full(len(f.c), float(p.stop_fixed_pct))
     raw = f.cols["atr_pct"] * p.stop_mult
     lo, hi = (p.btc_stop_lo, p.btc_stop_hi) if f.is_btc else (p.stop_lo, p.stop_hi)
     return np.clip(np.nan_to_num(raw, nan=hi), lo, hi)
 
 
 # ================================================================= saída
-def simulate_exit(f: Features, i: int, sl_pct: float, p: Params):
-    """Simula a posição aberta na decisão da vela ``i`` (entrada no open de i+1).
+def simulate_position(f: Features, i: int, sl_pct: float, p: Params, start: Optional[int] = None,
+                      ref: Optional[float] = None, fill_bar_stop_only: bool = False):
+    """Simula a posição decidida na vela ``i``.
 
-    Retorna (j, preço_ref_de_saída, motivo, mae_pct). Percentuais de gatilho
-    são relativos ao preço observado no scan (close[i]), como o live faz com
-    ``active_buy_price = target_price``.
+    Mercado: entrada no open de ``i+1``; gatilhos relativos ao close[i] (como o
+    live). Limit: ``start`` = vela do fill, ``ref`` = preço limite e, na vela do
+    fill, só o stop é checado (pior caso: a mínima que executou a compra pode
+    ter batido o stop; e a alta da vela do fill é ignorada).
+
+    Retorna (pernas, mae_pct); cada perna é (fração, j, preço_ref, motivo).
     """
     ot, O, H, L, C, AV = f.lists()
     n = len(C)
-    ref = C[i]
+    if start is None:
+        start = i + 1
+    if ref is None:
+        ref = C[i]
     use_disaster = p.disaster <= sl_pct
-    stop_level = ref * (1 - min(sl_pct, p.disaster) / 100)
-    stop_reason = "STOP_DESASTRE" if use_disaster else "STOP_LOSS_DINAMICO"
+    be_level = ref * (1 + p.be_offset / 100)
     tp_level = None
     if p.exit_mode == "fixed":
         tp_level = ref * (1 + p.tp_pct / 100)
@@ -305,62 +356,122 @@ def simulate_exit(f: Features, i: int, sl_pct: float, p: Params):
     trail = p.exit_mode == "trail"
     act, drop = p.trail_act, p.trail_drop
     max_hold_ms = None if p.max_hold_h is None else p.max_hold_h * 3_600_000
-    entry_t = ot[i + 1] if i + 1 < n else ot[i]
-    peak = 0.0
-    mae = 0.0
+    ts_ms = None if p.time_stop_h is None else p.time_stop_h * 3_600_000
+    tp1 = ref * (1 + p.partial_tp / 100)
+    entry_t = ot[start] if start < n else ot[n - 1]
+    st = {
+        "stop": ref * (1 - min(sl_pct, p.disaster) / 100),
+        "reason": "STOP_DESASTRE" if use_disaster else "STOP_LOSS_DINAMICO",
+        "rem": 1.0, "partial": p.partial_frac > 0, "peak": 0.0, "mae": 0.0,
+    }
+    legs = []
+
+    def arm_be():
+        if be_level > st["stop"]:
+            st["stop"] = be_level
+            st["reason"] = "BREAKEVEN"
+
+    def new_peak(pk):
+        if pk > st["peak"]:
+            st["peak"] = pk
+            if p.be_trigger is not None and pk >= p.be_trigger:
+                arm_be()
+
+    def do_partial(j, px):
+        legs.append((p.partial_frac, j, px, "PARCIAL"))
+        st["rem"] -= p.partial_frac
+        st["partial"] = False
+        if p.be_after_partial:
+            arm_be()
+
+    def done(j, px, reason):
+        legs.append((st["rem"], j, px, reason))
+        return legs, st["mae"]
+
+    def mae_at(px):
+        st["mae"] = min(st["mae"], (px - ref) / ref * 100)
+
+    j0 = start
+    if fill_bar_stop_only and start < n:
+        if L[start] <= st["stop"]:
+            mae_at(st["stop"])
+            return done(start, st["stop"], st["reason"])
+        mae_at(L[start])
+        j0 = start + 1
 
     if p.check == "close":
-        for j in range(i + 1, n):
-            if max_hold_ms is not None and ot[j] + 900_000 - entry_t >= max_hold_ms:
-                return j, C[j], "TIMEOUT", min(mae, (L[j] - ref) / ref * 100)
+        for j in range(j0, n):
+            held = ot[j] + 900_000 - entry_t
+            if max_hold_ms is not None and held >= max_hold_ms:
+                mae_at(L[j])
+                return done(j, C[j], "TIMEOUT")
             cj = C[j]
             pct = (cj - ref) / ref * 100
-            mae = min(mae, (L[j] - ref) / ref * 100)
-            if pct > peak:
-                peak = pct
+            mae_at(L[j])
+            new_peak(pct)
             if pct <= -p.disaster:
-                return j, cj, "STOP_DESASTRE", mae
-            if pct <= -sl_pct:
-                return j, cj, "STOP_LOSS_DINAMICO", mae
-            if trail and peak >= act and (peak - pct) >= drop:
-                return j, cj, "TAKE_PROFIT", mae
+                return done(j, cj, "STOP_DESASTRE")
+            if cj <= st["stop"]:
+                return done(j, cj, st["reason"])
+            if trail and st["peak"] >= act and (st["peak"] - pct) >= drop:
+                return done(j, cj, "TAKE_PROFIT")
             if tp_level is not None and cj >= tp_level:
-                return j, cj, "TP_ALVO", mae
-        return n - 1, C[n - 1], "FIM_DADOS", mae
+                return done(j, cj, "TP_ALVO")
+            if st["partial"] and cj >= tp1:
+                do_partial(j, cj)
+            if ts_ms is not None and held >= ts_ms and st["peak"] < p.time_stop_min_pct:
+                return done(j, cj, "TIME_STOP")
+        return done(n - 1, C[n - 1], "FIM_DADOS")
 
-    for j in range(i + 1, n):
+    for j in range(j0, n):
         o, h, lo, c = O[j], H[j], L[j], C[j]
-        if max_hold_ms is not None and ot[j] - entry_t >= max_hold_ms:
-            return j, o, "TIMEOUT", mae
-        if o <= stop_level:
-            return j, o, stop_reason, min(mae, (o - ref) / ref * 100)
-        if lo <= stop_level:  # pior caso: stop vence qualquer alvo na mesma vela
-            return j, stop_level, stop_reason, min(mae, (stop_level - ref) / ref * 100)
-        # abertura: trailing já armado e abriu abaixo da trava
-        if trail and peak >= act:
-            lvl = ref * (1 + (peak - drop) / 100)
+        held = ot[j] - entry_t
+        if max_hold_ms is not None and held >= max_hold_ms:
+            return done(j, o, "TIMEOUT")
+        if ts_ms is not None and held >= ts_ms and st["peak"] < p.time_stop_min_pct:
+            return done(j, o, "TIME_STOP")
+        if o <= st["stop"]:
+            mae_at(o)
+            return done(j, o, st["reason"])
+        if lo <= st["stop"]:  # pior caso: stop vence qualquer alvo na mesma vela
+            mae_at(st["stop"])
+            return done(j, st["stop"], st["reason"])
+        if trail and st["peak"] >= act:
+            lvl = ref * (1 + (st["peak"] - drop) / 100)
             if o <= lvl:
-                return j, o, "TAKE_PROFIT", mae
+                return done(j, o, "TAKE_PROFIT")
         if tp_level is not None and o >= tp_level:
-            return j, o, "TP_ALVO", mae
+            return done(j, o, "TP_ALVO")
+        if st["partial"] and o >= tp1:
+            do_partial(j, o)
         path = (lo, h, c) if c >= o else (h, lo, c)
         prev = o
         for px in path:
             if px > prev:
+                if st["partial"] and px >= tp1:
+                    do_partial(j, tp1)
                 if tp_level is not None and px >= tp_level:
-                    return j, tp_level, "TP_ALVO", mae
-                if trail:
-                    pk = (px - ref) / ref * 100
-                    if pk > peak:
-                        peak = pk
+                    return done(j, tp_level, "TP_ALVO")
+                new_peak((px - ref) / ref * 100)
             elif px < prev:
-                mae = min(mae, (px - ref) / ref * 100)
-                if trail and peak >= act:
-                    lvl = ref * (1 + (peak - drop) / 100)
-                    if px <= lvl:
-                        return j, lvl, "TAKE_PROFIT", mae
+                mae_at(px)
+                # na descida, o primeiro nível cruzado é o mais alto
+                lvl, why = st["stop"], st["reason"]
+                if trail and st["peak"] >= act:
+                    tl = ref * (1 + (st["peak"] - drop) / 100)
+                    if tl > lvl:
+                        lvl, why = tl, "TAKE_PROFIT"
+                if px <= lvl:
+                    return done(j, min(lvl, prev), why)
             prev = px
-    return n - 1, C[n - 1], "FIM_DADOS", mae
+    return done(n - 1, C[n - 1], "FIM_DADOS")
+
+
+def simulate_exit(f: Features, i: int, sl_pct: float, p: Params):
+    """Compatível com a sim-001: (j, preço médio de saída, motivo, mae)."""
+    legs, mae = simulate_position(f, i, sl_pct, p)
+    px = sum(fr * x for fr, _, x, _ in legs) / sum(fr for fr, _, _, _ in legs)
+    return legs[-1][1], px, legs[-1][3], mae
 
 
 # ============================================================ simulação
@@ -388,7 +499,7 @@ def run(p: Params, feats: dict, start_ms: int, end_ms: int, initial: float = 100
     sig = {}
     for s in syms:
         f = feats[s]
-        cand = porteiro(f, p)
+        cand = entry_mask(f, p)
         win = (f.open_time >= start_ms) & (f.open_time < end_ms)
         cand &= win
         sig[s] = (cand, oracle_score(f, p), stop_pct(f, p))
@@ -439,17 +550,40 @@ def run(p: Params, feats: dict, start_ms: int, end_ms: int, initial: float = 100
         if i + 1 >= len(f.c):
             break
         sl = float(sig[s][2][i])
-        j, px_out, reason, mae = simulate_exit(f, i, sl, p)
-        ref_in = f.o[i + 1]
         eq0 = ex.balance(ex.quote_asset)
-        buy = ex.buy_all_in(s, ref_in, int(f.open_time[i + 1]), reason="ENTRADA")
-        sell = ex.sell_all(s, px_out, int(f.open_time[j]), reason=reason)
+        if p.entry_type == "limit":
+            lim = f.c[i] * (1 - p.limit_offset_pct / 100)
+            need = lim * (1 - p.limit_through_pct / 100)
+            last = min(i + 1 + p.limit_bars, len(f.c))
+            e = next((k for k in range(i + 1, last) if f.l[k] <= need), None)
+            if e is None:  # não executou: ordem cancelada, volta a escanear
+                t = g + p.limit_bars + 1
+                continue
+            legs, mae = simulate_position(f, i, sl, p, start=e, ref=lim, fill_bar_stop_only=True)
+            buy = ex.limit_buy_quote(s, eq0 * 0.99, lim, int(f.open_time[e]), reason="ENTRADA_LIMIT")
+            ref_scan = lim
+        else:
+            legs, mae = simulate_position(f, i, sl, p)
+            buy = ex.buy_all_in(s, f.o[i + 1], int(f.open_time[i + 1]), reason="ENTRADA")
+            ref_scan = f.c[i]
+        base_asset = s[: -len(ex.quote_asset)]
+        qty = ex.balance(base_asset)
+        proceeds, sold = 0.0, 0.0
+        for k_leg, (fr, jl, px_l, why) in enumerate(legs):
+            q = ex.balance(base_asset) if k_leg == len(legs) - 1 else qty * fr
+            sell = ex.market_sell_qty(s, q, px_l, int(f.open_time[jl]), reason=why)
+            proceeds += sell.quote - sell.fee
+            sold += q
+        j, reason = legs[-1][1], legs[-1][3]
+        if len(legs) > 1:
+            reason = "PARCIAL+" + reason
+        px_out = sum(fr * x for fr, _, x, _ in legs) / sum(fr for fr, _, _, _ in legs)
         eq1 = ex.balance(ex.quote_asset)
-        net = (sell.quote - sell.fee) / buy.quote - 1
-        gross = (px_out - f.c[i]) / f.c[i] * 100
-        trades.append(Trade(s, int(f.open_time[i]), int(f.open_time[i + 1]), int(f.open_time[j]),
-                            buy.price, sell.price, net * 100, gross, eq1 / eq0, mae, reason,
-                            float(sc), sl))
+        net = proceeds / buy.quote - 1
+        gross = (px_out - ref_scan) / ref_scan * 100
+        trades.append(Trade(s, int(f.open_time[i]), int(buy.ts), int(f.open_time[j]),
+                            buy.price, px_out * (1 - p.slippage), net * 100, gross, eq1 / eq0, mae,
+                            reason, float(sc), sl))
         # contadores diários contam no dia da venda (como o live)
         gx = int(np.searchsorted(grid, f.open_time[j]))
         exit_day = day_of[min(gx, G - 1)]

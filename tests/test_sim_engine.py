@@ -160,3 +160,63 @@ def test_portfolio_mode_single_position_at_a_time():
     assert len({t.symbol for t in trades}) == 2
     for a, b in zip(trades, trades[1:]):
         assert b.entry_ts > a.exit_ts  # nunca duas posições abertas
+
+
+# ------------------------------------------------- sim-002: variações estruturais
+def test_breakeven_moves_stop_after_trigger():
+    # sobe a +1,2% (arma BE em +1%), depois despenca: sai no breakeven (+0,2%)
+    f = bars([(100, 101.2, 99.9, 101.0), (101.0, 101.1, 95.0, 95.5)])
+    p = Params(be_trigger=1.0, be_offset=0.2, trail_act=5.0)
+    j, px, reason, _ = simulate_exit(f, 0, 5.0, p)
+    assert reason == "BREAKEVEN" and j == 2 and px == pytest.approx(100.2)
+
+
+def test_partial_exit_then_trailing():
+    # alvo 1 = +1,5% (vende 50%); o resto sai no trailing 3%/1%
+    f = bars([(100, 101.6, 99.9, 101.5), (101.5, 103.5, 101.4, 103.4), (103.4, 103.5, 101.0, 101.2)])
+    p = Params(partial_frac=0.5, partial_tp=1.5, trail_act=3.0, trail_drop=1.0)
+    legs, _ = E.simulate_position(f, 0, 5.0, p)
+    assert [lg[3] for lg in legs] == ["PARCIAL", "TAKE_PROFIT"]
+    assert legs[0][0] == 0.5 and legs[0][2] == pytest.approx(101.5)
+    assert legs[1][2] == pytest.approx(102.5)  # pico 3,5% − 1%
+
+
+def test_time_stop_exits_when_position_did_not_move():
+    flat = bars([(100, 100.3, 99.8, 100)] * 30)
+    j, _, reason, _ = simulate_exit(flat, 0, 5.0, Params(time_stop_h=3, time_stop_min_pct=0.5))
+    assert reason == "TIME_STOP" and j == 13  # 12 velas de 15m após a entrada
+
+
+def test_fixed_stop_mode():
+    f = make_feats(synth_15m(500, seed=5))
+    assert np.all(E.stop_pct(f, Params(stop_mode="fixed", stop_fixed_pct=2.0)) == 2.0)
+
+
+def test_confirmation_is_causal_and_after_signal():
+    d15 = synth_15m(3000, seed=8, vol=0.006)
+    f = make_feats(d15)
+    p = Params(atr_mult=0.0, bb_std=1.0, vol_min_pct=0, ema_dist_max=50, chg24_min=-99, chg24_max=99,
+               confirm="break_high", confirm_bars=4)
+    m = E.entry_mask(f, p)
+    base = E.porteiro(f, p.with_(confirm="none"))
+    assert m.sum() > 0
+    for k in np.flatnonzero(m):
+        assert base[max(0, k - 4):k].any()           # houve sinal nas 4 velas anteriores
+        assert f.c[k] > f.h[k - 1]                   # e a vela k rompeu a máxima anterior
+
+
+def test_limit_entry_needs_trade_through_and_has_no_slippage():
+    d15 = synth_15m(6000, seed=11, vol=0.006)
+    f = make_feats(d15)
+    p = Params(atr_mult=0.0, bb_std=0.5, vol_min_pct=0, ema_dist_max=50, chg24_min=-99, chg24_max=99,
+               trail_act=0.5, trail_drop=0.2, max_daily_trades=99, daily_target_pct=999,
+               entry_type="limit", limit_offset_pct=0.2, limit_bars=2, limit_through_pct=0.05)
+    trades = E.run(p, {"ETHUSDT": f}, int(f.open_time[200]), int(f.open_time[-1]))
+    assert trades
+    idx = {int(t): k for k, t in enumerate(f.open_time)}
+    for t in trades:
+        i, e = idx[t.signal_ts], idx[t.entry_ts]
+        lim = f.c[i] * (1 - 0.002)
+        assert 1 <= e - i <= 2
+        assert t.entry_price == pytest.approx(lim)          # fill no limite, sem slippage
+        assert f.l[e] <= lim * (1 - 0.0005)                  # mínima atravessou o limite

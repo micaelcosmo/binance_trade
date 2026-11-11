@@ -9,7 +9,9 @@ público de klines e as ordens vão para uma exchange mock.
 | `mock_exchange.py` | exchange mock: saldo USDT, ordens market com taxa (0,1%) e slippage, histórico de fills |
 | `indicators.py` | RSI/EMA/MACD/ATR/Bollinger/ADX/estocástico/IBS/divergências/AVWAP em pandas/numpy |
 | `engine.py` | motor candle-a-candle sem look-ahead: Porteiro + oráculo mock + saídas (`Params`) |
-| `run_grid.py` | grade de variações (IS 70% / OOS 30%), modos carteira e por moeda |
+| `run_grid.py` | sim-001: grade de 101 variações paramétricas (IS 70% / OOS 30%), modos carteira e por moeda |
+| `run_sim002.py` | sim-002: variações estruturais (R:R, breakeven, parcial, time-stop, confirmação, limit/maker, custos), todas com gate SMA200 |
+| `summarize.py` | tabelas markdown a partir dos CSVs |
 | `reports/` | relatório `sim-001-calibracao.md` + CSVs |
 
 ## Como rodar (Windows, Git Bash)
@@ -20,7 +22,8 @@ PY=.venv/Scripts/python
 
 $PY -m simulation.data                 # baixa/atualiza (incremental) ~11 moedas
 $PY -m simulation.run_grid --quick     # smoke: BASE em 3 moedas (~1 min)
-$PY -m simulation.run_grid             # grade completa (~30–40 min)
+$PY -m simulation.run_grid             # sim-001 (~25 min)
+$PY -m simulation.run_sim002           # sim-002 (~15 min)
 $PY -m pytest -q tests/test_sim_*.py   # testes (sintéticos, sem rede)
 ```
 

@@ -1,6 +1,6 @@
 # TEMPO — estimado × gasto
 
-> Atualizado em **2026-11-11T00:56:22-03:00** · estimado total **755 min** · gasto total **216 min**. Tempos em minutos (relógio de parede).
+> Atualizado em **2026-11-11T01:15:25-03:00** · estimado total **755 min** · gasto total **234 min**. Tempos em minutos (relógio de parede).
 
 ## Por task
 
@@ -23,15 +23,15 @@
 | T-040 | Aplicar gate SMA200 diária (único ajuste robusto da sim-001), configurável | 45.0 | 8.8 | -36 | 2026-11-11T00:44:40-03:00 | 2026-11-11T00:53:27-03:00 |
 | T-041 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | 75.0 | 12.0 | -63 | 2026-11-11T00:31:20-03:00 | 2026-11-11T00:43:18-03:00 |
 | T-004 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | 15.0 | — | — | 2026-11-11T00:39:50-03:00 | 2026-11-11T00:39:51-03:00 |
-| T-024 | sim-002: variações estruturais (R:R, confirmação, custos) | 90.0 | 11.3 | -79 | 2026-11-11T00:45:05-03:00 | — |
+| T-024 | sim-002: variações estruturais (R:R, confirmação, custos) | 90.0 | 29.2 | -61 | 2026-11-11T00:45:05-03:00 | 2026-11-11T01:14:18-03:00 |
 
 ## Por agente
 
 | agente | criado | encerrado | vivo (min) |
 |---|---|---|---|
-| orquestrador | 2026-11-10T23:49:29-03:00 | — | 66.9 |
+| orquestrador | 2026-11-10T23:49:29-03:00 | — | 86.0 |
 | ag-spec | 2026-11-10T23:51:53-03:00 | 2026-11-11T00:18:26-03:00 | 26.6 |
-| ag-sim | 2026-11-10T23:52:06-03:00 | — | 64.3 |
+| ag-sim | 2026-11-10T23:52:06-03:00 | 2026-11-11T01:14:20-03:00 | 82.2 |
 | ag-ui | 2026-11-10T23:52:07-03:00 | 2026-11-11T00:36:13-03:00 | 44.1 |
 | ag-calib | 2026-11-11T00:31:17-03:00 | 2026-11-11T00:53:50-03:00 | 22.6 |
 
@@ -126,18 +126,20 @@ tasks:
   T-024:
     estimate_min: 90.0
     started_at: '2026-11-11T00:45:05-03:00'
-    spent_min: 11.3
+    spent_min: 29.2
+    finished_at: '2026-11-11T01:14:18-03:00'
 agents:
   orquestrador:
     spawned_at: '2026-11-10T23:49:29-03:00'
-    alive_min: 66.9
+    alive_min: 86.0
   ag-spec:
     spawned_at: '2026-11-10T23:51:53-03:00'
     alive_min: 26.6
     ended_at: '2026-11-11T00:18:26-03:00'
   ag-sim:
     spawned_at: '2026-11-10T23:52:06-03:00'
-    alive_min: 64.3
+    alive_min: 82.2
+    ended_at: '2026-11-11T01:14:20-03:00'
   ag-ui:
     spawned_at: '2026-11-10T23:52:07-03:00'
     alive_min: 44.1
@@ -148,6 +150,6 @@ agents:
     ended_at: '2026-11-11T00:53:50-03:00'
 totals:
   estimate_min: 755.0
-  spent_min: 215.7
+  spent_min: 233.6
 ```
 <!-- DATA:END -->

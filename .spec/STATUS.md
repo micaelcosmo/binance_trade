@@ -1,15 +1,15 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T00:56:22-03:00** · branch `check_strategies` · versão `v3.11.0` · 17/18 tasks concluídas.
+> Atualizado em **2026-11-11T01:15:25-03:00** · branch `check_strategies` · versão `v3.12.0` · 18/18 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | — | commit T-040 | 2026-11-11T00:55:53-03:00 |
+| orquestrador | Orquestrador | active | — | commit sim-002 | 2026-11-11T01:15:22-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
-| ag-sim | Simulador | active | T-024 | sim-002 stage1: variação 10/53 (114s) | 2026-11-11T00:55:22-03:00 |
+| ag-sim | Simulador | done | T-024 | concluído (T-024) | 2026-11-11T01:14:20-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
 | ag-calib | Calibrador | done | T-040 | concluído T-040 | 2026-11-11T00:53:50-03:00 |
 
@@ -44,7 +44,7 @@
 | T-040 | E4 | Aplicar gate SMA200 diária (único ajuste robusto da sim-001), configurável | done | ag-calib | 5/5 |
 | T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | done | ag-calib | 6/6 |
 | T-004 | E0 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | done | orquestrador | 2/2 |
-| T-024 | E2 | sim-002: variações estruturais (R:R, confirmação, custos) | doing | ag-sim | 2/4 |
+| T-024 | E2 | sim-002: variações estruturais (R:R, confirmação, custos) | done | ag-sim | 4/4 |
 
 ## Decisões para o Micael
 
@@ -66,31 +66,33 @@
 | D-405 | não | UNIT-006 item 8: entrada all-in (99% do saldo). Agora configurável via [profit_gain] entry_balance_fraction (default 0.99, comportamento inalterado). Mudar o default? | A: manter 0.99 / B: dimensionar por risco (ex. risco 1-2% do capital / stop ATR) / C: fração fixa menor (ex. 0.5) | pending | — |
 | D-406 | não | UNIT-006 item 9: maximum_hold_time_seconds = 7200 é definido e nunca usado (não há timeout de posição). O que fazer? | A: remover o atributo morto / B: implementar timeout de posição (venda após X h) parametrizado / C: manter | pending | — |
 | D-407 | não | Gate SMA200 diário ligado por padrão (regime_filter_sma200=true). Mantém? | Manter ligado / Desligar por padrão | pending | — |
+| D-210 | não | sim-002: entrada limit −0,6% válida 1h (+taxa BNB) é a única melhora relevante (carteira IS +0,05%/trade), mas depende do modelo de fill. Implementar? | A: implementar em shadow/paper e medir fill real / B: não implementar | pending | — |
+| D-211 | não | 190 configurações (sim-001+002) sem edge líquido robusto na profit_gain; problema está no sinal (edge bruto ≈ custo). O que fazer? | A: live com tamanho mínimo + IA em shadow-mode / B: pausar live / C: spec de nova tese de entrada | pending | — |
 
 ## Últimos eventos
 
+- `2026-11-11T01:15:25-03:00` **orquestrador** — commit v3.12.0: sim-002 (89 variações estruturais): nenhuma robusta; problema é o sinal
+- `2026-11-11T01:15:22-03:00` **orquestrador** — status → active
+- `2026-11-11T01:14:20-03:00` **ag-sim** — status → done
+- `2026-11-11T01:14:19-03:00` **ag-sim** — T-024 ok: sim-002 (89 config, todas c/ SMA200). Nenhuma positiva e robusta; R:R/breakeven/parcial/time-stop pioram; só limit −0,6%×1h + BNB ≈ empate (IS +0,05%/trade, OOS −0,14%, @close −0,19/−0,52). D-210/D-211 abertas
+- `2026-11-11T01:14:18-03:00` **ag-sim** — T-024 doing → done
+- `2026-11-11T01:14:17-03:00` **ag-sim** — T-024 ✓ relatório sim-002
+- `2026-11-11T01:14:16-03:00` **ag-sim** — T-024 ✓ grade estrutural >=50 var
+- `2026-11-11T01:14:16-03:00` **ag-sim** — decisão aberta D-211: 190 configurações (sim-001+002) sem edge líquido robusto na profit_gain; problema está no sinal (edge bruto ≈ custo). O que fazer?
+- `2026-11-11T01:14:14-03:00` **ag-sim** — decisão aberta D-210: sim-002: entrada limit −0,6% válida 1h (+taxa BNB) é a única melhora relevante (carteira IS +0,05%/trade), mas depende do modelo de fill. Implementar?
+- `2026-11-11T00:57:31-03:00` **orquestrador** — status → waiting
 - `2026-11-11T00:56:22-03:00` **orquestrador** — commit v3.11.0: gate de regime SMA200 diária (89 testes)
 - `2026-11-11T00:55:53-03:00` **orquestrador** — status → active
 - `2026-11-11T00:53:50-03:00` **ag-calib** — status → done
 - `2026-11-11T00:53:35-03:00` **ag-calib** — T-040 concluída: gate SMA200 diário (Porteiro+Tribunal, fail-closed, cache diário) na profit_gain; D-407 aberta
 - `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 doing → done
-- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 ✓ Decisão D-407
-- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 ✓ Atualizar arch.yaml e UNIT-012
-- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 ✓ Testes mock + suíte
-- `2026-11-11T00:53:25-03:00` **ag-calib** — decisão aberta D-407: Gate SMA200 diário ligado por padrão (regime_filter_sma200=true). Mantém?
-- `2026-11-11T00:53:12-03:00` **ag-sim** — sim-002: grade estrutural iniciada (53 var estágio 1 + combinações + 28 checagens de robustez), todas com gate SMA200
-- `2026-11-11T00:51:15-03:00` **ag-sim** — T-024 ✓ testes novos
-- `2026-11-11T00:51:13-03:00` **ag-sim** — T-024 ✓ estender engine: stop fixo, breakeven, parcial, time-stop, confirmação, maker
-- `2026-11-11T00:47:22-03:00` **ag-calib** — T-040 ✓ Gate SMA200 diário com cache 24h (Porteiro + Tribunal)
-- `2026-11-11T00:47:22-03:00` **ag-calib** — T-040 ✓ Params regime_filter_sma200/regime_sma_period
-- `2026-11-11T00:45:06-03:00` **ag-sim** — status → active
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.11.0
+  version: v3.12.0
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -101,10 +103,10 @@ agents:
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
   task: —
-  step: commit T-040
+  step: commit sim-002
   kind: orchestrator
   status: active
-  heartbeat: '2026-11-11T00:55:53-03:00'
+  heartbeat: '2026-11-11T01:15:22-03:00'
   step_log:
   - at: '2026-11-10T23:49:29-03:00'
     step: construindo painel
@@ -132,6 +134,10 @@ agents:
     step: aguardando ag-calib (T-040 SMA200) e ag-sim (T-024 sim-002)
   - at: '2026-11-11T00:55:53-03:00'
     step: commit T-040
+  - at: '2026-11-11T00:57:31-03:00'
+    step: aguardando ag-sim (sim-002)
+  - at: '2026-11-11T01:15:22-03:00'
+    step: commit sim-002
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -163,43 +169,11 @@ agents:
   name: Simulador
   role: Mock exchange + backtests de calibração
   task: T-024
-  step: 'sim-002 stage1: variação 10/53 (114s)'
+  step: concluído (T-024)
   kind: worker
-  status: active
-  heartbeat: '2026-11-11T00:55:22-03:00'
+  status: done
+  heartbeat: '2026-11-11T01:14:20-03:00'
   step_log:
-  - at: '2026-11-11T00:29:32-03:00'
-    step: 'stage1: variação 40/69 (861s)'
-  - at: '2026-11-11T00:31:18-03:00'
-    step: 'stage1: variação 45/69 (966s)'
-  - at: '2026-11-11T00:32:59-03:00'
-    step: 'stage1: variação 50/69 (1067s)'
-  - at: '2026-11-11T00:34:55-03:00'
-    step: 'stage1: variação 55/69 (1175s)'
-  - at: '2026-11-11T00:35:52-03:00'
-    step: 'stage1: variação 60/69 (1240s)'
-  - at: '2026-11-11T00:36:10-03:00'
-    step: 'stage1: variação 65/69 (1259s)'
-  - at: '2026-11-11T00:36:19-03:00'
-    step: 'stage1: variação 69/69 (1268s)'
-  - at: '2026-11-11T00:36:27-03:00'
-    step: 'stage2: variação 5/20 (1276s)'
-  - at: '2026-11-11T00:36:37-03:00'
-    step: 'stage2: variação 10/20 (1286s)'
-  - at: '2026-11-11T00:36:56-03:00'
-    step: 'stage2: variação 15/20 (1304s)'
-  - at: '2026-11-11T00:37:19-03:00'
-    step: 'stage2: variação 20/20 (1327s)'
-  - at: '2026-11-11T00:37:41-03:00'
-    step: 'check: variação 5/12 (1350s)'
-  - at: '2026-11-11T00:39:04-03:00'
-    step: 'check: variação 10/12 (1432s)'
-  - at: '2026-11-11T00:39:09-03:00'
-    step: 'check: variação 12/12 (1438s)'
-  - at: '2026-11-11T00:40:50-03:00'
-    step: escrevendo relatório sim-001
-  - at: '2026-11-11T00:42:36-03:00'
-    step: concluído
   - at: '2026-11-11T00:45:06-03:00'
     step: estendendo engine (breakeven, parcial, confirmação, maker)
   - at: '2026-11-11T00:51:28-03:00'
@@ -208,6 +182,38 @@ agents:
     step: 'sim-002 stage1: variação 5/53 (91s)'
   - at: '2026-11-11T00:55:22-03:00'
     step: 'sim-002 stage1: variação 10/53 (114s)'
+  - at: '2026-11-11T00:57:40-03:00'
+    step: 'sim-002 stage1: variação 15/53 (250s)'
+  - at: '2026-11-11T00:59:25-03:00'
+    step: 'sim-002 stage1: variação 20/53 (364s)'
+  - at: '2026-11-11T01:01:29-03:00'
+    step: 'sim-002 stage1: variação 25/53 (485s)'
+  - at: '2026-11-11T01:03:07-03:00'
+    step: 'sim-002 stage1: variação 30/53 (587s)'
+  - at: '2026-11-11T01:04:17-03:00'
+    step: 'sim-002 stage1: variação 35/53 (659s)'
+  - at: '2026-11-11T01:05:35-03:00'
+    step: 'sim-002 stage1: variação 40/53 (742s)'
+  - at: '2026-11-11T01:05:51-03:00'
+    step: 'sim-002 stage1: variação 45/53 (759s)'
+  - at: '2026-11-11T01:07:15-03:00'
+    step: 'sim-002 stage1: variação 50/53 (842s)'
+  - at: '2026-11-11T01:07:58-03:00'
+    step: 'sim-002 stage1: variação 53/53 (885s)'
+  - at: '2026-11-11T01:09:37-03:00'
+    step: 'sim-002 check: variação 5/28 (984s)'
+  - at: '2026-11-11T01:09:54-03:00'
+    step: 'sim-002 check: variação 10/28 (1001s)'
+  - at: '2026-11-11T01:10:10-03:00'
+    step: 'sim-002 check: variação 15/28 (1018s)'
+  - at: '2026-11-11T01:10:29-03:00'
+    step: 'sim-002 check: variação 20/28 (1036s)'
+  - at: '2026-11-11T01:10:53-03:00'
+    step: 'sim-002 check: variação 25/28 (1060s)'
+  - at: '2026-11-11T01:11:09-03:00'
+    step: 'sim-002 check: variação 28/28 (1075s)'
+  - at: '2026-11-11T01:14:20-03:00'
+    step: concluído (T-024)
 - id: ag-ui
   name: Designer do app
   role: Repagina templates/index.html
@@ -552,7 +558,7 @@ tasks:
   title: 'sim-002: variações estruturais (R:R, confirmação, custos)'
   epic: E2
   agent: ag-sim
-  status: doing
+  status: done
   steps:
   - name: 'estender engine: stop fixo, breakeven, parcial, time-stop, confirmação, maker'
     done: true
@@ -561,10 +567,11 @@ tasks:
     done: true
     at: '2026-11-11T00:51:15-03:00'
   - name: grade estrutural >=50 var
-    done: false
-    doing: true
+    done: true
+    at: '2026-11-11T01:14:16-03:00'
   - name: relatório sim-002
-    done: false
+    done: true
+    at: '2026-11-11T01:14:17-03:00'
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -744,6 +751,27 @@ decisions:
   status: pending
   blocking: false
   opened_at: '2026-11-11T00:53:25-03:00'
+- id: D-210
+  question: 'sim-002: entrada limit −0,6% válida 1h (+taxa BNB) é a única melhora relevante (carteira IS +0,05%/trade),
+    mas depende do modelo de fill. Implementar?'
+  options:
+  - 'A: implementar em shadow/paper e medir fill real'
+  - 'B: não implementar'
+  recommendation: A (só paper)
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T01:14:14-03:00'
+- id: D-211
+  question: 190 configurações (sim-001+002) sem edge líquido robusto na profit_gain; problema está no sinal (edge
+    bruto ≈ custo). O que fazer?
+  options:
+  - 'A: live com tamanho mínimo + IA em shadow-mode'
+  - 'B: pausar live'
+  - 'C: spec de nova tese de entrada'
+  recommendation: A + C
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T01:14:16-03:00'
 events:
 - at: '2026-11-10T23:49:14-03:00'
   who: orquestrador
@@ -1232,6 +1260,39 @@ events:
 - at: '2026-11-11T00:56:22-03:00'
   who: orquestrador
   msg: 'commit v3.11.0: gate de regime SMA200 diária (89 testes)'
-updated_at: '2026-11-11T00:56:22-03:00'
+- at: '2026-11-11T00:57:31-03:00'
+  who: orquestrador
+  msg: status → waiting
+- at: '2026-11-11T01:14:14-03:00'
+  who: ag-sim
+  msg: 'decisão aberta D-210: sim-002: entrada limit −0,6% válida 1h (+taxa BNB) é a única melhora relevante (carteira
+    IS +0,05%/trade), mas depende do modelo de fill. Implementar?'
+- at: '2026-11-11T01:14:16-03:00'
+  who: ag-sim
+  msg: 'decisão aberta D-211: 190 configurações (sim-001+002) sem edge líquido robusto na profit_gain; problema
+    está no sinal (edge bruto ≈ custo). O que fazer?'
+- at: '2026-11-11T01:14:16-03:00'
+  who: ag-sim
+  msg: T-024 ✓ grade estrutural >=50 var
+- at: '2026-11-11T01:14:17-03:00'
+  who: ag-sim
+  msg: T-024 ✓ relatório sim-002
+- at: '2026-11-11T01:14:18-03:00'
+  who: ag-sim
+  msg: T-024 doing → done
+- at: '2026-11-11T01:14:19-03:00'
+  who: ag-sim
+  msg: 'T-024 ok: sim-002 (89 config, todas c/ SMA200). Nenhuma positiva e robusta; R:R/breakeven/parcial/time-stop
+    pioram; só limit −0,6%×1h + BNB ≈ empate (IS +0,05%/trade, OOS −0,14%, @close −0,19/−0,52). D-210/D-211 abertas'
+- at: '2026-11-11T01:14:20-03:00'
+  who: ag-sim
+  msg: status → done
+- at: '2026-11-11T01:15:22-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T01:15:25-03:00'
+  who: orquestrador
+  msg: 'commit v3.12.0: sim-002 (89 variações estruturais): nenhuma robusta; problema é o sinal'
+updated_at: '2026-11-11T01:15:25-03:00'
 ```
 <!-- DATA:END -->

@@ -53,3 +53,11 @@ def test_equity_marks_to_market():
     ex = MockExchange.with_balance(100.0, fee_rate=0.0, slippage=0.0)
     ex.market_buy_quote("BTCUSDT", 50.0, 10.0)
     assert ex.equity({"BTC": 12.0}) == pytest.approx(50.0 + 5 * 12.0)
+
+
+def test_limit_buy_fills_at_limit_without_slippage():
+    ex = MockExchange.with_balance(1000.0, fee_rate=0.00075, slippage=0.002)
+    fill = ex.limit_buy_quote("BTCUSDT", 1000.0, 100.0)
+    assert fill.price == pytest.approx(100.0)
+    assert ex.balance("BTC") == pytest.approx(10.0 * (1 - 0.00075))
+    assert ex.slippage == 0.002  # slippage restaurado para as ordens market

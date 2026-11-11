@@ -25,3 +25,7 @@ Medir, sem capital real, o desempenho da `profit_gain` atual e de ≥ 50 variaç
 - [ ] ≥ 50 variações executadas; métricas por variação × moeda × segmento (IS/OOS): retorno, win rate, drawdown, nº de trades, profit factor.
 - [ ] Recomendação justificada por OOS, com custo (taxa+slippage) incluído.
 - [ ] Decisão do Micael registrada antes de E4.
+
+## Rodada 2 — sim-002 (T-024)
+
+89 variações estruturais (R:R, stops apertados, breakeven, saída parcial, time-stop, confirmação de entrada, entrada limit, taxa BNB), todas com o gate SMA200. Nenhuma tem expectância líquida positiva robusta (IS, OOS, latência e slippage). Único ganho: custo/preço de entrada (taxa BNB; entrada limit −0,6% só em paper). Relatório: `simulation/reports/sim-002-estrutural.md`. Decisões: D-210, D-211.
