@@ -73,6 +73,18 @@ class Config:
         self.trailing_drop_pct = get_safe_float("trailing_drop_pct", 0.3)
         self.ai_cooldown_minutes = get_safe_float("ai_cooldown_minutes", 45.0)
 
+        # Parametros da profit_gain (T-041): defaults = comportamento atual,
+        # chaves legadas acima e, por cima, a secao opcional [profit_gain].
+        # Anti-crash: chave invalida -> mantem valor anterior + aviso.
+        from .strategies.profit_gain_params import load_profit_gain_params, params_from_legacy_config
+
+        def _warn_params(message):
+            print(f"⚠️ {message}")
+
+        self.PROFIT_GAIN_PARAMS = load_profit_gain_params(
+            config, base=params_from_legacy_config(self, warn=_warn_params), warn=_warn_params
+        )
+
         self.SCOUT_SLEEP_TIME = get_safe_int("scout_sleep_time", 60)
         self.SELL_TIMEOUT = os.environ.get("SELL_TIMEOUT") or config.get(USER_CFG_SECTION, "sell_timeout", fallback="0")
         self.BUY_TIMEOUT = os.environ.get("BUY_TIMEOUT") or config.get(USER_CFG_SECTION, "buy_timeout", fallback="0")

@@ -1,13 +1,13 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T00:43:30-03:00** · branch `check_strategies` · versão `v3.9.0` · 16/17 tasks concluídas.
+> Atualizado em **2026-11-11T00:44:26-03:00** · branch `check_strategies` · versão `v3.10.0` · 16/17 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | — | commit E2 (simulação) | 2026-11-11T00:43:29-03:00 |
+| orquestrador | Orquestrador | active | — | commit T-041 | 2026-11-11T00:44:24-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
 | ag-sim | Simulador | done | T-023 | concluído | 2026-11-11T00:42:36-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
@@ -41,7 +41,7 @@
 | T-023 | E2 | Relatório + recomendação de parâmetros | done | ag-sim | 3/3 |
 | T-030 | E3 | Redesign templates/index.html | done | ag-ui | 4/4 |
 | T-031 | E3 | Verificação visual com dados mock | done | ag-ui | 3/3 |
-| T-040 | E4 | Aplicar valores calibrados (após simulação + aprovação) | todo | — | 0/0 |
+| T-040 | E4 | Aplicar gate SMA200 diária (único ajuste robusto da sim-001), configurável | todo | — | 0/0 |
 | T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | done | ag-calib | 6/6 |
 | T-004 | E0 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | done | orquestrador | 2/2 |
 
@@ -67,6 +67,9 @@
 
 ## Últimos eventos
 
+- `2026-11-11T00:44:26-03:00` **orquestrador** — commit v3.10.0: profit_gain parametrizada; stop antes da varredura; fill real (62 testes)
+- `2026-11-11T00:44:24-03:00` **orquestrador** — status → active
+- `2026-11-11T00:43:48-03:00` **orquestrador** — status → waiting
 - `2026-11-11T00:43:30-03:00` **orquestrador** — commit v3.9.0: simulação 101 variações; baseline perde (−0,30%/trade); SMA200 é o único ganho robusto
 - `2026-11-11T00:43:29-03:00` **orquestrador** — status → active
 - `2026-11-11T00:43:19-03:00` **ag-calib** — status → done
@@ -79,16 +82,13 @@
 - `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-403: UNIT-006 item 6: durante o cooldown do motor (ai_cooldown_until) a mineração pesada de klines continua rodando a cada scout; só a chamada à IA é poupada. Pular a mineração no cooldown quando fora de operação?
 - `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-402: UNIT-006 item 5: Tribunal de Swap exige >= 4 candidatas aprovadas ao mesmo tempo, então quase nunca convoca (e adia +45 min). Qual o mínimo?
 - `2026-11-11T00:43:14-03:00` **ag-calib** — decisão aberta D-401: UNIT-006 item 4: com USDT < $5 a recuperação de estado assume a 1ª moeda da carteira com valor >= $5, mesmo uma que o bot nunca comprou (e passa a vendê-la pelos stops). Corrigir?
-- `2026-11-11T00:42:49-03:00` **ag-calib** — T-041 ✓ Testes mock + suíte
-- `2026-11-11T00:42:36-03:00` **ag-sim** — status → done
-- `2026-11-11T00:42:35-03:00` **ag-sim** — T-023 ok: relatório simulation/reports/sim-001-calibracao.md; recomendação: gate SMA200 diária (seguro), trail_drop 0.2 e stop_mult 3 opcionais; D-201..D-204 abertas
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.9.0
+  version: v3.10.0
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -99,10 +99,10 @@ agents:
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
   task: —
-  step: commit E2 (simulação)
+  step: commit T-041
   kind: orchestrator
   status: active
-  heartbeat: '2026-11-11T00:43:29-03:00'
+  heartbeat: '2026-11-11T00:44:24-03:00'
   step_log:
   - at: '2026-11-10T23:49:29-03:00'
     step: construindo painel
@@ -122,6 +122,10 @@ agents:
     step: aguardando ag-sim (grade estágio 2) e ag-calib
   - at: '2026-11-11T00:43:29-03:00'
     step: commit E2 (simulação)
+  - at: '2026-11-11T00:43:48-03:00'
+    step: aguardando ag-calib (T-041) para encadear T-040
+  - at: '2026-11-11T00:44:24-03:00'
+    step: commit T-041
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -473,11 +477,12 @@ tasks:
     at: '2026-11-11T00:04:52-03:00'
   agent: ag-ui
 - id: T-040
-  title: Aplicar valores calibrados (após simulação + aprovação)
+  title: Aplicar gate SMA200 diária (único ajuste robusto da sim-001), configurável
   epic: E4
   status: todo
   steps: []
-  note: T-041 prepara a parametrização
+  note: Trailing 0,2 / stop×3 NÃO aplicados (marginais, quebram com latência/slippage). Aguarda fim do T-041 (mesmo
+    arquivo).
 - id: T-041
   title: Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real
   epic: E4
@@ -1103,6 +1108,15 @@ events:
 - at: '2026-11-11T00:43:30-03:00'
   who: orquestrador
   msg: 'commit v3.9.0: simulação 101 variações; baseline perde (−0,30%/trade); SMA200 é o único ganho robusto'
-updated_at: '2026-11-11T00:43:30-03:00'
+- at: '2026-11-11T00:43:48-03:00'
+  who: orquestrador
+  msg: status → waiting
+- at: '2026-11-11T00:44:24-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T00:44:26-03:00'
+  who: orquestrador
+  msg: 'commit v3.10.0: profit_gain parametrizada; stop antes da varredura; fill real (62 testes)'
+updated_at: '2026-11-11T00:44:26-03:00'
 ```
 <!-- DATA:END -->

@@ -67,3 +67,75 @@ disaster_stop_pct=15.0
 # esperar antes de permitir que a IA avalie trocar ela por outra melhor (Swap)?
 # Recomendado: 45. Assim o bot nao fica pulando de moeda em moeda no desespero.
 ai_cooldown_minutes=45
+
+
+# ==============================================================================
+# PARAMETROS AVANCADOS DA PROFIT GAIN (OPCIONAL) — secao [profit_gain]
+# ==============================================================================
+# Tudo abaixo e OPCIONAL. Os valores mostrados sao os PADROES atuais do motor:
+# deixar a secao comentada = comportamento identico ao de hoje.
+# Para alterar, descomente a linha [profit_gain] e apenas as chaves desejadas.
+# Valor invalido (texto, vazio, fora da faixa) e ignorado: o motor usa o padrao
+# e avisa no log. Se uma chave tambem existir na secao principal acima
+# (ex.: disaster_stop_pct), o valor desta secao prevalece.
+#
+# [profit_gain]
+#
+# --- Porteiro (filtro matematico) ---
+# Queda minima exigida nas 24h = -(N x ATR% de 1h).
+# atr_bottom_multiplier = 2.0
+# Desvio padrao inicial das Bandas de Bollinger (o botao da UI sobrescreve).
+# bollinger_std_default = 2.0
+# Volume da vela de 15m precisa ser >= X% da media das 10 anteriores.
+# volume_15m_min_pct = 80.0
+# Preco precisa estar abaixo de X% da EMA21 de 1h (ex.: -1.0 = 1% abaixo).
+# ema21_max_distance_pct = -1.0
+# Variacao 24h maxima aceita (minima = -disaster_stop_pct).
+# change_24h_max_pct = 2.5
+# Tribunal: candidata ao swap precisa ter variacao 24h <= X%.
+# swap_change_24h_max_pct = -0.5
+#
+# --- Inteligencia Artificial ---
+# Confianca minima (%) para comprar.
+# ai_min_confidence_entry = 90
+# Confianca minima (%) para o Tribunal aprovar a troca de moeda.
+# ai_min_confidence_swap = 95
+# Numero minimo de candidatas para convocar o Tribunal.
+# swap_min_candidates = 4
+# Espera (segundos) apos a IA responder "sobrecarregada" (503).
+# ai_503_retry_seconds = 300
+#
+# --- Saida (stops) ---
+# trailing_activation_pct = 1.5
+# trailing_drop_pct = 0.3
+# Stop dinamico = N x ATR% de 1h, limitado pelas faixas abaixo.
+# atr_stop_multiplier = 4.0
+# btc_stop_min_pct = 6.0
+# btc_stop_max_pct = 10.5
+# Faixa das altcoins: de alt_stop_min_pct ate base_stop_loss_pct.
+# alt_stop_min_pct = 4.0
+# base_stop_loss_pct = 7.0
+# disaster_stop_pct = 15.0
+# Tribunal so avalia apos X horas de operacao...
+# swap_min_hold_hours = 10.0
+# ...com prejuizo entre swap_loss_max_pct e swap_loss_min_pct (%).
+# swap_loss_min_pct = -0.15
+# swap_loss_max_pct = -2.5
+# Intervalo do Tribunal / pausa apos veto da IA (minutos).
+# ai_cooldown_minutes = 45
+#
+# --- Disciplina diaria ---
+# daily_profit_target_pct = 5.0
+# max_daily_trades = 3
+# Pausa (minutos) apos o Porteiro vetar o mercado (o botao da UI sobrescreve).
+# motor_cooldown_minutes_default = 15
+# Pausa (segundos) apos venda manual ou "+1 trade" pela UI.
+# ui_override_cooldown_seconds = 60
+#
+# --- Tamanho da posicao ---
+# Fracao do saldo livre usada em cada entrada (0.99 = 99%, all-in).
+# entry_balance_fraction = 0.99
+# Saldo minimo da moeda base para tentar comprar (minimo Binance + folga).
+# min_entry_balance = 5.1
+# Valor minimo (em moeda base) para considerar uma posicao ainda aberta.
+# min_position_value = 5.0
