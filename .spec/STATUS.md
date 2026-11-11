@@ -1,6 +1,6 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T00:37:15-03:00** · branch `check_strategies` · versão `v3.8.0` · 12/16 tasks concluídas.
+> Atualizado em **2026-11-11T00:39:52-03:00** · branch `check_strategies` · versão `v3.8.1` · 13/17 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
@@ -9,9 +9,9 @@
 |---|---|---|---|---|---|
 | orquestrador | Orquestrador | active | — | commit E3 (UI do app) | 2026-11-11T00:37:08-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
-| ag-sim | Simulador | active | T-022 | stage2: variação 15/20 (1304s) | 2026-11-11T00:36:56-03:00 |
+| ag-sim | Simulador | active | T-022 | check: variação 12/12 (1438s) | 2026-11-11T00:39:09-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
-| ag-calib | Calibrador | active | T-041 | ligando params na estratégia | 2026-11-11T00:36:10-03:00 |
+| ag-calib | Calibrador | active | T-041 | escrevendo testes mock | 2026-11-11T00:39:42-03:00 |
 
 ## Épicos
 
@@ -42,7 +42,8 @@
 | T-030 | E3 | Redesign templates/index.html | done | ag-ui | 4/4 |
 | T-031 | E3 | Verificação visual com dados mock | done | ag-ui | 3/3 |
 | T-040 | E4 | Aplicar valores calibrados (após simulação + aprovação) | todo | — | 0/0 |
-| T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | doing | ag-calib | 1/6 |
+| T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | doing | ag-calib | 4/6 |
+| T-004 | E0 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | done | orquestrador | 2/2 |
 
 ## Decisões para o Micael
 
@@ -56,28 +57,28 @@
 
 ## Últimos eventos
 
+- `2026-11-11T00:39:52-03:00` **orquestrador** — commit v3.8.1: fix re-render do painel
+- `2026-11-11T00:39:51-03:00` **orquestrador** — T-004 doing → done
+- `2026-11-11T00:39:50-03:00` **orquestrador** — T-004 todo → doing
+- `2026-11-11T00:39:50-03:00` **orquestrador** — T-004 ✓ screenshots desktop/mobile
+- `2026-11-11T00:39:50-03:00` **orquestrador** — T-004 ✓ re-render só com dados novos
+- `2026-11-11T00:39:44-03:00` **ag-calib** — profit_gain parametrizada (ProfitGainParams) + pré-check de stop antes da mineração + preço de compra = fill médio
+- `2026-11-11T00:39:41-03:00` **ag-calib** — T-041 ✓ Fix preço de compra = fill médio
+- `2026-11-11T00:39:41-03:00` **ag-calib** — T-041 ✓ Fix stop antes da mineração
+- `2026-11-11T00:39:41-03:00` **ag-calib** — T-041 ✓ Carregar [profit_gain] no config.py + user.cfg.exemple
 - `2026-11-11T00:37:15-03:00` **orquestrador** — commit v3.8.0: repaginação da página do app
 - `2026-11-11T00:37:08-03:00` **orquestrador** — status → active
 - `2026-11-11T00:36:33-03:00` **ag-sim** — estágio 1 ok (69 var). Melhores IS: entrada sma200=asset/both, ema<-2; saída trail_drop=0.2/trail_act=2.0; stop_mult=3/5, clamp 4-12
 - `2026-11-11T00:36:31-03:00` **ag-sim** — T-022 ✓ rodar estágio 1 em 11 moedas
 - `2026-11-11T00:36:13-03:00` **ag-ui** — status → done
 - `2026-11-11T00:36:13-03:00` **ag-ui** — E3: index.html repaginado; paridade 29/29 IDs, 12/12 emits, 7/7 listeners; screenshots em D:\binance_trade_work\ui_check\shots
-- `2026-11-11T00:36:12-03:00` **ag-ui** — T-031 doing → done
-- `2026-11-11T00:36:12-03:00` **ag-ui** — T-031 ✓ screenshots desktop/mobile
-- `2026-11-11T00:36:11-03:00` **ag-ui** — T-030 doing → done
-- `2026-11-11T00:36:11-03:00` **ag-ui** — T-030 ✓ ajustes pós-screenshot
-- `2026-11-11T00:36:09-03:00` **ag-calib** — T-041 ✓ Extrair ProfitGainParams
-- `2026-11-11T00:31:20-03:00` **ag-calib** — T-041 todo → doing
-- `2026-11-11T00:31:19-03:00` **orquestrador** — status → waiting
-- `2026-11-11T00:31:17-03:00` **ag-calib** — agente criado (Calibrador)
-- `2026-11-11T00:31:17-03:00` **ag-calib** — status → active
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.8.0
+  version: v3.8.1
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -138,19 +139,11 @@ agents:
   name: Simulador
   role: Mock exchange + backtests de calibração
   task: T-022
-  step: 'stage2: variação 15/20 (1304s)'
+  step: 'check: variação 12/12 (1438s)'
   kind: worker
   status: active
-  heartbeat: '2026-11-11T00:36:56-03:00'
+  heartbeat: '2026-11-11T00:39:09-03:00'
   step_log:
-  - at: '2026-11-11T00:10:17-03:00'
-    step: 'stage1: variação 1/1 (19s)'
-  - at: '2026-11-11T00:11:08-03:00'
-    step: download paralelo das 8 moedas restantes
-  - at: '2026-11-11T00:15:14-03:00'
-    step: grade estágio 1 rodando (69 variações × 11 moedas)
-  - at: '2026-11-11T00:17:20-03:00'
-    step: 'stage1: variação 5/69 (128s)'
   - at: '2026-11-11T00:19:17-03:00'
     step: 'stage1: variação 10/69 (240s)'
   - at: '2026-11-11T00:21:58-03:00'
@@ -183,6 +176,14 @@ agents:
     step: 'stage2: variação 10/20 (1286s)'
   - at: '2026-11-11T00:36:56-03:00'
     step: 'stage2: variação 15/20 (1304s)'
+  - at: '2026-11-11T00:37:19-03:00'
+    step: 'stage2: variação 20/20 (1327s)'
+  - at: '2026-11-11T00:37:41-03:00'
+    step: 'check: variação 5/12 (1350s)'
+  - at: '2026-11-11T00:39:04-03:00'
+    step: 'check: variação 10/12 (1432s)'
+  - at: '2026-11-11T00:39:09-03:00'
+    step: 'check: variação 12/12 (1438s)'
 - id: ag-ui
   name: Designer do app
   role: Repagina templates/index.html
@@ -208,15 +209,17 @@ agents:
   name: Calibrador
   role: Parametriza profit_gain + correções de stop
   task: T-041
-  step: ligando params na estratégia
+  step: escrevendo testes mock
   kind: worker
   status: active
-  heartbeat: '2026-11-11T00:36:10-03:00'
+  heartbeat: '2026-11-11T00:39:42-03:00'
   step_log:
   - at: '2026-11-11T00:31:17-03:00'
     step: lendo estratégia
   - at: '2026-11-11T00:36:10-03:00'
     step: ligando params na estratégia
+  - at: '2026-11-11T00:39:42-03:00'
+    step: escrevendo testes mock
 epics:
 - id: E0
   title: Painel de acompanhamento do desenvolvimento
@@ -458,16 +461,31 @@ tasks:
     done: true
     at: '2026-11-11T00:36:09-03:00'
   - name: Carregar [profit_gain] no config.py + user.cfg.exemple
-    done: false
-    doing: true
+    done: true
+    at: '2026-11-11T00:39:41-03:00'
   - name: Fix stop antes da mineração
-    done: false
+    done: true
+    at: '2026-11-11T00:39:41-03:00'
   - name: Fix preço de compra = fill médio
-    done: false
+    done: true
+    at: '2026-11-11T00:39:41-03:00'
   - name: Testes mock + suíte
     done: false
+    doing: true
   - name: Registrar decisões D-4xx (itens 4-9)
     done: false
+- id: T-004
+  title: 'Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual'
+  epic: E0
+  agent: orquestrador
+  status: done
+  steps:
+  - name: re-render só com dados novos
+    done: true
+    at: '2026-11-11T00:39:50-03:00'
+  - name: screenshots desktop/mobile
+    done: true
+    at: '2026-11-11T00:39:50-03:00'
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -815,6 +833,34 @@ events:
 - at: '2026-11-11T00:37:15-03:00'
   who: orquestrador
   msg: 'commit v3.8.0: repaginação da página do app'
-updated_at: '2026-11-11T00:37:15-03:00'
+- at: '2026-11-11T00:39:41-03:00'
+  who: ag-calib
+  msg: T-041 ✓ Carregar [profit_gain] no config.py + user.cfg.exemple
+- at: '2026-11-11T00:39:41-03:00'
+  who: ag-calib
+  msg: T-041 ✓ Fix stop antes da mineração
+- at: '2026-11-11T00:39:41-03:00'
+  who: ag-calib
+  msg: T-041 ✓ Fix preço de compra = fill médio
+- at: '2026-11-11T00:39:44-03:00'
+  who: ag-calib
+  msg: profit_gain parametrizada (ProfitGainParams) + pré-check de stop antes da mineração + preço de compra = fill
+    médio
+- at: '2026-11-11T00:39:50-03:00'
+  who: orquestrador
+  msg: T-004 ✓ re-render só com dados novos
+- at: '2026-11-11T00:39:50-03:00'
+  who: orquestrador
+  msg: T-004 ✓ screenshots desktop/mobile
+- at: '2026-11-11T00:39:50-03:00'
+  who: orquestrador
+  msg: T-004 todo → doing
+- at: '2026-11-11T00:39:51-03:00'
+  who: orquestrador
+  msg: T-004 doing → done
+- at: '2026-11-11T00:39:52-03:00'
+  who: orquestrador
+  msg: 'commit v3.8.1: fix re-render do painel'
+updated_at: '2026-11-11T00:39:52-03:00'
 ```
 <!-- DATA:END -->

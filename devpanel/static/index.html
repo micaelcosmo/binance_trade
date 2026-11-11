@@ -234,7 +234,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LABEL = {active:'ativo',idle:'ocioso',waiting:'aguardando',done:'concluído',killed:'encerrado',error:'erro',
   todo:'a fazer',doing:'em andamento',blocked:'bloqueada',review:'revisão',cancelled:'cancelada',pending:'pendente',answered:'respondida',stale:'sem sinal'};
-let taskFilter = 'all', agentFilter = 'live', state = null, lastOk = 0;
+let taskFilter = 'all', agentFilter = 'live', state = null, lastOk = 0, lastKey = '', lastFull = 0;
 const openTasks = new Set();
 const drafts = {};
 
@@ -369,7 +369,15 @@ async function tick(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     state = await r.json(); lastOk = Date.now();
     $('err').style.display='none';
-    renderKpis(state); renderEpics(state); renderAgents(state); renderDecisions(state); renderTimeline(state); renderGit(state);
+    renderKpis(state);
+    // listas só re-renderizam quando os dados mudam (ou a cada 30s p/ tempos) — não atrapalha clique/scroll
+    const key = state.updated_at + '|' + (state.git?.commits?.[0]?.hash||'') + '|' + (state.git?.dirty_files||0);
+    if(key !== lastKey || Date.now() - lastFull > 30000){
+      lastKey = key; lastFull = Date.now();
+      const tl = $('timeline'), sc = tl.scrollTop;
+      renderEpics(state); renderAgents(state); renderDecisions(state); renderTimeline(state); renderGit(state);
+      tl.scrollTop = sc;
+    }
   }catch(e){
     $('err').style.display='block'; $('err').textContent = 'Sem conexão com o servidor do painel ('+e.message+'). Tentando de novo…';
   }

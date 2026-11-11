@@ -1,6 +1,6 @@
 # TEMPO — estimado × gasto
 
-> Atualizado em **2026-11-11T00:37:15-03:00** · estimado total **665 min** · gasto total **184 min**. Tempos em minutos (relógio de parede).
+> Atualizado em **2026-11-11T00:39:52-03:00** · estimado total **680 min** · gasto total **189 min**. Tempos em minutos (relógio de parede).
 
 ## Por task
 
@@ -16,22 +16,23 @@
 | T-014 | .spec/README.md (convenções e índice) | 15.0 | 2.0 | -13 | 2026-11-11T00:16:16-03:00 | 2026-11-11T00:18:19-03:00 |
 | T-020 | Coleta de klines públicos (≥8 moedas, 1h/15m/4h/1d) | 30.0 | 23.0 | -7 | 2026-11-10T23:52:08-03:00 | 2026-11-11T00:15:10-03:00 |
 | T-021 | Mock exchange + motor de simulação fiel à profit_gain | 90.0 | 16.9 | -73 | 2026-11-10T23:58:19-03:00 | 2026-11-11T00:15:12-03:00 |
-| T-022 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | 60.0 | 24.0 | -36 | 2026-11-11T00:13:17-03:00 | — |
+| T-022 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | 60.0 | 26.6 | -33 | 2026-11-11T00:13:17-03:00 | — |
 | T-023 | Relatório + recomendação de parâmetros | 30.0 | — | — | — | — |
 | T-030 | Redesign templates/index.html | 60.0 | 44.0 | -16 | 2026-11-10T23:52:10-03:00 | 2026-11-11T00:36:11-03:00 |
 | T-031 | Verificação visual com dados mock | 20.0 | 37.4 | +17 | 2026-11-10T23:58:46-03:00 | 2026-11-11T00:36:12-03:00 |
 | T-040 | Aplicar valores calibrados (após simulação + aprovação) | 60.0 | — | — | — | — |
-| T-041 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | 75.0 | 5.9 | -69 | 2026-11-11T00:31:20-03:00 | — |
+| T-041 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | 75.0 | 8.5 | -66 | 2026-11-11T00:31:20-03:00 | — |
+| T-004 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | 15.0 | — | — | 2026-11-11T00:39:50-03:00 | 2026-11-11T00:39:51-03:00 |
 
 ## Por agente
 
 | agente | criado | encerrado | vivo (min) |
 |---|---|---|---|
-| orquestrador | 2026-11-10T23:49:29-03:00 | — | 47.8 |
+| orquestrador | 2026-11-10T23:49:29-03:00 | — | 50.4 |
 | ag-spec | 2026-11-10T23:51:53-03:00 | 2026-11-11T00:18:26-03:00 | 26.6 |
-| ag-sim | 2026-11-10T23:52:06-03:00 | — | 45.2 |
+| ag-sim | 2026-11-10T23:52:06-03:00 | — | 47.8 |
 | ag-ui | 2026-11-10T23:52:07-03:00 | 2026-11-11T00:36:13-03:00 | 44.1 |
-| ag-calib | 2026-11-11T00:31:17-03:00 | — | 6.0 |
+| ag-calib | 2026-11-11T00:31:17-03:00 | — | 8.6 |
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
@@ -88,7 +89,7 @@ tasks:
     finished_at: '2026-11-11T00:15:12-03:00'
   T-022:
     estimate_min: 60.0
-    spent_min: 24.0
+    spent_min: 26.6
     started_at: '2026-11-11T00:13:17-03:00'
   T-023:
     estimate_min: 30.0
@@ -109,27 +110,32 @@ tasks:
   T-041:
     estimate_min: 75.0
     started_at: '2026-11-11T00:31:20-03:00'
-    spent_min: 5.9
+    spent_min: 8.5
+  T-004:
+    estimate_min: 15.0
+    started_at: '2026-11-11T00:39:50-03:00'
+    spent_min: 0.0
+    finished_at: '2026-11-11T00:39:51-03:00'
 agents:
   orquestrador:
     spawned_at: '2026-11-10T23:49:29-03:00'
-    alive_min: 47.8
+    alive_min: 50.4
   ag-spec:
     spawned_at: '2026-11-10T23:51:53-03:00'
     alive_min: 26.6
     ended_at: '2026-11-11T00:18:26-03:00'
   ag-sim:
     spawned_at: '2026-11-10T23:52:06-03:00'
-    alive_min: 45.2
+    alive_min: 47.8
   ag-ui:
     spawned_at: '2026-11-10T23:52:07-03:00'
     alive_min: 44.1
     ended_at: '2026-11-11T00:36:13-03:00'
   ag-calib:
     spawned_at: '2026-11-11T00:31:17-03:00'
-    alive_min: 6.0
+    alive_min: 8.6
 totals:
-  estimate_min: 665.0
-  spent_min: 184.2
+  estimate_min: 680.0
+  spent_min: 189.4
 ```
 <!-- DATA:END -->
