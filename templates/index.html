@@ -3,551 +3,839 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binance Trade Bot Pro - Terminal Cloud</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0b0f17">
+    <title>Binance Trade Bot — Painel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        /* ------------------------------------------------------------------ tokens */
         :root {
-            --bg-deep: #030407;
-            --bg-panel: #0d1017;
-            --bg-hover: #161a22;
-            --text-main: #c9d1d9;
-            --border-color: #21262d;
-            
-            --accent-blue: #58a6ff;
-            --accent-green: #3fb950;
-            --accent-red: #f85149;
-            --accent-yellow: #d29922;
-            --accent-purple: #bc8cff;
-            --btc-gold: #f78166;
+            --bg: #0b0f17;
+            --surface: #121826;
+            --surface-2: #182032;
+            --surface-3: #1f2940;
+            --inset: #0e131f;
+            --border: #252f44;
+            --border-strong: #34405a;
+
+            --text: #e7ebf3;
+            --muted: #a3adbf;
+            --subtle: #8590a4;
+
+            --accent: #4fd1d9;
+            --accent-ink: #062a2d;
+            --accent-soft: rgba(79, 209, 217, 0.12);
+
+            --pos: #34d399;
+            --pos-soft: rgba(52, 211, 153, 0.12);
+            --neg: #f87171;
+            --neg-soft: rgba(248, 113, 113, 0.12);
+            --warn: #fbbf24;
+            --warn-soft: rgba(251, 191, 36, 0.12);
+
+            --radius: 14px;
+            --radius-sm: 10px;
+            --gap: 16px;
+            --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
         }
 
-        body { 
-            background-color: var(--bg-deep); 
-            color: var(--text-main); 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-            background-size: 24px 24px;
+        /* ------------------------------------------------------------------ base */
+        *, *::before, *::after { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
+        button { font: inherit; color: inherit; }
+        ul { margin: 0; padding: 0; list-style: none; }
+        h1, h2, h3, p { margin: 0; }
+        .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+        .pos { color: var(--pos); }
+        .neg { color: var(--neg); }
+        .warn { color: var(--warn); }
+        .muted { color: var(--muted); }
+        .subtle { color: var(--subtle); }
+        .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-        .glass-panel {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+        .scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .scroll::-webkit-scrollbar-track { background: transparent; }
+        .scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+        .scroll { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+        /* ------------------------------------------------------------------ layout */
+        .app { max-width: 1480px; margin: 0 auto; padding: 20px 24px 32px; display: flex; flex-direction: column; gap: var(--gap); }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            min-width: 0;
         }
+        .card-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 14px 18px; border-bottom: 1px solid var(--border);
+        }
+        .card-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+        .card-title svg { color: var(--subtle); }
+        .eyebrow { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.01em; }
 
-        .btn-tool { background: transparent; border: 1px solid var(--border-color); color: #8b949e; transition: all 0.2s; }
-        .btn-tool:hover { background: var(--bg-hover); color: var(--text-main); border-color: #30363d; }
-        
-        .btn-run { background: rgba(88, 166, 255, 0.1); border: 1px solid var(--accent-blue); color: var(--accent-blue); }
-        .btn-run:hover { background: rgba(88, 166, 255, 0.2); box-shadow: 0 0 10px rgba(88,166,255,0.3); }
-        
-        .btn-stop { background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-red); color: var(--accent-red); }
-        .btn-stop:hover { background: rgba(248, 81, 73, 0.2); box-shadow: 0 0 10px rgba(248,81,73,0.3); }
+        /* ------------------------------------------------------------------ topbar */
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .brand-mark {
+            width: 36px; height: 36px; border-radius: 10px; flex: none;
+            display: grid; place-items: center;
+            background: var(--accent-soft); color: var(--accent);
+            border: 1px solid rgba(79, 209, 217, 0.25);
+        }
+        .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+        .brand-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+        .chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11.5px; font-weight: 500; color: var(--muted);
+            padding: 2px 8px; border-radius: 999px;
+            background: var(--surface-2); border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .chip b { color: var(--text); font-weight: 600; }
+        .run-controls { display: flex; gap: 8px; }
 
-        .btn-action { background: var(--accent-green); color: #000; border: none; font-weight: bold; }
-        .btn-action:hover { opacity: 0.8; box-shadow: 0 0 10px rgba(63,185,80,0.4); }
+        /* ------------------------------------------------------------------ buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            min-height: 36px; padding: 0 14px;
+            font-size: 13px; font-weight: 500; line-height: 1;
+            color: var(--text); background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+            cursor: pointer; white-space: nowrap;
+            transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+        }
+        .btn:hover { background: var(--surface-3); border-color: var(--border-strong); }
+        .btn svg { flex: none; }
+        .btn .btn-val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }
+        .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+        .btn-primary:hover { background: #74dde3; border-color: #74dde3; }
+        .btn-danger { background: var(--neg-soft); color: #fca5a5; border-color: rgba(248, 113, 113, 0.35); }
+        .btn-danger:hover { background: rgba(248, 113, 113, 0.2); border-color: rgba(248, 113, 113, 0.6); }
+        .btn-success { background: var(--pos-soft); color: #6ee7b7; border-color: rgba(52, 211, 153, 0.35); }
+        .btn-success:hover { background: rgba(52, 211, 153, 0.2); border-color: rgba(52, 211, 153, 0.6); }
+        .btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
+        .btn-ghost:hover { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+        .btn-sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+        .btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; background: var(--surface-2); color: var(--muted); border-color: var(--border); }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #484f58; }
-        
-        #log-area { font-family: 'Consolas', 'Courier New', monospace; font-size: 12.5px; color: #3fb950; white-space: pre-wrap; line-height: 1.4; background-color: #010409; }
-        .list-box-container { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; background-color: #010409; }
-        
-        canvas { background-color: #010409; border-radius: 4px; display: block; width: 100%; height: 100%; }
-        #modal-overlay { display: none; }
-        
-        .label-sm { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; font-weight: 600; }
-        .val-lg { font-size:clamp(16px, 2vw, 20px); font-weight: 800; letter-spacing: -0.02em; }
+        /* ------------------------------------------------------------------ toolbar */
+        .toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; padding: 12px 16px; align-items: center; }
+        .tool-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .tool-group-label { font-size: 11.5px; color: var(--subtle); font-weight: 500; margin-right: 2px; }
+        .tool-sep { width: 1px; align-self: stretch; background: var(--border); }
+        .tool-group.end { margin-left: auto; }
 
-        .glitch-text {
-            color: #ffffff;
-            font-weight: 900;
-            text-shadow: 2px 0 0 rgba(255, 0, 0, 0.75), -2px 0 0 rgba(0, 255, 255, 0.75);
-            letter-spacing: 1px;
+        /* ------------------------------------------------------------------ KPIs */
+        .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+        .kpi { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+        .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .kpi-value {
+            font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+            font-size: clamp(22px, 2.2vw, 28px); font-weight: 600; letter-spacing: -0.02em;
+            line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .kpi-sub { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+        .kpi-sub .num { color: var(--text); }
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 11.5px; font-weight: 600; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+            padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted);
+            border: 1px solid var(--border); white-space: nowrap;
+        }
+        .wr-bar { height: 6px; border-radius: 999px; background: var(--neg-soft); overflow: hidden; margin-top: 4px; }
+        .wr-bar > span { display: block; height: 100%; width: 0; background: var(--pos); border-radius: inherit; transition: width .3s ease; }
+        .wr-bar.empty { background: var(--surface-3); }
+
+        /* status do motor */
+        .status-line { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--subtle); box-shadow: 0 0 0 3px rgba(133, 144, 164, 0.15); }
+        .status-text { font-size: 17px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; color: var(--muted); }
+        [data-state="idle"] .dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        [data-state="idle"] .status-text { color: var(--accent); }
+        [data-state="trade"] .dot { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
+        [data-state="trade"] .status-text { color: var(--warn); }
+        [data-state="alert"] .dot { background: var(--neg); box-shadow: 0 0 0 3px var(--neg-soft); }
+        [data-state="alert"] .status-text { color: var(--neg); }
+        .hb { display: inline-flex; align-items: center; gap: 6px; }
+        .hb-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+        /* ------------------------------------------------------------------ veredito */
+        .verdict { display: flex; gap: 14px; align-items: flex-start; padding: 14px 18px; border-color: rgba(79, 209, 217, 0.22); background: linear-gradient(0deg, var(--accent-soft), var(--accent-soft)), var(--surface); }
+        .verdict-icon { color: var(--accent); flex: none; margin-top: 1px; }
+        .verdict-label { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
+        .verdict-text { font-size: 13.5px; color: var(--text); overflow-wrap: anywhere; }
+
+        /* ------------------------------------------------------------------ grids */
+        .row-a { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: var(--gap); }
+        .row-b { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: var(--gap); }
+
+        /* posição */
+        .position-body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+        .coin { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; overflow-wrap: anywhere; }
+        .coin .coin-meta { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 500; }
+        .price-rows { display: flex; flex-direction: column; gap: 8px; }
+        .price-row {
+            display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 2px 12px; align-items: baseline;
+            padding: 10px 12px; border-radius: var(--radius-sm); background: var(--inset); border: 1px solid var(--border);
+        }
+        .price-row .pr-label { font-size: 12px; color: var(--muted); font-weight: 500; grid-row: span 2; align-self: center; }
+        .price-row .pr-price { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .price-row .pr-meta { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .price-row.is-cur .pr-price { color: var(--accent); }
+        .price-row.is-tgt .pr-price { color: var(--pos); }
+        .empty-note { font-size: 12.5px; color: var(--subtle); display: flex; gap: 8px; align-items: center; }
+        .is-hidden { display: none !important; }
+
+        /* gráfico */
+        .chart-card { display: flex; flex-direction: column; min-height: 340px; }
+        #canvas-container { position: relative; flex: 1; min-height: 280px; margin: 8px 10px 12px; }
+        #miniChart { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+        .chart-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px; color: var(--subtle); font-size: 13px; pointer-events: none; }
+        .chart-empty svg { color: var(--border-strong); margin: 0 auto 8px; display: block; }
+        .chart-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--subtle); }
+        .chart-legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+        .chart-tag { flex: none; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+        .chart-tag.on { color: var(--pos); background: var(--pos-soft); border-color: rgba(52, 211, 153, 0.3); }
+
+        /* logs */
+        .logs-card { display: flex; flex-direction: column; height: 420px; }
+        #log-area {
+            flex: 1; overflow: auto; padding: 12px 16px; background: var(--inset);
+            border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius);
+            font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; color: #c8d0dd;
+            white-space: pre-wrap; overflow-wrap: anywhere;
+        }
+        #log-area .ln { padding: 1px 0; }
+        #log-area .ln-err { color: var(--neg); }
+        #log-area .ln-ok { color: var(--pos); }
+        #log-area .ln-warn { color: var(--warn); }
+        #log-area .ln-info { color: var(--muted); }
+        #log-area:empty::before { content: "Nenhum log por enquanto. Clique em Iniciar para ligar o motor."; color: var(--subtle); font-family: var(--font-sans); font-size: 13px; }
+
+        /* mercado */
+        .markets { display: flex; flex-direction: column; gap: var(--gap); height: 420px; }
+        .market-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .market-list { flex: 1; overflow-y: auto; padding: 6px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+        .market-list li { padding: 6px 10px; border-radius: 8px; white-space: pre; overflow: hidden; text-overflow: ellipsis; color: #c8d0dd; }
+        .market-list li:hover { background: var(--surface-2); }
+        .market-list li.li-empty { white-space: normal; font-family: var(--font-sans); color: var(--subtle); font-size: 12.5px; }
+        .count { font-family: var(--font-mono); font-size: 11.5px; color: var(--subtle); }
+
+        /* ------------------------------------------------------------------ modal */
+        #modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 50;
+            background: rgba(5, 8, 14, 0.72); backdrop-filter: blur(4px);
+            justify-content: center; align-items: center; padding: 16px;
+        }
+        .modal { width: 100%; max-width: 880px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }
+        #modal-title { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #modal-content-html {
+            flex: 1; overflow-y: auto; padding: 18px 20px; background: var(--inset);
+            border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius);
+            font-family: var(--font-mono); font-size: 13px; line-height: 1.7; color: #d3d9e4; overflow-wrap: anywhere;
+        }
+        /* compatibilidade: classes utilitárias emitidas pelo app.py no HTML dos modais */
+        #modal-content-html .text-green-500 { color: var(--pos); }
+        #modal-content-html .text-red-500 { color: var(--neg); }
+        #modal-content-html .text-orange-400 { color: #fb923c; }
+        #modal-content-html .text-blue-400 { color: var(--accent); }
+        #modal-content-html .text-gray-300 { color: #d3d9e4; }
+        #modal-content-html .text-gray-400 { color: var(--muted); }
+        #modal-content-html .text-gray-500 { color: var(--subtle); }
+        #modal-content-html .font-bold { font-weight: 700; }
+        #modal-content-html .font-semibold { font-weight: 600; }
+        #modal-content-html .mb-2 { margin-bottom: 8px; }
+        #modal-content-html .mb-4 { margin-bottom: 16px; }
+        #modal-content-html .ml-4 { margin-left: 16px; }
+        #modal-content-html .p-3 { padding: 14px 16px; }
+        #modal-content-html .pb-2 { padding-bottom: 8px; }
+        #modal-content-html .rounded { border-radius: var(--radius-sm); }
+        #modal-content-html .border { border: 1px solid var(--border); }
+        #modal-content-html .border-b { border-bottom: 1px solid var(--border); }
+        #modal-content-html .border-gray-800 { border-color: var(--border); }
+        #modal-content-html .bg-\[\#0a0c10\] { background: var(--surface); }
+
+        /* ------------------------------------------------------------------ responsivo */
+        @media (max-width: 1180px) {
+            .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .row-a, .row-b { grid-template-columns: minmax(0, 1fr); }
+            .markets { flex-direction: row; height: auto; }
+            .market-card { height: 300px; }
+            .tool-group.end { margin-left: 0; }
+        }
+        @media (max-width: 720px) {
+            .app { padding: 14px 16px 24px; gap: 12px; }
+            .kpis { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+            .row-a, .row-b { gap: 12px; }
+            .markets { flex-direction: column; gap: 12px; }
+            .market-card { height: 260px; }
+            .tool-sep { display: none; }
+            .toolbar { gap: 12px; }
+            .tool-group { width: 100%; }
+            .tool-group-label { width: 100%; }
+            .tool-group .btn { flex: 1 1 auto; }
+            .topbar { align-items: stretch; }
+            .run-controls { width: 100%; }
+            .run-controls .btn { flex: 1; }
+            .logs-card { height: 360px; }
+            .chart-card { min-height: 300px; }
+            #canvas-container { min-height: 240px; }
+            .coin { font-size: 22px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
         }
     </style>
 </head>
-<body class="min-h-screen xl:h-screen flex flex-col p-2 sm:p-3 gap-3 overflow-x-hidden xl:overflow-hidden">
+<body>
+<div class="app">
 
-    <div class="glass-panel px-3 sm:px-4 py-2.5 flex flex-col xl:flex-row justify-between items-center gap-4 shrink-0">
-        
-        <div class="flex flex-wrap justify-center xl:justify-start items-center gap-3 md:gap-4 w-full xl:w-auto">
-            <h1 class="text-base sm:text-lg flex items-center gap-2 glitch-text uppercase whitespace-nowrap">
-                BINANCE BOT 
-                <span class="border border-blue-500/50 text-blue-400 bg-blue-500/10 text-[9px] px-1.5 py-0.5 rounded uppercase tracking-widest font-bold" style="text-shadow: none;">
-                    {{ versao }}
-                </span>
-            </h1>
-            <div class="flex gap-2">
-                <button onclick="socket.emit('start_bot')" class="btn-run text-[11px] sm:text-xs font-bold px-3 sm:px-5 py-1.5 rounded transition">▶ START</button>
-                <button onclick="socket.emit('stop_bot')" class="btn-stop text-[11px] sm:text-xs font-bold px-3 sm:px-5 py-1.5 rounded transition">⏹ STOP</button>
+    <!-- ============================================================ topo -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
             </div>
-            <div class="hidden sm:block w-px h-5 bg-[#21262d] mx-1"></div>
-            <div class="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase">Modo: <span class="text-yellow-400">{{ strategy }}</span></div>
+            <div style="min-width:0">
+                <h1 class="brand-name">Binance Trade Bot</h1>
+                <div class="brand-meta">
+                    <span class="chip">Versão <b>{{ versao }}</b></span>
+                    <span class="chip">Estratégia <b>{{ strategy }}</b></span>
+                </div>
+            </div>
         </div>
+        <div class="run-controls">
+            <button type="button" onclick="socket.emit('start_bot')" class="btn btn-primary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+                Iniciar
+            </button>
+            <button type="button" onclick="socket.emit('stop_bot')" class="btn btn-danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+                Parar
+            </button>
+        </div>
+    </header>
 
-        <div class="flex flex-wrap justify-center items-center gap-2 w-full xl:w-auto">
-            <button onclick="socket.emit('request_ai_report')" class="btn-tool text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded flex items-center gap-1">🧠 Parecer</button>
-            <button onclick="socket.emit('request_dossier')" class="btn-tool text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded flex items-center gap-1">📊 Dossiê</button>
-            <button onclick="socket.emit('request_daily_history')" class="btn-tool text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded flex items-center gap-1">📜 Histórico</button>
-            
-            <div class="hidden sm:block w-px h-5 bg-[#21262d] mx-1"></div>
-            
-            <button id="btn_cooldown" onclick="cycleSetting('cooldown')" class="btn-tool text-[10px] sm:text-[11px] font-semibold text-[#3fb950] px-2 sm:px-3 py-1.5 rounded border-[#3fb950]/30 hover:border-[#3fb950]">⏱️ Scan: 15m</button>
-            <button id="btn_bb" onclick="cycleSetting('bb_std')" class="btn-tool text-[10px] sm:text-[11px] font-semibold text-[#3fb950] px-2 sm:px-3 py-1.5 rounded border-[#3fb950]/30 hover:border-[#3fb950]">📏 BB STD: 2.0</button>
+    <!-- ============================================================ ferramentas -->
+    <nav class="card toolbar" aria-label="Ferramentas">
+        <div class="tool-group">
+            <span class="tool-group-label">Análises</span>
+            <button type="button" onclick="socket.emit('request_ai_report')" class="btn btn-sm">Parecer IA</button>
+            <button type="button" onclick="socket.emit('request_dossier')" class="btn btn-sm">Dossiê</button>
+            <button type="button" onclick="socket.emit('request_daily_history')" class="btn btn-sm">Histórico do dia</button>
         </div>
-        
-        <div class="flex flex-wrap justify-center xl:justify-end items-center gap-2 w-full xl:w-auto">
-            <button onclick="socket.emit('reset_scoreboard')" class="text-[#8b949e] hover:text-white text-[10px] sm:text-[11px] font-semibold px-1 sm:px-2 transition">Zerar Placar</button>
-            <button onclick="socket.emit('reset_initial_balance')" class="text-[#8b949e] hover:text-white text-[10px] sm:text-[11px] font-semibold px-1 sm:px-2 transition">Atualizar Inicial</button>
-            <div class="hidden sm:block w-px h-5 bg-[#21262d] mx-1"></div>
-            <button onclick="socket.emit('request_update')" class="btn-tool text-[#58a6ff] border-[#58a6ff]/30 hover:border-[#58a6ff] text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded">🔄 Up</button>
-            <button onclick="confirmForceSell()" class="btn-stop text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1.5 rounded">🚨 Venda Forçada</button>
-            <button id="btn_add_trade" onclick="socket.emit('add_trade_chance')" class="btn-action text-[10px] sm:text-[11px] px-3 sm:px-4 py-1.5 rounded flex items-center gap-1">🔋 +1 Tentativa</button>
+        <div class="tool-sep" aria-hidden="true"></div>
+        <div class="tool-group">
+            <span class="tool-group-label">Parâmetros</span>
+            <button type="button" id="btn_cooldown" onclick="cycleSetting('cooldown')" class="btn btn-sm" title="Alterna o intervalo de varredura: 15 → 30 → 45 min">Varredura <span class="btn-val">15m</span></button>
+            <button type="button" id="btn_bb" onclick="cycleSetting('bb_std')" class="btn btn-sm" title="Alterna o desvio padrão das Bandas de Bollinger: 2.0 → 1.8 → 1.5">Bollinger σ <span class="btn-val">2.0</span></button>
         </div>
+        <div class="tool-group end">
+            <button type="button" onclick="socket.emit('reset_scoreboard')" class="btn btn-sm btn-ghost">Zerar placar</button>
+            <button type="button" onclick="socket.emit('reset_initial_balance')" class="btn btn-sm btn-ghost">Atualizar saldo inicial</button>
+            <button type="button" onclick="socket.emit('request_update')" class="btn btn-sm" title="Gera a flag de atualização (git pull)">Atualizar bot</button>
+            <button type="button" onclick="confirmForceSell()" class="btn btn-sm btn-danger">Venda forçada</button>
+            <button type="button" id="btn_add_trade" onclick="socket.emit('add_trade_chance')" class="btn btn-sm btn-success">+1 tentativa</button>
+        </div>
+    </nav>
+
+    <!-- ============================================================ KPIs -->
+    <section class="kpis" aria-label="Indicadores principais">
+        <article class="card kpi">
+            <div class="kpi-top"><span class="eyebrow">Desempenho total</span></div>
+            <div id="lbl_pl" class="kpi-value">0.00%</div>
+            <div class="kpi-sub">
+                <span id="lbl_inicial">Inicial: <span class="num">$0.00</span></span>
+                <span id="lbl_atual">Atual: <span class="num">$0.00</span></span>
+            </div>
+        </article>
+
+        <article class="card kpi">
+            <div class="kpi-top">
+                <span class="eyebrow">Placar do dia</span>
+                <span id="score_rate" class="badge" title="Taxa de acerto">0.0%</span>
+            </div>
+            <div class="kpi-value"><span id="lbl_trades">0</span> <span class="subtle" style="font-size:14px;font-weight:500;font-family:var(--font-sans)">operações</span></div>
+            <div class="wr-bar empty" aria-hidden="true"><span id="score_bar"></span></div>
+            <div class="kpi-sub">
+                <span id="score_w" class="pos num">W: 0</span>
+                <span id="score_l" class="neg num">L: 0</span>
+                <span id="lbl_daily_limit" class="subtle"></span>
+            </div>
+        </article>
+
+        <article class="card kpi" id="status_card" data-state="off">
+            <div class="kpi-top">
+                <span class="eyebrow">Status do motor</span>
+                <span id="lbl_heartbeat" class="hb num" style="font-size:12px;color:var(--subtle)" title="Último heartbeat do motor"><span class="hb-dot" aria-hidden="true"></span>--:--</span>
+            </div>
+            <div class="status-line" style="margin-top:4px">
+                <span class="dot" aria-hidden="true"></span>
+                <div id="lbl_status" class="status-text">Offline</div>
+            </div>
+            <div class="kpi-sub">
+                <span id="lbl_countdown">Próxima análise: --</span>
+                <span id="lbl_ping" class="subtle num">Ping: -- ms</span>
+            </div>
+        </article>
+
+        <article class="card kpi">
+            <div class="kpi-top"><span class="eyebrow">Bitcoin (BTC)</span><span id="lbl_btc_change" class="badge">--</span></div>
+            <div id="lbl_btc" class="kpi-value">$--</div>
+            <div class="kpi-sub"><span class="subtle">Referência de mercado</span></div>
+        </article>
+    </section>
+
+    <!-- ============================================================ veredito -->
+    <section class="card verdict" aria-live="polite">
+        <svg class="verdict-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a4 4 0 0 0 6 0z"/><path d="M19 7l-3 7a4 4 0 0 0 6 0z"/></svg>
+        <div style="min-width:0">
+            <div class="verdict-label">Último veredito</div>
+            <div id="lbl_det_atu" class="verdict-text">Aguardando varredura e cruzamento de dados...</div>
+        </div>
+    </section>
+
+    <!-- ============================================================ posição + gráfico -->
+    <div class="row-a">
+        <section class="card" aria-labelledby="pos_title">
+            <div class="card-head">
+                <h2 class="card-title" id="pos_title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+                    Moeda em foco
+                </h2>
+            </div>
+            <div class="position-body">
+                <div id="lbl_cur_coin" class="coin">BUSCANDO...</div>
+                <div class="price-rows">
+                    <div id="lbl_buy_price" class="price-row">
+                        <span class="pr-label">Compra</span><span class="pr-price">$0.000000</span><span class="pr-meta">0.00 USDT</span>
+                    </div>
+                    <div id="lbl_cur_price" class="price-row is-cur">
+                        <span class="pr-label">Atual</span><span class="pr-price">$0.000000</span><span class="pr-meta">0.00 USDT</span>
+                    </div>
+                    <div id="lbl_tgt_price" class="price-row is-tgt">
+                        <span class="pr-label">Alvo (venda)</span><span class="pr-price">$0.000000</span><span class="pr-meta">0.00 USDT</span>
+                    </div>
+                </div>
+                <p id="pos_empty" class="empty-note">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                    Nenhuma posição aberta no momento. O motor segue monitorando o mercado.
+                </p>
+            </div>
+        </section>
+
+        <section class="card chart-card" aria-labelledby="chart_title">
+            <div class="card-head">
+                <h2 class="card-title" id="chart_title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                    Gráfico 15m · Bandas de Bollinger
+                </h2>
+                <div id="lbl_chart_title" class="chart-tag">Inativo</div>
+            </div>
+            <div class="chart-legend" style="padding:10px 18px 0">
+                <span><i style="border-color:var(--accent)"></i>Média</span>
+                <span><i style="border-color:#5a6680;border-top-style:dashed"></i>Bandas</span>
+                <span><i style="border-color:var(--warn);border-top-style:dashed"></i>Preço de compra</span>
+            </div>
+            <div id="canvas-container">
+                <canvas id="miniChart" aria-label="Gráfico de candles de 15 minutos com Bandas de Bollinger" role="img"></canvas>
+                <div id="chart_empty" class="chart-empty">
+                    <div>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/></svg>
+                        O gráfico aparece quando o motor entra em operação.
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <div class="glass-panel grid grid-cols-1 xl:grid-cols-2 shrink-0">
-        
-        <div class="p-3.5 flex flex-col justify-center border-b xl:border-r xl:border-b-0 border-[#21262d]">
-            <div class="flex justify-between items-start w-full">
-                <div class="flex-1 flex flex-col">
-                    <div class="label-sm mb-1">Performance Total</div>
-                    <div class="flex items-end gap-3 flex-wrap">
-                        <div id="lbl_pl" class="val-lg text-white truncate">0.00%</div>
-                        <div class="flex flex-col pb-0.5">
-                            <span id="lbl_inicial" class="text-[10px] text-gray-500 truncate">Inicial: $0.00</span>
-                            <span id="lbl_atual" class="text-[11px] text-gray-300 font-semibold truncate">Atual: $0.00</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="w-px bg-[#21262d] mx-3 md:mx-4 h-auto self-stretch"></div>
-                
-                <div class="flex-1 flex flex-col">
-                    <div class="label-sm mb-1 flex justify-between">
-                        <span>Placar Diário</span>
-                        <span id="score_rate" class="text-[#bc8cff] font-bold">0.0%</span>
-                    </div>
-                    <div class="flex items-end gap-3 flex-wrap">
-                        <div id="lbl_trades" class="val-lg text-white truncate">0</div>
-                        <div class="flex gap-2 pb-1 text-[11px] font-bold">
-                            <span id="score_w" class="text-[#3fb950]">W: 0</span>
-                            <span id="score_l" class="text-[#f85149]">L: 0</span>
-                        </div>
-                    </div>
-                </div>
+    <!-- ============================================================ logs + mercado -->
+    <div class="row-b">
+        <section class="card logs-card" aria-labelledby="logs_title">
+            <div class="card-head">
+                <h2 class="card-title" id="logs_title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+                    Logs ao vivo
+                </h2>
+                <button type="button" onclick="document.getElementById('log-area').innerHTML=''" class="btn btn-sm btn-ghost">Limpar</button>
             </div>
-        </div>
+            <div id="log-area" class="scroll" role="log" aria-live="off"></div>
+        </section>
 
-        <div class="p-3.5 flex flex-col justify-center">
-            <div class="label-sm mb-1">Bitcoin (BTC)</div>
-            <div id="lbl_btc" class="val-lg text-[#d29922] truncate">$--</div>
-        </div>
-
-    </div>
-
-    <div class="flex flex-col xl:flex-row gap-3 shrink-0">
-        
-        <div class="glass-panel w-full xl:w-[440px] flex flex-col divide-y divide-[#21262d] shrink-0">
-            
-            <div class="p-3.5 flex flex-col justify-between">
-                <div class="flex justify-between items-start">
-                    <div class="label-sm">Status do Sistema</div>
-                    <div class="flex items-center gap-2">
-                        <span id="lbl_ping" class="text-gray-600 normal-case font-normal text-[9px] truncate">PING: -- ms</span>
-                        <span id="lbl_heartbeat" class="text-[10px] text-[#3fb950] font-mono truncate">💓 --:--</span>
-                    </div>
+        <div class="markets">
+            <section class="card market-card" aria-labelledby="hot_title">
+                <div class="card-head">
+                    <h2 class="card-title" id="hot_title"><span class="dot" style="background:var(--pos);box-shadow:0 0 0 3px var(--pos-soft);width:8px;height:8px"></span>Tendência de alta</h2>
+                    <span id="hot_count" class="count"></span>
                 </div>
-                <div id="lbl_status" class="val-lg text-gray-500 truncate mt-1">Offline</div>
-                <div id="lbl_countdown" class="text-[10px] text-[#58a6ff] font-semibold mt-1 truncate">⏳ Próxima Análise: --</div>
-            </div>
-
-            <div class="p-3.5 flex flex-col justify-between flex-1 bg-[#010409]/30">
-                <div class="mb-3">
-                    <div class="label-sm">Moeda em Foco</div>
-                    <div id="lbl_cur_coin" class="text-[20px] font-black text-white leading-none mt-1 break-words">BUSCANDO...</div>
+                <ul id="list_hot" class="market-list scroll"><li class="li-empty">Aguardando a primeira varredura.</li></ul>
+            </section>
+            <section class="card market-card" aria-labelledby="cold_title">
+                <div class="card-head">
+                    <h2 class="card-title" id="cold_title"><span class="dot" style="background:var(--neg);box-shadow:0 0 0 3px var(--neg-soft);width:8px;height:8px"></span>Tendência de baixa</h2>
+                    <span id="cold_count" class="count"></span>
                 </div>
-                <div class="flex flex-col gap-1.5 border-l-2 border-[#21262d] pl-2 sm:pl-3 overflow-hidden">
-                    <div id="lbl_buy_price" class="text-[10px] sm:text-[11px] font-mono text-gray-400 truncate">
-                        <span class="text-gray-600">[🛒] Compra:</span> $0.000000 | 0.00 USDT
-                    </div>
-                    <div id="lbl_cur_price" class="text-[10px] sm:text-[11px] font-mono text-[#58a6ff] truncate">
-                        <span class="text-blue-900/80">[💲] Atual:</span> $0.000000 | 0.00 USDT
-                    </div>
-                    <div id="lbl_tgt_price" class="text-[10px] sm:text-[11px] font-mono text-[#3fb950] truncate">
-                        <span class="text-green-900/80">[🎯] Alvo (V):</span> $0.000000 | 0.00 USDT
-                    </div>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="glass-panel flex-1 flex flex-col overflow-hidden h-[300px] xl:h-auto min-h-[250px]">
-            <div class="bg-[#0d1017] px-3 py-1.5 border-b border-[#21262d] flex justify-between items-center shrink-0">
-                <span class="label-sm">System Live Logs</span>
-                <button onclick="document.getElementById('log-area').innerHTML=''" class="text-[10px] text-gray-500 hover:text-white transition">Clear Console</button>
-            </div>
-            <div id="log-area" class="flex-1 p-2 sm:p-3 custom-scrollbar overflow-x-auto overflow-y-auto"></div>
+                <ul id="list_cold" class="market-list scroll"><li class="li-empty">Aguardando a primeira varredura.</li></ul>
+            </section>
         </div>
     </div>
+</div>
 
-    <div class="glass-panel bg-blue-900/10 border-blue-900/30 px-3 sm:px-4 py-2 flex items-center overflow-x-auto custom-scrollbar shrink-0">
-        <span class="text-[10px] sm:text-[11px] font-bold text-blue-400 tracking-wide uppercase mr-2 sm:mr-3 whitespace-nowrap">⚖️ ÚLTIMO VEREDITO:</span>
-        <span id="lbl_det_atu" class="text-[10.5px] sm:text-[11.5px] font-mono text-gray-300 whitespace-nowrap">Aguardando varredura e cruzamento de dados...</span>
-    </div>
-
-    <div class="flex-1 flex flex-col xl:flex-row gap-3 min-h-[250px] xl:min-h-0">
-        
-        <div class="flex-1 glass-panel flex flex-col overflow-hidden bg-[#010409]/30 min-h-[250px] xl:min-h-0">
-            <div class="bg-[#0d1017] px-3 py-1.5 border-b border-[#21262d] flex justify-between items-center shrink-0">
-                <span class="label-sm text-[#bc8cff]">Análise Gráfica Avançada (15m)</span>
-                <div id="lbl_chart_title" class="text-[9px] text-gray-600 font-bold uppercase truncate ml-2">Inativo</div>
-            </div>
-            <div class="w-full flex-1 relative" id="canvas-container">
-                <canvas id="miniChart" class="absolute inset-0"></canvas>
-            </div>
+<!-- ============================================================ modal -->
+<div id="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="card modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="card-head">
+            <h2 id="modal-title">Título</h2>
+            <button type="button" id="modal-close" onclick="closeModal()" class="btn btn-sm btn-ghost" aria-label="Fechar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
         </div>
-
-        <div class="w-full xl:w-[250px] flex flex-col sm:flex-row xl:flex-col gap-3 shrink-0">
-            <div class="flex-1 glass-panel flex flex-col overflow-hidden h-[180px] xl:h-auto min-h-0">
-                <div class="bg-[#010409] px-3 py-1.5 border-b border-green-900/30 text-center shrink-0">
-                    <span class="label-sm text-[#3fb950]">🟢 Tendência de Alta</span>
-                </div>
-                <ul id="list_hot" class="flex-1 list-box-container text-[#c9d1d9] p-1.5 custom-scrollbar overflow-y-auto"></ul>
-            </div>
-            
-            <div class="flex-1 glass-panel flex flex-col overflow-hidden h-[180px] xl:h-auto min-h-0">
-                <div class="bg-[#010409] px-3 py-1.5 border-b border-[#21262d] text-center shrink-0">
-                    <span class="label-sm text-gray-500">❄️ Tendência de Baixa</span>
-                </div>
-                <ul id="list_cold" class="flex-1 list-box-container text-gray-500 p-1.5 custom-scrollbar overflow-y-auto"></ul>
-            </div>
-        </div>
-
+        <div id="modal-content-html" class="scroll"></div>
     </div>
+</div>
 
-    <div id="modal-overlay" class="fixed inset-0 bg-[#030407]/80 flex justify-center items-center z-50 backdrop-blur-sm p-4">
-        <div class="glass-panel w-full max-w-4xl h-full max-h-[85vh] flex flex-col border border-[#30363d] shadow-2xl">
-            <div class="p-3 sm:p-4 border-b border-[#30363d] flex justify-between items-center bg-[#0d1017] rounded-t-lg shrink-0">
-                <h2 id="modal-title" class="text-[#58a6ff] text-base sm:text-lg font-bold flex items-center gap-2 truncate">Título</h2>
-                <button onclick="closeModal()" class="text-gray-500 hover:text-red-400 transition font-bold text-xl px-2">✕</button>
-            </div>
-            <div class="p-3 sm:p-4 flex-1 overflow-hidden bg-[#010409] rounded-b-lg">
-                <div id="modal-content-html" class="w-full h-full text-[#c9d1d9] custom-scrollbar font-mono text-[11px] sm:text-[13px] overflow-y-auto pr-2 break-words"></div>
-            </div>
-        </div>
-    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    const socket = io();
+    const logArea = document.getElementById('log-area');
+    const btnAddTrade = document.getElementById('btn_add_trade');
+    const canvas = document.getElementById('miniChart');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvas-container');
+    const $ = (id) => document.getElementById(id);
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const logArea = document.getElementById('log-area');
-        const btnAddTrade = document.getElementById('btn_add_trade');
-        const canvas = document.getElementById('miniChart');
-        const ctx = canvas.getContext('2d');
-        const container = document.getElementById('canvas-container');
-        
-        let currentCooldown = 15;
-        let currentBB = 2.0;
+    const COLORS = { pos: '#34d399', neg: '#f87171', warn: '#fbbf24', accent: '#4fd1d9', band: '#5a6680', grid: '#1c2436' };
 
-        window.lastChartData = [];
-        window.lastCoinSym = null;
-        window.lastBuyPrice = 0;
+    let currentCooldown = 15;
+    let currentBB = 2.0;
+    let chartW = 0, chartH = 0;
 
-        // Memória de Cache do Saldo Inicial
-        let cachedInicial = localStorage.getItem('saldo_inicial');
-        if (cachedInicial) {
-            document.getElementById('lbl_inicial').innerText = `Inicial: $${parseFloat(cachedInicial).toFixed(2)}`;
+    window.lastChartData = [];
+    window.lastCoinSym = null;
+    window.lastBuyPrice = 0;
+
+    function esc(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function signCls(v) { return v >= 0 ? 'pos' : 'neg'; }
+    function fmtUsd(v) { return '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+
+    // Memória de cache do saldo inicial
+    try {
+        const cachedInicial = localStorage.getItem('saldo_inicial');
+        if (cachedInicial) $('lbl_inicial').innerHTML = `Inicial: <span class="num">${fmtUsd(parseFloat(cachedInicial))}</span>`;
+    } catch (e) {}
+
+    function resizeCanvas() {
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        chartW = rect.width;
+        chartH = rect.height || 200;
+        canvas.width = Math.round(chartW * dpr);
+        canvas.height = Math.round(chartH * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (window.lastChartData && window.lastChartData.length > 0) {
+            drawMiniChart(window.lastChartData, window.lastCoinSym, window.lastBuyPrice, false);
+        }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 100);
+
+    function confirmForceSell() {
+        if (confirm("ATENÇÃO: VENDA FORÇADA\n\nConfirma o encerramento manual e imediato da operacao financeira vigente?")) {
+            socket.emit('force_sell_action');
+        }
+    }
+
+    function cycleSetting(type) {
+        if (type === 'cooldown') socket.emit('cycle_cooldown', {current: currentCooldown});
+        if (type === 'bb_std') socket.emit('cycle_bb_std', {current: currentBB});
+    }
+
+    function setCooldownLabel(v) { $('btn_cooldown').querySelector('.btn-val').textContent = `${v}m`; }
+    function setBBLabel(v) { $('btn_bb').querySelector('.btn-val').textContent = Number(v).toFixed(1); }
+
+    function drawMiniChart(dataPoints, coinSymbol, buyPrice, saveState = true) {
+        if (saveState) {
+            window.lastChartData = dataPoints;
+            window.lastCoinSym = coinSymbol;
+            window.lastBuyPrice = buyPrice;
+        }
+        if (!chartW) resizeCanvas();
+        ctx.clearRect(0, 0, chartW, chartH);
+        const lblTitle = $('lbl_chart_title');
+        const emptyEl = $('chart_empty');
+
+        if (!dataPoints || dataPoints.length < 2) {
+            lblTitle.innerText = "Inativo";
+            lblTitle.className = "chart-tag";
+            emptyEl.classList.remove('is-hidden');
+            return;
+        }
+        emptyEl.classList.add('is-hidden');
+
+        const padding = 15;
+        const w = chartW;
+        const h = chartH;
+        const isNewFormat = typeof dataPoints[0] === 'object';
+
+        lblTitle.innerText = `Ativo · ${coinSymbol}`;
+        lblTitle.className = "chart-tag on";
+
+        // grade horizontal discreta
+        ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1; ctx.setLineDash([]);
+        for (let g = 0; g <= 4; g++) {
+            const y = Math.round(padding + (h - 2 * padding) * g / 4) + 0.5;
+            ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(w - padding, y); ctx.stroke();
         }
 
-        function resizeCanvas() {
-            if(!container) return;
-            const rect = container.getBoundingClientRect();
-            canvas.width = rect.width; 
-            canvas.height = rect.height || 200; 
-            
-            if(window.lastChartData && window.lastChartData.length > 0) {
-                drawMiniChart(window.lastChartData, window.lastCoinSym, window.lastBuyPrice, false);
-            }
-        }
-        window.addEventListener('resize', resizeCanvas);
-        setTimeout(resizeCanvas, 100);
+        let minVal, maxVal, range;
+        const yOf = (v) => padding + (h - 2 * padding) * (1 - (v - minVal) / range);
 
-        function confirmForceSell() {
-            if(confirm("ATENÇÃO: VENDA FORÇADA\n\nConfirma o encerramento manual e imediato da operacao financeira vigente?")) {
-                socket.emit('force_sell_action');
-            }
-        }
-
-        function cycleSetting(type) {
-            if (type === 'cooldown') socket.emit('cycle_cooldown', {current: currentCooldown});
-            if (type === 'bb_std') socket.emit('cycle_bb_std', {current: currentBB});
-        }
-
-        function drawMiniChart(dataPoints, coinSymbol, buyPrice, saveState = true) {
-            if(saveState) {
-                window.lastChartData = dataPoints;
-                window.lastCoinSym = coinSymbol;
-                window.lastBuyPrice = buyPrice;
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const lblTitle = document.getElementById('lbl_chart_title');
-
-            if (!dataPoints || dataPoints.length < 2) {
-                lblTitle.innerText = "INATIVO";
-                return;
-            }
-
-            const padding = 15;
-            const w = canvas.width;
-            const h = canvas.height;
-            const isNewFormat = typeof dataPoints[0] === 'object';
-            
-            lblTitle.innerText = `ATIVO (${coinSymbol})`;
-            lblTitle.className = "text-[9px] sm:text-[10px] text-[#3fb950] font-bold uppercase tracking-widest truncate ml-2";
-
-            let minVal, maxVal, range;
-            
-            if (isNewFormat) {
-                minVal = Math.min(...dataPoints.map(p => Math.min(p.l, p.bbl)));
-                maxVal = Math.max(...dataPoints.map(p => Math.max(p.h, p.bbu)));
-                range = (maxVal - minVal) === 0 ? 1 : (maxVal - minVal);
-                const xStep = (w - 2 * padding) / (dataPoints.length - 1);
-                
-                ctx.lineWidth = 1;
-                ctx.setLineDash([3, 3]);
-                
-                ctx.beginPath(); ctx.strokeStyle = '#30363d';
-                dataPoints.forEach((p, i) => {
-                    const x = padding + i * xStep;
-                    const y = padding + (h - 2 * padding) * (1 - (p.bbu - minVal) / range);
-                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }); ctx.stroke();
-
-                ctx.beginPath(); ctx.strokeStyle = '#1f6feb';
-                dataPoints.forEach((p, i) => {
-                    const x = padding + i * xStep;
-                    const y = padding + (h - 2 * padding) * (1 - (p.bbm - minVal) / range);
-                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }); ctx.stroke();
-
-                ctx.beginPath(); ctx.strokeStyle = '#30363d';
-                dataPoints.forEach((p, i) => {
-                    const x = padding + i * xStep;
-                    const y = padding + (h - 2 * padding) * (1 - (p.bbl - minVal) / range);
-                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }); ctx.stroke();
-
-                ctx.setLineDash([]);
-                
-                const candleW = Math.max(1, Math.min(xStep * 0.7, 8));
-                
-                dataPoints.forEach((p, i) => {
-                    const x = padding + i * xStep;
-                    const yo = padding + (h - 2 * padding) * (1 - (p.o - minVal) / range);
-                    const yh = padding + (h - 2 * padding) * (1 - (p.h - minVal) / range);
-                    const yl = padding + (h - 2 * padding) * (1 - (p.l - minVal) / range);
-                    const yc = padding + (h - 2 * padding) * (1 - (p.c - minVal) / range);
-                    
-                    const color = p.c >= p.o ? '#3fb950' : '#f85149';
-                    ctx.strokeStyle = color;
-                    ctx.fillStyle = color;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(x, yh);
-                    ctx.lineTo(x, yl);
-                    ctx.stroke();
-                    
-                    let by1 = Math.min(yo, yc);
-                    let by2 = Math.max(yo, yc);
-                    if (by2 - by1 < 1) by2 = by1 + 1;
-                    ctx.fillRect(x - candleW/2, by1, candleW, by2 - by1);
-                });
-
-            } else {
-                minVal = Math.min(...dataPoints);
-                maxVal = Math.max(...dataPoints);
-                range = (maxVal - minVal) === 0 ? 1 : (maxVal - minVal);
-                const isUp = dataPoints[dataPoints.length - 1] >= dataPoints[0];
-                const gradient = ctx.createLinearGradient(0, 0, 0, h);
-                gradient.addColorStop(0, isUp ? 'rgba(63, 185, 80, 0.3)' : 'rgba(248, 81, 73, 0.3)');
-                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-                ctx.strokeStyle = isUp ? '#3fb950' : '#f85149';
-                ctx.lineWidth = 1.5;
-                ctx.lineJoin = 'round';
-
-                ctx.beginPath();
-                const xStep = (w - 2 * padding) / (dataPoints.length - 1);
-                
-                dataPoints.forEach((val, i) => {
-                    const x = padding + i * xStep;
-                    const y = padding + (h - 2 * padding) * (1 - (val - minVal) / range);
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                });
-                
+        if (isNewFormat) {
+            minVal = Math.min(...dataPoints.map(p => Math.min(p.l, p.bbl)));
+            maxVal = Math.max(...dataPoints.map(p => Math.max(p.h, p.bbu)));
+            range = (maxVal - minVal) === 0 ? 1 : (maxVal - minVal);
+            const xStep = (w - 2 * padding) / (dataPoints.length - 1);
+            const line = (key, color, dash) => {
+                ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 1.25; ctx.setLineDash(dash);
+                dataPoints.forEach((p, i) => { const x = padding + i * xStep, y = yOf(p[key]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
                 ctx.stroke();
-                ctx.lineTo(padding + (dataPoints.length - 1) * xStep, h);
-                ctx.lineTo(padding, h);
-                ctx.closePath();
-                ctx.fillStyle = gradient;
-                ctx.fill();
-            }
+            };
+            line('bbu', COLORS.band, [3, 3]);
+            line('bbl', COLORS.band, [3, 3]);
+            line('bbm', COLORS.accent, []);
+            ctx.setLineDash([]);
 
-            if (buyPrice > 0 && buyPrice >= minVal && buyPrice <= maxVal) {
-                const yBuy = padding + (h - 2 * padding) * (1 - (buyPrice - minVal) / range);
-                ctx.strokeStyle = '#d29922';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath();
-                ctx.moveTo(padding, yBuy);
-                ctx.lineTo(w - padding, yBuy);
-                ctx.stroke();
-                ctx.setLineDash([]); 
-            }
+            const candleW = Math.max(1, Math.min(xStep * 0.62, 10));
+            dataPoints.forEach((p, i) => {
+                const x = padding + i * xStep;
+                const yo = yOf(p.o), yh = yOf(p.h), yl = yOf(p.l), yc = yOf(p.c);
+                const color = p.c >= p.o ? COLORS.pos : COLORS.neg;
+                ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(x, yh); ctx.lineTo(x, yl); ctx.stroke();
+                let by1 = Math.min(yo, yc), by2 = Math.max(yo, yc);
+                if (by2 - by1 < 1) by2 = by1 + 1;
+                ctx.fillRect(x - candleW / 2, by1, candleW, by2 - by1);
+            });
+        } else {
+            minVal = Math.min(...dataPoints);
+            maxVal = Math.max(...dataPoints);
+            range = (maxVal - minVal) === 0 ? 1 : (maxVal - minVal);
+            const isUp = dataPoints[dataPoints.length - 1] >= dataPoints[0];
+            const gradient = ctx.createLinearGradient(0, 0, 0, h);
+            gradient.addColorStop(0, isUp ? 'rgba(52, 211, 153, 0.22)' : 'rgba(248, 113, 113, 0.22)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.strokeStyle = isUp ? COLORS.pos : COLORS.neg;
+            ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+            ctx.beginPath();
+            const xStep = (w - 2 * padding) / (dataPoints.length - 1);
+            dataPoints.forEach((val, i) => { const x = padding + i * xStep, y = yOf(val); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+            ctx.stroke();
+            ctx.lineTo(padding + (dataPoints.length - 1) * xStep, h);
+            ctx.lineTo(padding, h);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
         }
 
-        socket.on('new_log', (data) => {
-            logArea.innerHTML += data.message + '\n';
-            logArea.scrollTop = logArea.scrollHeight;
-            let lines = logArea.innerHTML.split('\n');
-            if (lines.length > 1500) logArea.innerHTML = lines.slice(-500).join('\n');
-        });
-
-        socket.on('update_balance', (data) => {
-            if (data.inicial !== undefined) {
-                localStorage.setItem('saldo_inicial', data.inicial);
-                document.getElementById('lbl_inicial').innerText = `Inicial: $${data.inicial.toFixed(2)}`;
-            }
-            if (data.atual !== undefined) document.getElementById('lbl_atual').innerText = `Atual: $${data.atual.toFixed(2)}`;
-            if (data.pl !== undefined) {
-                document.getElementById('lbl_pl').innerText = `${data.pl >= 0 ? '+' : ''}${data.pl_perc.toFixed(2)}%`;
-                document.getElementById('lbl_pl').className = `val-lg truncate ${data.pl >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]'}`;
-            }
-            if (data.ping !== undefined) document.getElementById('lbl_ping').innerText = `PING: ${data.ping} ms`;
-        });
-
-        socket.on('status_parado', () => {
-            document.getElementById('lbl_status').innerHTML = 'Offline';
-            document.getElementById('lbl_status').className = 'val-lg text-gray-600 truncate mt-1';
-            document.getElementById('lbl_det_atu').innerText = 'Sistema em repouso.';
-        });
-
-        socket.on('lock_add_trade', () => {
-            btnAddTrade.disabled = true;
-            btnAddTrade.className = "text-[#8b949e] border border-[#30363d] bg-[#161a22] text-[10px] sm:text-[11px] px-3 sm:px-4 py-1.5 rounded flex items-center gap-1 opacity-50 cursor-not-allowed";
-        });
-
-        socket.on('update_button_states', (data) => {
-            if (data.cooldown !== undefined) {
-                currentCooldown = data.cooldown;
-                document.getElementById('btn_cooldown').innerText = `⏱️ Scan: ${currentCooldown}m`;
-            }
-            if (data.bb_std !== undefined) {
-                currentBB = data.bb_std;
-                document.getElementById('btn_bb').innerText = `📏 BB STD: ${currentBB}`;
-            }
-        });
-
-        socket.on('update_metrics', (data) => {
-            if(data.countdown_str) document.getElementById('lbl_countdown').innerText = data.countdown_str;
-            
-            if(data.unlock_add_trade && btnAddTrade.disabled) {
-                btnAddTrade.disabled = false;
-                btnAddTrade.className = "btn-action text-[10px] sm:text-[11px] px-3 sm:px-4 py-1.5 rounded flex items-center gap-1 cursor-pointer";
-            }
-
-            if(data.status) {
-                let colorClass = "text-[#58a6ff]";
-                if (data.status.includes("Em Operação")) colorClass = "text-[#d29922]";
-                if (data.status.includes("Crash") || data.status.includes("⚠️")) colorClass = "text-[#f85149]";
-                document.getElementById('lbl_status').innerHTML = `<span class="${colorClass}">${data.status}</span>`;
-            }
-
-            const coinSym = data.coin || 'BUSCANDO...';
-            let coinDisplay = coinSym;
-            
-            if (data.current_price && coinSym !== "USDT" && coinSym !== "BTC" && data.status && data.status.includes("Em Operação")) {
-                const varColor = data.current_coin_change >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
-                coinDisplay = `${coinSym} <span class="text-[11px] sm:text-[13px] font-mono text-gray-500 ml-2 whitespace-nowrap">$${data.current_price.toFixed(4)}</span> <span class="text-[11px] sm:text-[13px] font-mono ${varColor} whitespace-nowrap">${data.current_coin_change > 0 ? '+' : ''}${data.current_coin_change}%</span>`;
-            }
-            document.getElementById('lbl_cur_coin').innerHTML = coinDisplay;
-            
-            if (data.btc_price !== undefined) {
-                const btcCor = data.btc_change >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
-                document.getElementById('lbl_btc').innerHTML = `$${parseFloat(data.btc_price).toLocaleString('en-US', {minimumFractionDigits:2})} <span class="text-[12px] sm:text-[14px] ${btcCor} ml-1 font-semibold">${data.btc_change > 0 ? '▲' : '▼'} ${data.btc_change}%</span>`;
-            }
-            
-            if (data.hb_str) {
-                document.getElementById('lbl_heartbeat').innerHTML = `💓 ${data.hb_str}`;
-                document.getElementById('lbl_heartbeat').style.color = data.hb_color;
-            }
-
-            if (data.current_motor_cooldown !== undefined) {
-                currentCooldown = data.current_motor_cooldown;
-                document.getElementById('btn_cooldown').innerText = `⏱️ Scan: ${currentCooldown}m`;
-            }
-            if (data.current_bb_std !== undefined) {
-                currentBB = data.current_bb_std;
-                document.getElementById('btn_bb').innerText = `📏 BB STD: ${currentBB}`;
-            }
-
-            const w = data.trades_won || 0;
-            const l = data.trades_lost || 0;
-            const t = w + l;
-            const wr = t > 0 ? (w / t) * 100 : 0;
-            
-            document.getElementById('lbl_trades').innerText = t;
-            document.getElementById('score_w').innerText = `W: ${w}`;
-            document.getElementById('score_l').innerText = `L: ${l}`;
-            document.getElementById('score_rate').innerText = `${wr.toFixed(1)}%`;
-
-            const buyPrice = data.buy_price || 0.0;
-            const curPrice = data.current_price || 0.0;
-            const tgtPrice = data.target_price || 0.0;
-            const qty = data.active_qty || 0.0;
-
-            if (buyPrice > 0 && qty > 0) {
-                document.getElementById('lbl_buy_price').innerHTML = `<span class="text-gray-600">[🛒] Compra:</span> $${buyPrice.toFixed(6)} | ${(buyPrice*qty).toFixed(2)} USDT ⇌ ${qty.toFixed(4)} ${coinSym}`;
-                document.getElementById('lbl_cur_price').innerHTML = `<span class="text-blue-900/80">[💲] Atual:</span> $${curPrice.toFixed(6)} | ${(curPrice*qty).toFixed(2)} USDT ⇌ ${qty.toFixed(4)} ${coinSym}`;
-                document.getElementById('lbl_tgt_price').innerHTML = `<span class="text-green-900/80">[🎯] Alvo (V):</span> $${tgtPrice.toFixed(6)} | ${(tgtPrice*qty).toFixed(2)} USDT ⇌ ${qty.toFixed(4)} ${coinSym}`;
-            } else {
-                document.getElementById('lbl_buy_price').innerHTML = "<span class='text-gray-600'>[🛒] Compra:</span> $0.000000 | 0.00 USDT";
-                document.getElementById('lbl_cur_price').innerHTML = "<span class='text-blue-900/80'>[💲] Atual:</span> $0.000000 | 0.00 USDT";
-                document.getElementById('lbl_tgt_price').innerHTML = "<span class='text-green-900/80'>[🎯] Alvo (V):</span> $0.000000 | 0.00 USDT";
-            }
-
-            if(data.current_detail) document.getElementById('lbl_det_atu').innerText = data.current_detail;
-
-            if(data.chart_data && data.chart_data.length > 0) {
-                drawMiniChart(data.chart_data, coinSym, buyPrice);
-            } else {
-                drawMiniChart([], null, 0);
-            }
-
-            if(data.hot_cache) {
-                document.getElementById('list_hot').innerHTML = data.hot_cache.map(i => `<li class="py-1 px-2 hover:bg-[#161a22] border-b border-[#21262d] last:border-0 truncate">${i}</li>`).join('');
-            }
-            if(data.cold_cache) {
-                document.getElementById('list_cold').innerHTML = data.cold_cache.map(i => `<li class="py-1 px-2 hover:bg-[#161a22] border-b border-[#21262d] last:border-0 truncate">${i}</li>`).join('');
-            }
-        });
-
-        socket.on('show_modal_html', (data) => {
-            document.getElementById('modal-title').innerHTML = data.title;
-            document.getElementById('modal-content-html').innerHTML = data.content;
-            document.getElementById('modal-overlay').style.display = 'flex';
-        });
-
-        function closeModal() {
-            document.getElementById('modal-overlay').style.display = 'none';
+        if (buyPrice > 0 && buyPrice >= minVal && buyPrice <= maxVal) {
+            const yBuy = yOf(buyPrice);
+            ctx.strokeStyle = COLORS.warn; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(padding, yBuy); ctx.lineTo(w - padding, yBuy); ctx.stroke();
+            ctx.setLineDash([]);
         }
-    </script>
+    }
+
+    function logClass(msg) {
+        if (/\[(ERROR|ERRO)\]|erro|falha/i.test(msg)) return 'ln-err';
+        if (/\[OK\]|\[\+\]/.test(msg)) return 'ln-ok';
+        if (/\[!\]|WARNING|⚠️/.test(msg)) return 'ln-warn';
+        if (/\[INFO\]/.test(msg)) return 'ln-info';
+        return '';
+    }
+
+    socket.on('new_log', (data) => {
+        const msg = String(data.message).replace(/^\n+|\n+$/g, '');
+        const nearBottom = logArea.scrollHeight - logArea.scrollTop - logArea.clientHeight < 40;
+        const div = document.createElement('div');
+        div.className = 'ln ' + logClass(msg);
+        div.textContent = msg;
+        logArea.appendChild(div);
+        if (logArea.childElementCount > 1500) {
+            while (logArea.childElementCount > 500) logArea.removeChild(logArea.firstChild);
+        }
+        if (nearBottom) logArea.scrollTop = logArea.scrollHeight;
+    });
+
+    socket.on('update_balance', (data) => {
+        if (data.inicial !== undefined) {
+            try { localStorage.setItem('saldo_inicial', data.inicial); } catch (e) {}
+            $('lbl_inicial').innerHTML = `Inicial: <span class="num">${fmtUsd(data.inicial)}</span>`;
+        }
+        if (data.atual !== undefined) $('lbl_atual').innerHTML = `Atual: <span class="num">${fmtUsd(data.atual)}</span>`;
+        if (data.pl !== undefined) {
+            const pl = $('lbl_pl');
+            pl.innerText = `${data.pl >= 0 ? '+' : ''}${data.pl_perc.toFixed(2)}%`;
+            pl.className = `kpi-value ${signCls(data.pl)}`;
+            pl.title = `${data.pl >= 0 ? '+' : '-'}${fmtUsd(Math.abs(data.pl))}`;
+        }
+        if (data.ping !== undefined) $('lbl_ping').innerText = `Ping: ${data.ping} ms`;
+    });
+
+    function setStatus(text, state) {
+        $('lbl_status').textContent = text.replace(/^[🟢🟡🔴🟠⚪]\s*/u, ''); // o ponto colorido já indica o estado
+        $('lbl_status').title = text;
+        $('status_card').dataset.state = state;
+    }
+
+    socket.on('status_parado', () => {
+        setStatus('Offline', 'off');
+        $('lbl_det_atu').innerText = 'Sistema em repouso.';
+    });
+
+    socket.on('lock_add_trade', () => {
+        btnAddTrade.disabled = true;
+        btnAddTrade.title = 'Aguardando o motor consumir a tentativa extra';
+    });
+
+    socket.on('update_button_states', (data) => {
+        if (data.cooldown !== undefined) { currentCooldown = data.cooldown; setCooldownLabel(currentCooldown); }
+        if (data.bb_std !== undefined) { currentBB = data.bb_std; setBBLabel(currentBB); }
+    });
+
+    function priceRow(id, label, price, qty, coin) {
+        const el = $(id);
+        if (price > 0 && qty > 0) {
+            el.innerHTML = `<span class="pr-label">${label}</span><span class="pr-price">$${price.toFixed(6)}</span>` +
+                `<span class="pr-meta">${(price * qty).toFixed(2)} USDT ⇌ ${qty.toFixed(4)} ${esc(coin)}</span>`;
+        } else {
+            el.innerHTML = `<span class="pr-label">${label}</span><span class="pr-price">$0.000000</span><span class="pr-meta">0.00 USDT</span>`;
+        }
+    }
+
+    function renderMarket(listId, countId, items) {
+        const ul = $(listId);
+        $(countId).textContent = items.length ? items.length : '';
+        if (!items.length) { ul.innerHTML = '<li class="li-empty">Nenhuma moeda nesta lista agora.</li>'; return; }
+        ul.innerHTML = items.map(i => {
+            const safe = esc(i);
+            // colore a variação percentual, ex.: "(+0.66%)"
+            return `<li title="${safe}">${safe.replace(/\(([+-]?[\d.]+)%\)/, (m, v) => `<span class="${parseFloat(v) >= 0 ? 'pos' : 'neg'}">${m}</span>`)}</li>`;
+        }).join('');
+    }
+
+    socket.on('update_metrics', (data) => {
+        if (data.countdown_str) $('lbl_countdown').innerText = data.countdown_str.replace(/^⏳\s*/, '');
+
+        if (data.unlock_add_trade && btnAddTrade.disabled) {
+            btnAddTrade.disabled = false;
+            btnAddTrade.title = '';
+        }
+
+        if (data.status) {
+            let state = 'idle';
+            if (data.status.includes("Em Operação")) state = 'trade';
+            if (data.status.includes("Crash") || data.status.includes("⚠️")) state = 'alert';
+            setStatus(data.status, state);
+        }
+
+        const coinSym = data.coin || 'BUSCANDO...';
+        let coinDisplay = esc(coinSym);
+        if (data.current_price && coinSym !== "USDT" && coinSym !== "BTC" && data.status && data.status.includes("Em Operação")) {
+            const chg = data.current_coin_change;
+            coinDisplay = `${esc(coinSym)} <span class="coin-meta muted">$${data.current_price.toFixed(4)}</span> <span class="coin-meta ${signCls(chg)}">${chg > 0 ? '+' : ''}${chg}%</span>`;
+        }
+        $('lbl_cur_coin').innerHTML = coinDisplay;
+
+        if (data.btc_price !== undefined) {
+            const chg = data.btc_change;
+            $('lbl_btc').innerHTML = `$${parseFloat(data.btc_price).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            const b = $('lbl_btc_change');
+            b.textContent = `${chg > 0 ? '▲' : '▼'} ${chg}%`;
+            b.className = `badge ${signCls(chg)}`;
+        }
+
+        if (data.hb_str) {
+            const hb = $('lbl_heartbeat');
+            hb.innerHTML = `<span class="hb-dot" aria-hidden="true"></span>${esc(data.hb_str)}`;
+            hb.style.color = data.hb_color;
+        }
+
+        if (data.current_motor_cooldown !== undefined) { currentCooldown = data.current_motor_cooldown; setCooldownLabel(currentCooldown); }
+        if (data.current_bb_std !== undefined) { currentBB = data.current_bb_std; setBBLabel(currentBB); }
+
+        const w = data.trades_won || 0;
+        const l = data.trades_lost || 0;
+        const t = w + l;
+        const wr = t > 0 ? (w / t) * 100 : 0;
+        $('lbl_trades').innerText = t;
+        $('score_w').innerText = `W: ${w}`;
+        $('score_l').innerText = `L: ${l}`;
+        $('score_rate').innerText = `${wr.toFixed(1)}%`;
+        $('score_rate').className = 'badge' + (t > 0 ? ' ' + (wr >= 50 ? 'pos' : 'neg') : '');
+        $('score_bar').style.width = `${wr}%`;
+        $('score_bar').parentElement.classList.toggle('empty', t === 0);
+        const daily = data.daily_trades ?? data.trades_no_dia;
+        $('lbl_daily_limit').textContent = (daily !== undefined && data.max_daily_trades) ? `Limite: ${daily}/${data.max_daily_trades}` : '';
+
+        const buyPrice = data.buy_price || 0.0;
+        const curPrice = data.current_price || 0.0;
+        const tgtPrice = data.target_price || 0.0;
+        const qty = data.active_qty || 0.0;
+        priceRow('lbl_buy_price', 'Compra', buyPrice, qty, coinSym);
+        priceRow('lbl_cur_price', 'Atual', curPrice, qty, coinSym);
+        priceRow('lbl_tgt_price', 'Alvo (venda)', tgtPrice, qty, coinSym);
+        $('pos_empty').classList.toggle('is-hidden', buyPrice > 0 && qty > 0);
+
+        // o rótulo "Último veredito" já está no cartão; remove o prefixo repetido só na exibição
+        if (data.current_detail) $('lbl_det_atu').innerText = data.current_detail.replace(/^\s*(🧠\s*)?ÚLTIMO VEREDITO:\s*/i, '');
+
+        if (data.chart_data && data.chart_data.length > 0) {
+            drawMiniChart(data.chart_data, coinSym, buyPrice);
+        } else {
+            drawMiniChart([], null, 0);
+        }
+
+        if (data.hot_cache) renderMarket('list_hot', 'hot_count', data.hot_cache);
+        if (data.cold_cache) renderMarket('list_cold', 'cold_count', data.cold_cache);
+    });
+
+    let lastFocus = null;
+    socket.on('show_modal_html', (data) => {
+        $('modal-title').innerHTML = data.title;
+        $('modal-content-html').innerHTML = data.content;
+        $('modal-content-html').scrollTop = 0;
+        lastFocus = document.activeElement;
+        $('modal-overlay').style.display = 'flex';
+        $('modal-close').focus();
+    });
+
+    function closeModal() {
+        $('modal-overlay').style.display = 'none';
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && $('modal-overlay').style.display === 'flex') closeModal();
+    });
+</script>
 </body>
 </html>

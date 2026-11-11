@@ -1,16 +1,17 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T00:27:14-03:00** · branch `check_strategies` · versão `v3.7.1` · 10/15 tasks concluídas.
+> Atualizado em **2026-11-11T00:37:15-03:00** · branch `check_strategies` · versão `v3.8.0` · 12/16 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | — | revisando e commitando E1 | 2026-11-11T00:27:10-03:00 |
+| orquestrador | Orquestrador | active | — | commit E3 (UI do app) | 2026-11-11T00:37:08-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
-| ag-sim | Simulador | active | T-022 | stage1: variação 30/69 (701s) | 2026-11-11T00:26:53-03:00 |
-| ag-ui | Designer do app | active | T-031 | aguardando download do Chromium; harness e diff de paridade prontos | 2026-11-11T00:04:51-03:00 |
+| ag-sim | Simulador | active | T-022 | stage2: variação 15/20 (1304s) | 2026-11-11T00:36:56-03:00 |
+| ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
+| ag-calib | Calibrador | active | T-041 | ligando params na estratégia | 2026-11-11T00:36:10-03:00 |
 
 ## Épicos
 
@@ -19,7 +20,7 @@
 | E0 | 0 | Painel de acompanhamento do desenvolvimento | doing |
 | E1 | 1 | Reestruturar .spec (README, arch.yaml, ADRs, UNITs) | done |
 | E2 | 1 | Simulação ≥50 variações (mock) p/ calibrar previsão, entrada, stoploss/stopwin | todo |
-| E3 | 2 | Repaginar página do app (amigável/futurista, sóbria) | todo |
+| E3 | 2 | Repaginar página do app (amigável/futurista, sóbria) | done |
 | E4 | 2 | Aplicar calibração na profit_gain (após simulação) | todo |
 
 ## Tasks
@@ -36,11 +37,12 @@
 | T-014 | E1 | .spec/README.md (convenções e índice) | done | ag-spec | 2/2 |
 | T-020 | E2 | Coleta de klines públicos (≥8 moedas, 1h/15m/4h/1d) | done | ag-sim | 3/3 |
 | T-021 | E2 | Mock exchange + motor de simulação fiel à profit_gain | done | ag-sim | 5/5 |
-| T-022 | E2 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | doing | ag-sim | 1/4 |
+| T-022 | E2 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | doing | ag-sim | 2/4 |
 | T-023 | E2 | Relatório + recomendação de parâmetros | todo | — | 0/0 |
-| T-030 | E3 | Redesign templates/index.html | doing | ag-ui | 3/4 |
-| T-031 | E3 | Verificação visual com dados mock | doing | ag-ui | 2/3 |
-| T-040 | E4 | Parametrizar profit_gain e aplicar calibração aprovada | todo | — | 0/0 |
+| T-030 | E3 | Redesign templates/index.html | done | ag-ui | 4/4 |
+| T-031 | E3 | Verificação visual com dados mock | done | ag-ui | 3/3 |
+| T-040 | E4 | Aplicar valores calibrados (após simulação + aprovação) | todo | — | 0/0 |
+| T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | doing | ag-calib | 1/6 |
 
 ## Decisões para o Micael
 
@@ -50,32 +52,32 @@
 | D-002 | não | O trabalho migrou para D:\binance_trade (cópia integral, inclusive user.cfg sem leitura). A pasta em C:\...\Documents\binance_trade ficou defasada. Apagar a cópia de C: depois? | Apagar C: após conferir / Manter as duas | pending | — |
 | D-301 | não | Remover Tailwind CDN (sem versão) e usar CSS próprio + classes de compatibilidade para o HTML gerado pelo app.py nos modais? | A: remover e mapear classes / B: manter Tailwind CDN | pending | — |
 | D-101 | não | update_pending.flag só é consumida pelo painel.py (deprecado); no modo web/Docker o botão 'Atualizar bot' não faz nada. Como tratar? | Portar git pull para app.py (escopo system:update, UNIT-001) / Remover o botão até a UNIT-001 / Manter como está | pending | — |
-| D-102 | não | A suíte pytest não coleta no .venv de D: (falta sqlitedict: binance_trade_bot/__init__ importa backtest). Instalar requirements completos no .venv de D: ou isolar os imports do pacote? | Instalar requirements no .venv D: / Tornar __init__ do pacote leve (imports tardios) | pending | — |
+| D-102 | não | A suíte pytest não coleta no .venv de D: (falta sqlitedict: binance_trade_bot/__init__ importa backtest). Instalar requirements completos no .venv de D: ou isolar os imports do pacote? | Instalar requirements no .venv D: / Tornar __init__ do pacote leve (imports tardios) | answered | Resolvido pelo orquestrador: venv313 (Py 3.13 + requirements-docker.lock + unicorn 2.13.0) → 17 passed |
 
 ## Últimos eventos
 
-- `2026-11-11T00:27:14-03:00` **orquestrador** — commit v3.7.1: .spec reestruturada (ADR/UNIT/arch.yaml)
-- `2026-11-11T00:27:10-03:00` **orquestrador** — status → active
-- `2026-11-11T00:20:48-03:00` **ag-sim** — grade estágio 1 em execução (~22 s/variação, 11 moedas)
-- `2026-11-11T00:18:26-03:00` **ag-spec** — status → done
-- `2026-11-11T00:18:21-03:00` **ag-spec** — E1 concluído: .spec = README + arch.yaml + 13 ADRs + 12 UNITs; planning/specs/contracts/strategies removidas
-- `2026-11-11T00:18:19-03:00` **ag-spec** — T-014 doing → done
-- `2026-11-11T00:18:19-03:00` **ag-spec** — T-014 ✓ remover pastas antigas + validar
-- `2026-11-11T00:18:17-03:00` **ag-spec** — decisão aberta D-102: A suíte pytest não coleta no .venv de D: (falta sqlitedict: binance_trade_bot/__init__ importa backtest). Instalar requirements completos no .venv de D: ou isolar os imports do pacote?
-- `2026-11-11T00:18:15-03:00` **ag-spec** — decisão aberta D-101: update_pending.flag só é consumida pelo painel.py (deprecado); no modo web/Docker o botão 'Atualizar bot' não faz nada. Como tratar?
-- `2026-11-11T00:17:21-03:00` **ag-spec** — T-014 ✓ escrever README
-- `2026-11-11T00:16:16-03:00` **ag-spec** — T-014 todo → doing
-- `2026-11-11T00:16:15-03:00` **ag-spec** — T-013 doing → done
-- `2026-11-11T00:16:15-03:00` **ag-spec** — T-013 ✓ UNITs novas E0-E4 (008-012)
-- `2026-11-11T00:15:12-03:00` **ag-sim** — T-021 doing → done
-- `2026-11-11T00:15:11-03:00` **ag-sim** — T-020 concluída: 11 moedas × 4 TFs, jul/2024→out/2026 (alta 2024-25, baixa Q4/25–Q2/26, recuperação Q3/26), 0 gaps
+- `2026-11-11T00:37:15-03:00` **orquestrador** — commit v3.8.0: repaginação da página do app
+- `2026-11-11T00:37:08-03:00` **orquestrador** — status → active
+- `2026-11-11T00:36:33-03:00` **ag-sim** — estágio 1 ok (69 var). Melhores IS: entrada sma200=asset/both, ema<-2; saída trail_drop=0.2/trail_act=2.0; stop_mult=3/5, clamp 4-12
+- `2026-11-11T00:36:31-03:00` **ag-sim** — T-022 ✓ rodar estágio 1 em 11 moedas
+- `2026-11-11T00:36:13-03:00` **ag-ui** — status → done
+- `2026-11-11T00:36:13-03:00` **ag-ui** — E3: index.html repaginado; paridade 29/29 IDs, 12/12 emits, 7/7 listeners; screenshots em D:\binance_trade_work\ui_check\shots
+- `2026-11-11T00:36:12-03:00` **ag-ui** — T-031 doing → done
+- `2026-11-11T00:36:12-03:00` **ag-ui** — T-031 ✓ screenshots desktop/mobile
+- `2026-11-11T00:36:11-03:00` **ag-ui** — T-030 doing → done
+- `2026-11-11T00:36:11-03:00` **ag-ui** — T-030 ✓ ajustes pós-screenshot
+- `2026-11-11T00:36:09-03:00` **ag-calib** — T-041 ✓ Extrair ProfitGainParams
+- `2026-11-11T00:31:20-03:00` **ag-calib** — T-041 todo → doing
+- `2026-11-11T00:31:19-03:00` **orquestrador** — status → waiting
+- `2026-11-11T00:31:17-03:00` **ag-calib** — agente criado (Calibrador)
+- `2026-11-11T00:31:17-03:00` **ag-calib** — status → active
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.7.1
+  version: v3.8.0
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -86,10 +88,10 @@ agents:
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
   task: —
-  step: revisando e commitando E1
+  step: commit E3 (UI do app)
   kind: orchestrator
   status: active
-  heartbeat: '2026-11-11T00:27:10-03:00'
+  heartbeat: '2026-11-11T00:37:08-03:00'
   step_log:
   - at: '2026-11-10T23:49:29-03:00'
     step: construindo painel
@@ -101,6 +103,10 @@ agents:
     step: aguardando conclusão dos workers (acorda por notificação)
   - at: '2026-11-11T00:27:10-03:00'
     step: revisando e commitando E1
+  - at: '2026-11-11T00:31:19-03:00'
+    step: aguardando ag-sim, ag-ui, ag-calib
+  - at: '2026-11-11T00:37:08-03:00'
+    step: commit E3 (UI do app)
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -132,17 +138,11 @@ agents:
   name: Simulador
   role: Mock exchange + backtests de calibração
   task: T-022
-  step: 'stage1: variação 30/69 (701s)'
+  step: 'stage2: variação 15/20 (1304s)'
   kind: worker
   status: active
-  heartbeat: '2026-11-11T00:26:53-03:00'
+  heartbeat: '2026-11-11T00:36:56-03:00'
   step_log:
-  - at: '2026-11-10T23:52:06-03:00'
-    step: coleta de klines
-  - at: '2026-11-10T23:58:16-03:00'
-    step: baixando 11 moedas x 4 TFs (jul/2024→nov/2026) em background
-  - at: '2026-11-11T00:03:40-03:00'
-    step: engine.py escrito; validando saídas e escrevendo testes (download em paralelo)
   - at: '2026-11-11T00:10:17-03:00'
     step: 'stage1: variação 1/1 (19s)'
   - at: '2026-11-11T00:11:08-03:00'
@@ -161,14 +161,36 @@ agents:
     step: 'stage1: variação 25/69 (563s)'
   - at: '2026-11-11T00:26:53-03:00'
     step: 'stage1: variação 30/69 (701s)'
+  - at: '2026-11-11T00:27:25-03:00'
+    step: 'stage1: variação 35/69 (733s)'
+  - at: '2026-11-11T00:29:32-03:00'
+    step: 'stage1: variação 40/69 (861s)'
+  - at: '2026-11-11T00:31:18-03:00'
+    step: 'stage1: variação 45/69 (966s)'
+  - at: '2026-11-11T00:32:59-03:00'
+    step: 'stage1: variação 50/69 (1067s)'
+  - at: '2026-11-11T00:34:55-03:00'
+    step: 'stage1: variação 55/69 (1175s)'
+  - at: '2026-11-11T00:35:52-03:00'
+    step: 'stage1: variação 60/69 (1240s)'
+  - at: '2026-11-11T00:36:10-03:00'
+    step: 'stage1: variação 65/69 (1259s)'
+  - at: '2026-11-11T00:36:19-03:00'
+    step: 'stage1: variação 69/69 (1268s)'
+  - at: '2026-11-11T00:36:27-03:00'
+    step: 'stage2: variação 5/20 (1276s)'
+  - at: '2026-11-11T00:36:37-03:00'
+    step: 'stage2: variação 10/20 (1286s)'
+  - at: '2026-11-11T00:36:56-03:00'
+    step: 'stage2: variação 15/20 (1304s)'
 - id: ag-ui
   name: Designer do app
   role: Repagina templates/index.html
   task: T-031
-  step: aguardando download do Chromium; harness e diff de paridade prontos
+  step: concluído
   kind: worker
-  status: active
-  heartbeat: '2026-11-11T00:04:51-03:00'
+  status: done
+  heartbeat: '2026-11-11T00:36:13-03:00'
   step_log:
   - at: '2026-11-10T23:52:07-03:00'
     step: lendo template atual
@@ -178,6 +200,23 @@ agents:
     step: 'montando harness mock + instalando playwright no D:'
   - at: '2026-11-11T00:04:51-03:00'
     step: aguardando download do Chromium; harness e diff de paridade prontos
+  - at: '2026-11-11T00:28:40-03:00'
+    step: revisando screenshots após ajustes (prefixo veredito, emoji status, tag do gráfico)
+  - at: '2026-11-11T00:36:13-03:00'
+    step: concluído
+- id: ag-calib
+  name: Calibrador
+  role: Parametriza profit_gain + correções de stop
+  task: T-041
+  step: ligando params na estratégia
+  kind: worker
+  status: active
+  heartbeat: '2026-11-11T00:36:10-03:00'
+  step_log:
+  - at: '2026-11-11T00:31:17-03:00'
+    step: lendo estratégia
+  - at: '2026-11-11T00:36:10-03:00'
+    step: ligando params na estratégia
 epics:
 - id: E0
   title: Painel de acompanhamento do desenvolvimento
@@ -194,7 +233,7 @@ epics:
 - id: E3
   title: Repaginar página do app (amigável/futurista, sóbria)
   priority: 2
-  status: todo
+  status: done
 - id: E4
   title: Aplicar calibração na profit_gain (após simulação)
   priority: 2
@@ -357,10 +396,11 @@ tasks:
     done: true
     at: '2026-11-11T00:13:51-03:00'
   - name: rodar estágio 1 em 11 moedas
-    done: false
-    doing: true
+    done: true
+    at: '2026-11-11T00:36:31-03:00'
   - name: 'estágio 2: combinações dos melhores IS'
     done: false
+    doing: true
   - name: 'checagens: latência (close) e slippage 0,2%'
     done: false
   agent: ag-sim
@@ -372,7 +412,7 @@ tasks:
 - id: T-030
   title: Redesign templates/index.html
   epic: E3
-  status: doing
+  status: done
   steps:
   - name: ler app.py e template
     done: true
@@ -382,31 +422,52 @@ tasks:
     at: '2026-11-10T23:55:57-03:00'
   - name: reescrever CSS/HTML
     done: true
-    doing: true
     at: '2026-11-10T23:58:44-03:00'
   - name: ajustes pós-screenshot
-    done: false
+    done: true
+    at: '2026-11-11T00:36:11-03:00'
   agent: ag-ui
 - id: T-031
   title: Verificação visual com dados mock
   epic: E3
-  status: doing
+  status: done
   steps:
   - name: harness Flask mock
     done: true
     at: '2026-11-11T00:04:52-03:00'
   - name: screenshots desktop/mobile
-    done: false
-    doing: true
+    done: true
+    at: '2026-11-11T00:36:12-03:00'
   - name: diff de paridade IDs/eventos
     done: true
     at: '2026-11-11T00:04:52-03:00'
   agent: ag-ui
 - id: T-040
-  title: Parametrizar profit_gain e aplicar calibração aprovada
+  title: Aplicar valores calibrados (após simulação + aprovação)
   epic: E4
   status: todo
   steps: []
+  note: T-041 prepara a parametrização
+- id: T-041
+  title: Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real
+  epic: E4
+  agent: ag-calib
+  status: doing
+  steps:
+  - name: Extrair ProfitGainParams
+    done: true
+    at: '2026-11-11T00:36:09-03:00'
+  - name: Carregar [profit_gain] no config.py + user.cfg.exemple
+    done: false
+    doing: true
+  - name: Fix stop antes da mineração
+    done: false
+  - name: Fix preço de compra = fill médio
+    done: false
+  - name: Testes mock + suíte
+    done: false
+  - name: Registrar decisões D-4xx (itens 4-9)
+    done: false
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -457,9 +518,10 @@ decisions:
   - Tornar __init__ do pacote leve (imports tardios)
   recommendation: Orquestrador criou D:\binance_trade_work\venv313 (Python 3.13 = Docker) com requirements-docker.lock;
     o .venv 3.14 não compila unicorn
-  status: pending
+  status: answered
   blocking: false
   opened_at: '2026-11-11T00:18:17-03:00'
+  answer: 'Resolvido pelo orquestrador: venv313 (Py 3.13 + requirements-docker.lock + unicorn 2.13.0) → 17 passed'
 events:
 - at: '2026-11-10T23:49:14-03:00'
   who: orquestrador
@@ -707,6 +769,52 @@ events:
 - at: '2026-11-11T00:27:14-03:00'
   who: orquestrador
   msg: 'commit v3.7.1: .spec reestruturada (ADR/UNIT/arch.yaml)'
-updated_at: '2026-11-11T00:27:14-03:00'
+- at: '2026-11-11T00:31:17-03:00'
+  who: ag-calib
+  msg: status → active
+- at: '2026-11-11T00:31:17-03:00'
+  who: ag-calib
+  msg: agente criado (Calibrador)
+- at: '2026-11-11T00:31:19-03:00'
+  who: orquestrador
+  msg: status → waiting
+- at: '2026-11-11T00:31:20-03:00'
+  who: ag-calib
+  msg: T-041 todo → doing
+- at: '2026-11-11T00:36:09-03:00'
+  who: ag-calib
+  msg: T-041 ✓ Extrair ProfitGainParams
+- at: '2026-11-11T00:36:11-03:00'
+  who: ag-ui
+  msg: T-030 ✓ ajustes pós-screenshot
+- at: '2026-11-11T00:36:11-03:00'
+  who: ag-ui
+  msg: T-030 doing → done
+- at: '2026-11-11T00:36:12-03:00'
+  who: ag-ui
+  msg: T-031 ✓ screenshots desktop/mobile
+- at: '2026-11-11T00:36:12-03:00'
+  who: ag-ui
+  msg: T-031 doing → done
+- at: '2026-11-11T00:36:13-03:00'
+  who: ag-ui
+  msg: 'E3: index.html repaginado; paridade 29/29 IDs, 12/12 emits, 7/7 listeners; screenshots em D:\binance_trade_work\ui_check\shots'
+- at: '2026-11-11T00:36:13-03:00'
+  who: ag-ui
+  msg: status → done
+- at: '2026-11-11T00:36:31-03:00'
+  who: ag-sim
+  msg: T-022 ✓ rodar estágio 1 em 11 moedas
+- at: '2026-11-11T00:36:33-03:00'
+  who: ag-sim
+  msg: 'estágio 1 ok (69 var). Melhores IS: entrada sma200=asset/both, ema<-2; saída trail_drop=0.2/trail_act=2.0;
+    stop_mult=3/5, clamp 4-12'
+- at: '2026-11-11T00:37:08-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T00:37:15-03:00'
+  who: orquestrador
+  msg: 'commit v3.8.0: repaginação da página do app'
+updated_at: '2026-11-11T00:37:15-03:00'
 ```
 <!-- DATA:END -->
