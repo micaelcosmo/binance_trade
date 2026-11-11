@@ -1,17 +1,17 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T00:39:52-03:00** · branch `check_strategies` · versão `v3.8.1` · 13/17 tasks concluídas.
+> Atualizado em **2026-11-11T00:43:30-03:00** · branch `check_strategies` · versão `v3.9.0` · 16/17 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | — | commit E3 (UI do app) | 2026-11-11T00:37:08-03:00 |
+| orquestrador | Orquestrador | active | — | commit E2 (simulação) | 2026-11-11T00:43:29-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
-| ag-sim | Simulador | active | T-022 | check: variação 12/12 (1438s) | 2026-11-11T00:39:09-03:00 |
+| ag-sim | Simulador | done | T-023 | concluído | 2026-11-11T00:42:36-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
-| ag-calib | Calibrador | active | T-041 | escrevendo testes mock | 2026-11-11T00:39:42-03:00 |
+| ag-calib | Calibrador | done | T-041 | concluído | 2026-11-11T00:43:19-03:00 |
 
 ## Épicos
 
@@ -19,7 +19,7 @@
 |---|---|---|---|
 | E0 | 0 | Painel de acompanhamento do desenvolvimento | doing |
 | E1 | 1 | Reestruturar .spec (README, arch.yaml, ADRs, UNITs) | done |
-| E2 | 1 | Simulação ≥50 variações (mock) p/ calibrar previsão, entrada, stoploss/stopwin | todo |
+| E2 | 1 | Simulação ≥50 variações (mock) p/ calibrar previsão, entrada, stoploss/stopwin | done |
 | E3 | 2 | Repaginar página do app (amigável/futurista, sóbria) | done |
 | E4 | 2 | Aplicar calibração na profit_gain (após simulação) | todo |
 
@@ -37,12 +37,12 @@
 | T-014 | E1 | .spec/README.md (convenções e índice) | done | ag-spec | 2/2 |
 | T-020 | E2 | Coleta de klines públicos (≥8 moedas, 1h/15m/4h/1d) | done | ag-sim | 3/3 |
 | T-021 | E2 | Mock exchange + motor de simulação fiel à profit_gain | done | ag-sim | 5/5 |
-| T-022 | E2 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | doing | ag-sim | 2/4 |
-| T-023 | E2 | Relatório + recomendação de parâmetros | todo | — | 0/0 |
+| T-022 | E2 | Grade ≥50 variações (entrada × stop × stopwin) multi-moeda | done | ag-sim | 4/4 |
+| T-023 | E2 | Relatório + recomendação de parâmetros | done | ag-sim | 3/3 |
 | T-030 | E3 | Redesign templates/index.html | done | ag-ui | 4/4 |
 | T-031 | E3 | Verificação visual com dados mock | done | ag-ui | 3/3 |
 | T-040 | E4 | Aplicar valores calibrados (após simulação + aprovação) | todo | — | 0/0 |
-| T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | doing | ag-calib | 4/6 |
+| T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | done | ag-calib | 6/6 |
 | T-004 | E0 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | done | orquestrador | 2/2 |
 
 ## Decisões para o Micael
@@ -54,31 +54,41 @@
 | D-301 | não | Remover Tailwind CDN (sem versão) e usar CSS próprio + classes de compatibilidade para o HTML gerado pelo app.py nos modais? | A: remover e mapear classes / B: manter Tailwind CDN | pending | — |
 | D-101 | não | update_pending.flag só é consumida pelo painel.py (deprecado); no modo web/Docker o botão 'Atualizar bot' não faz nada. Como tratar? | Portar git pull para app.py (escopo system:update, UNIT-001) / Remover o botão até a UNIT-001 / Manter como está | pending | — |
 | D-102 | não | A suíte pytest não coleta no .venv de D: (falta sqlitedict: binance_trade_bot/__init__ importa backtest). Instalar requirements completos no .venv de D: ou isolar os imports do pacote? | Instalar requirements no .venv D: / Tornar __init__ do pacote leve (imports tardios) | answered | Resolvido pelo orquestrador: venv313 (Py 3.13 + requirements-docker.lock + unicorn 2.13.0) → 17 passed |
+| D-201 | não | Simulação: profit_gain não paga custos (BASE −0,30%/trade; melhor variação ≈ break-even e frágil). O que fazer com o live? | A: IA em shadow-mode medindo acerto antes de all-in / B: operar com gate SMA200 e tamanho reduzido / C: pausar live até revisão estrutural | pending | — |
+| D-202 | não | Edge bruto ≈ custo de round-trip. Ativar desconto de taxa em BNB? | A: ativar BNB (0,075%/lado) / B: manter 0,1% | pending | — |
+| D-203 | não | Clamp do stop do BTC (6–10,5%) parece largo; BTC foi a pior moeda na REC | A: manter / B: igualar alts 4–7% / C: 3–6% | pending | — |
+| D-204 | não | Relação alvo ~+1,3% vs stop 4–7% exige >79% de acerto; revisar tese/all-in em nova spec? | A: abrir spec de revisão estrutural / B: não | pending | — |
+| D-401 | não | UNIT-006 item 4: com USDT < $5 a recuperação de estado assume a 1ª moeda da carteira com valor >= $5, mesmo uma que o bot nunca comprou (e passa a vendê-la pelos stops). Corrigir? | A: só assumir moeda registrada no profit_gain_state.json (current coin/qty salvos) / B: assumir só se houver compra recente via get_my_trades / C: manter como está | pending | — |
+| D-402 | não | UNIT-006 item 5: Tribunal de Swap exige >= 4 candidatas aprovadas ao mesmo tempo, então quase nunca convoca (e adia +45 min). Qual o mínimo? | A: 1 candidata / B: 2 candidatas / C: manter 4 | pending | — |
+| D-403 | não | UNIT-006 item 6: durante o cooldown do motor (ai_cooldown_until) a mineração pesada de klines continua rodando a cada scout; só a chamada à IA é poupada. Pular a mineração no cooldown quando fora de operação? | A: pular mineração em cooldown (manter só heartbeat/UI) / B: minerar em intervalo reduzido (ex. a cada N scouts) para manter hot/cold da UI / C: manter | pending | — |
+| D-404 | não | UNIT-006 item 7: daily_profit_pct soma % por trade (não compõe, ignora capital). Meta de 5% e hibernação disparam sobre número aproximado. Trocar? | A: retorno real do dia = equity atual / equity na 1ª operação do dia - 1 / B: produto composto (1+r1)(1+r2)...-1 / C: manter soma | pending | — |
+| D-405 | não | UNIT-006 item 8: entrada all-in (99% do saldo). Agora configurável via [profit_gain] entry_balance_fraction (default 0.99, comportamento inalterado). Mudar o default? | A: manter 0.99 / B: dimensionar por risco (ex. risco 1-2% do capital / stop ATR) / C: fração fixa menor (ex. 0.5) | pending | — |
+| D-406 | não | UNIT-006 item 9: maximum_hold_time_seconds = 7200 é definido e nunca usado (não há timeout de posição). O que fazer? | A: remover o atributo morto / B: implementar timeout de posição (venda após X h) parametrizado / C: manter | pending | — |
 
 ## Últimos eventos
 
-- `2026-11-11T00:39:52-03:00` **orquestrador** — commit v3.8.1: fix re-render do painel
-- `2026-11-11T00:39:51-03:00` **orquestrador** — T-004 doing → done
-- `2026-11-11T00:39:50-03:00` **orquestrador** — T-004 todo → doing
-- `2026-11-11T00:39:50-03:00` **orquestrador** — T-004 ✓ screenshots desktop/mobile
-- `2026-11-11T00:39:50-03:00` **orquestrador** — T-004 ✓ re-render só com dados novos
-- `2026-11-11T00:39:44-03:00` **ag-calib** — profit_gain parametrizada (ProfitGainParams) + pré-check de stop antes da mineração + preço de compra = fill médio
-- `2026-11-11T00:39:41-03:00` **ag-calib** — T-041 ✓ Fix preço de compra = fill médio
-- `2026-11-11T00:39:41-03:00` **ag-calib** — T-041 ✓ Fix stop antes da mineração
-- `2026-11-11T00:39:41-03:00` **ag-calib** — T-041 ✓ Carregar [profit_gain] no config.py + user.cfg.exemple
-- `2026-11-11T00:37:15-03:00` **orquestrador** — commit v3.8.0: repaginação da página do app
-- `2026-11-11T00:37:08-03:00` **orquestrador** — status → active
-- `2026-11-11T00:36:33-03:00` **ag-sim** — estágio 1 ok (69 var). Melhores IS: entrada sma200=asset/both, ema<-2; saída trail_drop=0.2/trail_act=2.0; stop_mult=3/5, clamp 4-12
-- `2026-11-11T00:36:31-03:00` **ag-sim** — T-022 ✓ rodar estágio 1 em 11 moedas
-- `2026-11-11T00:36:13-03:00` **ag-ui** — status → done
-- `2026-11-11T00:36:13-03:00` **ag-ui** — E3: index.html repaginado; paridade 29/29 IDs, 12/12 emits, 7/7 listeners; screenshots em D:\binance_trade_work\ui_check\shots
+- `2026-11-11T00:43:30-03:00` **orquestrador** — commit v3.9.0: simulação 101 variações; baseline perde (−0,30%/trade); SMA200 é o único ganho robusto
+- `2026-11-11T00:43:29-03:00` **orquestrador** — status → active
+- `2026-11-11T00:43:19-03:00` **ag-calib** — status → done
+- `2026-11-11T00:43:19-03:00` **ag-calib** — T-041 concluída: 29 params extraídos, stop pré-mineração, fill médio; pytest 62 passed; decisões D-401..D-406 abertas
+- `2026-11-11T00:43:18-03:00` **ag-calib** — T-041 doing → done
+- `2026-11-11T00:43:18-03:00` **ag-calib** — T-041 ✓ Registrar decisões D-4xx (itens 4-9)
+- `2026-11-11T00:43:17-03:00` **ag-calib** — decisão aberta D-406: UNIT-006 item 9: maximum_hold_time_seconds = 7200 é definido e nunca usado (não há timeout de posição). O que fazer?
+- `2026-11-11T00:43:16-03:00` **ag-calib** — decisão aberta D-405: UNIT-006 item 8: entrada all-in (99% do saldo). Agora configurável via [profit_gain] entry_balance_fraction (default 0.99, comportamento inalterado). Mudar o default?
+- `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-404: UNIT-006 item 7: daily_profit_pct soma % por trade (não compõe, ignora capital). Meta de 5% e hibernação disparam sobre número aproximado. Trocar?
+- `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-403: UNIT-006 item 6: durante o cooldown do motor (ai_cooldown_until) a mineração pesada de klines continua rodando a cada scout; só a chamada à IA é poupada. Pular a mineração no cooldown quando fora de operação?
+- `2026-11-11T00:43:15-03:00` **ag-calib** — decisão aberta D-402: UNIT-006 item 5: Tribunal de Swap exige >= 4 candidatas aprovadas ao mesmo tempo, então quase nunca convoca (e adia +45 min). Qual o mínimo?
+- `2026-11-11T00:43:14-03:00` **ag-calib** — decisão aberta D-401: UNIT-006 item 4: com USDT < $5 a recuperação de estado assume a 1ª moeda da carteira com valor >= $5, mesmo uma que o bot nunca comprou (e passa a vendê-la pelos stops). Corrigir?
+- `2026-11-11T00:42:49-03:00` **ag-calib** — T-041 ✓ Testes mock + suíte
+- `2026-11-11T00:42:36-03:00` **ag-sim** — status → done
+- `2026-11-11T00:42:35-03:00` **ag-sim** — T-023 ok: relatório simulation/reports/sim-001-calibracao.md; recomendação: gate SMA200 diária (seguro), trail_drop 0.2 e stop_mult 3 opcionais; D-201..D-204 abertas
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.8.1
+  version: v3.9.0
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -89,10 +99,10 @@ agents:
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
   task: —
-  step: commit E3 (UI do app)
+  step: commit E2 (simulação)
   kind: orchestrator
   status: active
-  heartbeat: '2026-11-11T00:37:08-03:00'
+  heartbeat: '2026-11-11T00:43:29-03:00'
   step_log:
   - at: '2026-11-10T23:49:29-03:00'
     step: construindo painel
@@ -108,6 +118,10 @@ agents:
     step: aguardando ag-sim, ag-ui, ag-calib
   - at: '2026-11-11T00:37:08-03:00'
     step: commit E3 (UI do app)
+  - at: '2026-11-11T00:40:01-03:00'
+    step: aguardando ag-sim (grade estágio 2) e ag-calib
+  - at: '2026-11-11T00:43:29-03:00'
+    step: commit E2 (simulação)
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -138,16 +152,12 @@ agents:
 - id: ag-sim
   name: Simulador
   role: Mock exchange + backtests de calibração
-  task: T-022
-  step: 'check: variação 12/12 (1438s)'
+  task: T-023
+  step: concluído
   kind: worker
-  status: active
-  heartbeat: '2026-11-11T00:39:09-03:00'
+  status: done
+  heartbeat: '2026-11-11T00:42:36-03:00'
   step_log:
-  - at: '2026-11-11T00:19:17-03:00'
-    step: 'stage1: variação 10/69 (240s)'
-  - at: '2026-11-11T00:21:58-03:00'
-    step: 'stage1: variação 15/69 (406s)'
   - at: '2026-11-11T00:23:11-03:00'
     step: 'stage1: variação 20/69 (477s)'
   - at: '2026-11-11T00:24:35-03:00'
@@ -184,6 +194,10 @@ agents:
     step: 'check: variação 10/12 (1432s)'
   - at: '2026-11-11T00:39:09-03:00'
     step: 'check: variação 12/12 (1438s)'
+  - at: '2026-11-11T00:40:50-03:00'
+    step: escrevendo relatório sim-001
+  - at: '2026-11-11T00:42:36-03:00'
+    step: concluído
 - id: ag-ui
   name: Designer do app
   role: Repagina templates/index.html
@@ -209,10 +223,10 @@ agents:
   name: Calibrador
   role: Parametriza profit_gain + correções de stop
   task: T-041
-  step: escrevendo testes mock
+  step: concluído
   kind: worker
-  status: active
-  heartbeat: '2026-11-11T00:39:42-03:00'
+  status: done
+  heartbeat: '2026-11-11T00:43:19-03:00'
   step_log:
   - at: '2026-11-11T00:31:17-03:00'
     step: lendo estratégia
@@ -220,6 +234,8 @@ agents:
     step: ligando params na estratégia
   - at: '2026-11-11T00:39:42-03:00'
     step: escrevendo testes mock
+  - at: '2026-11-11T00:43:19-03:00'
+    step: concluído
 epics:
 - id: E0
   title: Painel de acompanhamento do desenvolvimento
@@ -232,7 +248,7 @@ epics:
 - id: E2
   title: Simulação ≥50 variações (mock) p/ calibrar previsão, entrada, stoploss/stopwin
   priority: 1
-  status: todo
+  status: done
 - id: E3
   title: Repaginar página do app (amigável/futurista, sóbria)
   priority: 2
@@ -393,7 +409,7 @@ tasks:
 - id: T-022
   title: Grade ≥50 variações (entrada × stop × stopwin) multi-moeda
   epic: E2
-  status: doing
+  status: done
   steps:
   - name: montar grade estágio 1 (69 variações one-at-a-time)
     done: true
@@ -402,16 +418,27 @@ tasks:
     done: true
     at: '2026-11-11T00:36:31-03:00'
   - name: 'estágio 2: combinações dos melhores IS'
-    done: false
-    doing: true
+    done: true
+    at: '2026-11-11T00:40:45-03:00'
   - name: 'checagens: latência (close) e slippage 0,2%'
-    done: false
+    done: true
+    at: '2026-11-11T00:40:46-03:00'
   agent: ag-sim
 - id: T-023
   title: Relatório + recomendação de parâmetros
   epic: E2
-  status: todo
-  steps: []
+  status: done
+  steps:
+  - name: análise por trimestre e moeda
+    done: true
+    at: '2026-11-11T00:40:49-03:00'
+  - name: escrever sim-001-calibracao.md
+    done: true
+    at: '2026-11-11T00:42:20-03:00'
+  - name: registrar decisões do Micael
+    done: true
+    at: '2026-11-11T00:42:26-03:00'
+  agent: ag-sim
 - id: T-030
   title: Redesign templates/index.html
   epic: E3
@@ -455,7 +482,7 @@ tasks:
   title: Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real
   epic: E4
   agent: ag-calib
-  status: doing
+  status: done
   steps:
   - name: Extrair ProfitGainParams
     done: true
@@ -470,10 +497,11 @@ tasks:
     done: true
     at: '2026-11-11T00:39:41-03:00'
   - name: Testes mock + suíte
-    done: false
-    doing: true
+    done: true
+    at: '2026-11-11T00:42:49-03:00'
   - name: Registrar decisões D-4xx (itens 4-9)
-    done: false
+    done: true
+    at: '2026-11-11T00:43:18-03:00'
 - id: T-004
   title: 'Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual'
   epic: E0
@@ -540,6 +568,121 @@ decisions:
   blocking: false
   opened_at: '2026-11-11T00:18:17-03:00'
   answer: 'Resolvido pelo orquestrador: venv313 (Py 3.13 + requirements-docker.lock + unicorn 2.13.0) → 17 passed'
+- id: D-201
+  question: 'Simulação: profit_gain não paga custos (BASE −0,30%/trade; melhor variação ≈ break-even e frágil).
+    O que fazer com o live?'
+  options:
+  - 'A: IA em shadow-mode medindo acerto antes de all-in'
+  - 'B: operar com gate SMA200 e tamanho reduzido'
+  - 'C: pausar live até revisão estrutural'
+  recommendation: A + B com tamanho reduzido
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:42:22-03:00'
+- id: D-202
+  question: Edge bruto ≈ custo de round-trip. Ativar desconto de taxa em BNB?
+  options:
+  - 'A: ativar BNB (0,075%/lado)'
+  - 'B: manter 0,1%'
+  recommendation: A
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:42:23-03:00'
+- id: D-203
+  question: Clamp do stop do BTC (6–10,5%) parece largo; BTC foi a pior moeda na REC
+  options:
+  - 'A: manter'
+  - 'B: igualar alts 4–7%'
+  - 'C: 3–6%'
+  recommendation: A até rodada específica (efeito pooled neutro)
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:42:24-03:00'
+- id: D-204
+  question: Relação alvo ~+1,3% vs stop 4–7% exige >79% de acerto; revisar tese/all-in em nova spec?
+  options:
+  - 'A: abrir spec de revisão estrutural'
+  - 'B: não'
+  recommendation: A
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:42:25-03:00'
+- id: D-401
+  question: 'UNIT-006 item 4: com USDT < $5 a recuperação de estado assume a 1ª moeda da carteira com valor >= $5,
+    mesmo uma que o bot nunca comprou (e passa a vendê-la pelos stops). Corrigir?'
+  options:
+  - 'A: só assumir moeda registrada no profit_gain_state.json (current coin/qty salvos)'
+  - 'B: assumir só se houver compra recente via get_my_trades'
+  - 'C: manter como está'
+  recommendation: 'A (com B como fallback): persistir current_operation_coin no estado e só recuperar essa moeda;
+    demais saldos ficam intocados e logados'
+  task: T-041
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:43:14-03:00'
+- id: D-402
+  question: 'UNIT-006 item 5: Tribunal de Swap exige >= 4 candidatas aprovadas ao mesmo tempo, então quase nunca
+    convoca (e adia +45 min). Qual o mínimo?'
+  options:
+  - 'A: 1 candidata'
+  - 'B: 2 candidatas'
+  - 'C: manter 4'
+  recommendation: 'Decidir via simulação (UNIT-010): já parametrizado como swap_min_candidates (default 4); sugerir
+    A ou B só se a grade mostrar ganho'
+  task: T-041
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:43:15-03:00'
+- id: D-403
+  question: 'UNIT-006 item 6: durante o cooldown do motor (ai_cooldown_until) a mineração pesada de klines continua
+    rodando a cada scout; só a chamada à IA é poupada. Pular a mineração no cooldown quando fora de operação?'
+  options:
+  - 'A: pular mineração em cooldown (manter só heartbeat/UI)'
+  - 'B: minerar em intervalo reduzido (ex. a cada N scouts) para manter hot/cold da UI'
+  - 'C: manter'
+  recommendation: 'B: preserva a UI (hot/cold, dossiê) e corta ~90% das chamadas; com posição aberta o stop já não
+    depende da mineração (fix T-041)'
+  task: T-041
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:43:15-03:00'
+- id: D-404
+  question: 'UNIT-006 item 7: daily_profit_pct soma % por trade (não compõe, ignora capital). Meta de 5% e hibernação
+    disparam sobre número aproximado. Trocar?'
+  options:
+  - 'A: retorno real do dia = equity atual / equity na 1ª operação do dia - 1'
+  - 'B: produto composto (1+r1)(1+r2)...-1'
+  - 'C: manter soma'
+  recommendation: B (simples, sem depender de saldo/depósitos) e exibir A como informativo na UI
+  task: T-041
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:43:15-03:00'
+- id: D-405
+  question: 'UNIT-006 item 8: entrada all-in (99% do saldo). Agora configurável via [profit_gain] entry_balance_fraction
+    (default 0.99, comportamento inalterado). Mudar o default?'
+  options:
+  - 'A: manter 0.99'
+  - 'B: dimensionar por risco (ex. risco 1-2% do capital / stop ATR)'
+  - 'C: fração fixa menor (ex. 0.5)'
+  recommendation: A até a simulação (UNIT-010) medir B; B é o padrão de mercado para limitar perda por trade a 1-2%
+    do capital
+  task: T-041
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:43:16-03:00'
+- id: D-406
+  question: 'UNIT-006 item 9: maximum_hold_time_seconds = 7200 é definido e nunca usado (não há timeout de posição).
+    O que fazer?'
+  options:
+  - 'A: remover o atributo morto'
+  - 'B: implementar timeout de posição (venda após X h) parametrizado'
+  - 'C: manter'
+  recommendation: A agora (não muda comportamento); B só se a simulação mostrar ganho, como UNIT própria
+  task: T-041
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T00:43:17-03:00'
 events:
 - at: '2026-11-10T23:49:14-03:00'
   who: orquestrador
@@ -861,6 +1004,105 @@ events:
 - at: '2026-11-11T00:39:52-03:00'
   who: orquestrador
   msg: 'commit v3.8.1: fix re-render do painel'
-updated_at: '2026-11-11T00:39:52-03:00'
+- at: '2026-11-11T00:40:01-03:00'
+  who: orquestrador
+  msg: status → waiting
+- at: '2026-11-11T00:40:45-03:00'
+  who: ag-sim
+  msg: 'T-022 ✓ estágio 2: combinações dos melhores IS'
+- at: '2026-11-11T00:40:46-03:00'
+  who: ag-sim
+  msg: 'T-022 ✓ checagens: latência (close) e slippage 0,2%'
+- at: '2026-11-11T00:40:46-03:00'
+  who: ag-sim
+  msg: T-022 doing → done
+- at: '2026-11-11T00:40:47-03:00'
+  who: ag-sim
+  msg: 'T-022 ok: 101 variações. Nenhuma lucrativa com robustez; melhor (SMA200 ativo + trail_drop 0.2 + stop_mult
+    3) ≈ break-even (carteira IS −16,7% vs BASE −83,7%; OOS −2,0% vs −59,3%), mas frágil a latência/slippage'
+- at: '2026-11-11T00:40:48-03:00'
+  who: ag-sim
+  msg: T-023 todo → doing
+- at: '2026-11-11T00:40:49-03:00'
+  who: ag-sim
+  msg: T-023 ✓ análise por trimestre e moeda
+- at: '2026-11-11T00:42:20-03:00'
+  who: ag-sim
+  msg: T-023 ✓ escrever sim-001-calibracao.md
+- at: '2026-11-11T00:42:22-03:00'
+  who: ag-sim
+  msg: 'decisão aberta D-201: Simulação: profit_gain não paga custos (BASE −0,30%/trade; melhor variação ≈ break-even
+    e frágil). O que fazer com o live?'
+- at: '2026-11-11T00:42:23-03:00'
+  who: ag-sim
+  msg: 'decisão aberta D-202: Edge bruto ≈ custo de round-trip. Ativar desconto de taxa em BNB?'
+- at: '2026-11-11T00:42:24-03:00'
+  who: ag-sim
+  msg: 'decisão aberta D-203: Clamp do stop do BTC (6–10,5%) parece largo; BTC foi a pior moeda na REC'
+- at: '2026-11-11T00:42:25-03:00'
+  who: ag-sim
+  msg: 'decisão aberta D-204: Relação alvo ~+1,3% vs stop 4–7% exige >79% de acerto; revisar tese/all-in em nova
+    spec?'
+- at: '2026-11-11T00:42:26-03:00'
+  who: ag-sim
+  msg: T-023 ✓ registrar decisões do Micael
+- at: '2026-11-11T00:42:35-03:00'
+  who: ag-sim
+  msg: T-023 doing → done
+- at: '2026-11-11T00:42:35-03:00'
+  who: ag-sim
+  msg: 'T-023 ok: relatório simulation/reports/sim-001-calibracao.md; recomendação: gate SMA200 diária (seguro),
+    trail_drop 0.2 e stop_mult 3 opcionais; D-201..D-204 abertas'
+- at: '2026-11-11T00:42:36-03:00'
+  who: ag-sim
+  msg: status → done
+- at: '2026-11-11T00:42:49-03:00'
+  who: ag-calib
+  msg: T-041 ✓ Testes mock + suíte
+- at: '2026-11-11T00:43:14-03:00'
+  who: ag-calib
+  msg: 'decisão aberta D-401: UNIT-006 item 4: com USDT < $5 a recuperação de estado assume a 1ª moeda da carteira
+    com valor >= $5, mesmo uma que o bot nunca comprou (e passa a vendê-la pelos stops). Corrigir?'
+- at: '2026-11-11T00:43:15-03:00'
+  who: ag-calib
+  msg: 'decisão aberta D-402: UNIT-006 item 5: Tribunal de Swap exige >= 4 candidatas aprovadas ao mesmo tempo,
+    então quase nunca convoca (e adia +45 min). Qual o mínimo?'
+- at: '2026-11-11T00:43:15-03:00'
+  who: ag-calib
+  msg: 'decisão aberta D-403: UNIT-006 item 6: durante o cooldown do motor (ai_cooldown_until) a mineração pesada
+    de klines continua rodando a cada scout; só a chamada à IA é poupada. Pular a mineração no cooldown quando fora
+    de operação?'
+- at: '2026-11-11T00:43:15-03:00'
+  who: ag-calib
+  msg: 'decisão aberta D-404: UNIT-006 item 7: daily_profit_pct soma % por trade (não compõe, ignora capital). Meta
+    de 5% e hibernação disparam sobre número aproximado. Trocar?'
+- at: '2026-11-11T00:43:16-03:00'
+  who: ag-calib
+  msg: 'decisão aberta D-405: UNIT-006 item 8: entrada all-in (99% do saldo). Agora configurável via [profit_gain]
+    entry_balance_fraction (default 0.99, comportamento inalterado). Mudar o default?'
+- at: '2026-11-11T00:43:17-03:00'
+  who: ag-calib
+  msg: 'decisão aberta D-406: UNIT-006 item 9: maximum_hold_time_seconds = 7200 é definido e nunca usado (não há
+    timeout de posição). O que fazer?'
+- at: '2026-11-11T00:43:18-03:00'
+  who: ag-calib
+  msg: T-041 ✓ Registrar decisões D-4xx (itens 4-9)
+- at: '2026-11-11T00:43:18-03:00'
+  who: ag-calib
+  msg: T-041 doing → done
+- at: '2026-11-11T00:43:19-03:00'
+  who: ag-calib
+  msg: 'T-041 concluída: 29 params extraídos, stop pré-mineração, fill médio; pytest 62 passed; decisões D-401..D-406
+    abertas'
+- at: '2026-11-11T00:43:19-03:00'
+  who: ag-calib
+  msg: status → done
+- at: '2026-11-11T00:43:29-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T00:43:30-03:00'
+  who: orquestrador
+  msg: 'commit v3.9.0: simulação 101 variações; baseline perde (−0,30%/trade); SMA200 é o único ganho robusto'
+updated_at: '2026-11-11T00:43:30-03:00'
 ```
 <!-- DATA:END -->

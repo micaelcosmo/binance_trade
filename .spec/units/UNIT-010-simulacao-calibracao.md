@@ -1,6 +1,6 @@
 # UNIT-010 · Simulação ≥ 50 variações com mock exchange para calibrar previsão, entrada, stoploss e stopwin (E2)
 
-- **Status:** Draft (em andamento)
+- **Status:** Implemented (101 variações × 11 moedas; relatório `simulation/reports/sim-001-calibracao.md`) — aguarda revisão do Micael (D-201…D-204)
 - **Épico:** E2 · **Prioridade:** 1 · **Tasks:** T-020, T-021, T-022, T-023
 - **ADRs:** ADR-0002, ADR-0012, ADR-0013
 - **Arquitetura:** `arch.yaml#components.simulation`, `#strategies.profit_gain`, `#external_services.binance_rest.public_klines_sim`
