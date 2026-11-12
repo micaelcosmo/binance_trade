@@ -1,6 +1,6 @@
 # UNIT-011 · Repaginação da página do app (E3)
 
-- **Status:** Draft (em andamento)
+- **Status:** Implemented (T-030 e T-031 concluídas; commit v3.8.0 — repaginação verificada com servidor mock e Playwright; falta rodar com o app.py real)
 - **Épico:** E3 · **Prioridade:** 2 · **Tasks:** T-030, T-031
 - **ADRs:** ADR-0004, ADR-0008
 - **Arquitetura:** `arch.yaml#components.web_template`, `#events`, `#data_contracts.files.bot_status.json`

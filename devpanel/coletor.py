@@ -104,6 +104,23 @@ def _units_por_epico() -> dict:
     return mapa
 
 
+def _unit_specs() -> list:
+    """Todas as UNITs de .spec/units/ com status, épico e prioridade (tile e card "UNITs")."""
+    out = []
+    for path in sorted(glob.glob(os.path.join(SPEC, "units", "UNIT-*.md"))):
+        cab = _cabecalho_md(path)
+        bruto = cab.get("status", "") or ""
+        palavra = bruto.split()[0].strip("*,.;") if bruto else ""
+        detalhe = bruto[len(palavra):].strip(" —-()") if palavra else ""
+        epico = re.search(r"\bE\d+\b", cab.get("épico", "") or cab.get("epico", "") or "")
+        out.append({
+            "id": os.path.basename(path)[:8], "titulo": re.sub(r"^UNIT-\d+\s*[·—:-]\s*", "", cab["_titulo"]),
+            "status": palavra.upper() or "SEM STATUS", "detalhe": detalhe[:200] or None,
+            "epico": epico.group(0) if epico else None, "arquivo": rel(path),
+        })
+    return out
+
+
 def _adrs() -> list:
     adrs = []
     for path in sorted(glob.glob(os.path.join(SPEC, "adr", "ADR-*.md"))):
@@ -173,7 +190,7 @@ def coletar_spec() -> dict:
                     "atualizado": (s.get("updated_at") or "")[:10], "objetivo": p.get("goal"),
                     "sessaoInicio": p.get("session_started_at"), "sessaoPrazo": p.get("session_deadline")},
         "proximaInteracao": s.get("proxima") or {},
-        "fases": fases, "units": units, "adrs": _adrs(), "agentes": agentes, "pendencias": pendencias,
+        "fases": fases, "units": units, "unitSpecs": _unit_specs(), "adrs": _adrs(), "agentes": agentes, "pendencias": pendencias,
         "links": links[:20], "linksRecusados": len(s.get("links", [])) - len(links),
         "statusMtimeEpoch": round(mtime, 3), "archMtimeEpoch": round(arch_mtime, 3), "archIso": iso_local(arch_mtime),
         "tempo": t.get("totals", {}),

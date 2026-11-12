@@ -502,6 +502,11 @@
   </div>
 
   <section class="card">
+    <div class="card-head"><h2>UNITs (specs)</h2><span class="chip" id="unitspec-meta"></span></div>
+    <div class="lista" id="unitspecs"><p class="vazio">aguardando estado.json…</p></div>
+  </section>
+
+  <section class="card">
     <div class="card-head"><h2>Decisões (ADRs)</h2><span class="chip" id="adrs-meta"></span></div>
     <div class="lista" id="adrs"><p class="vazio">aguardando estado.json…</p></div>
   </section>
@@ -890,7 +895,9 @@
     setCss($('t-bar'), 'width', pct + '%');
     var atual = faseAtual(units, fases);
     setText($('t-soma'), fases.length > 1 ? 'soma dos ' + fases.length + ' épicos' : fases.length ? fases[0].id + ' · ' + fases[0].titulo : 'STATUS.md');
-    setText($('t-pct'), pct + '% das tasks concluídas' + (atual ? ' · épico atual: ' + atual.id + ' ' + atual.titulo : units.length && feitas === units.length ? ' · tudo concluído' : ''));
+    var tudo = units.length && feitas === units.length;
+    if (tudo) atual = null;   // nada aberto: não existe "épico atual"
+    setText($('t-pct'), pct + '% das tasks concluídas' + (tudo ? ' · tudo concluído' : atual ? ' · épico atual: ' + atual.id + ' ' + atual.titulo : ''));
     var hb = fases.map(function (f) {
       var us = units.filter(function (u) { return u.fase === f.id; });
       var ok = us.filter(function (u) { return estadoUnit(u) === 'concluida'; }).length;
@@ -912,12 +919,11 @@
   function renderTiles() {
     var s = spec(), e = live.estado; if (!s) return;
     var units = s.units || [], adrs = s.adrs || [], ags = s.agentes || [];
-    var comSpec = units.filter(function (u) { return u.spec; });
-    var cnt = {};
-    comSpec.forEach(function (u) { var k = String(u.specStatus || 'SEM STATUS').toUpperCase(); cnt[k] = (cnt[k] || 0) + 1; });
-    var prontas = (cnt.READY || 0) + (cnt.IMPLEMENTED || 0) + (cnt.VERIFIED || 0);
-    setText($('t-spec'), prontas + ' / ' + comSpec.length);
-    setText($('t-spec-sub'), Object.keys(cnt).sort().map(function (k) { return cnt[k] + ' ' + k; }).join(' · ') + (units.length - comSpec.length ? ' · ' + (units.length - comSpec.length) + ' tasks sem UNIT' : ''));
+    var specs = s.unitSpecs || [], cnt = {};
+    specs.forEach(function (u) { var k = String(u.status || 'SEM STATUS').toUpperCase(); cnt[k] = (cnt[k] || 0) + 1; });
+    var prontas = (cnt.APPROVED || 0) + (cnt.IMPLEMENTED || 0) + (cnt.VERIFIED || 0);
+    setText($('t-spec'), prontas + ' / ' + specs.length);
+    setText($('t-spec-sub'), Object.keys(cnt).sort().map(function (k) { return cnt[k] + ' ' + k; }).join(' · ') || 'nenhuma UNIT em .spec/units/');
     var aceitas = adrs.filter(function (a) { return semAcento(a.status) === 'aceita'; }).length;
     setText($('t-adrs'), aceitas + (aceitas === 1 ? ' aceita' : ' aceitas'));
     setText($('t-adrs-sub'), adrs.length + (adrs.length === 1 ? ' decisão' : ' decisões') + (adrs.length ? ' · última ' + adrs[adrs.length - 1].id : ''));
@@ -1188,6 +1194,20 @@
     morph($('pendencias'), ps.map(function (p) { return '<div class="item"><div class="item-head"><b>' + esc(p.id) + '</b><span class="chip aguardando">✋ ' + esc(p.quem || '—') + '</span>' + (p.bloqueante ? '<span class="chip bloqueada">⛔ bloqueante</span>' : '') + '</div><p><span class="ref">' + esc(p.texto) + '</span>' + (lista(p.opcoes).length ? '<br>opções: ' + esc(lista(p.opcoes).join(' · ')) : '') + (p.recomendacao ? '<br>recomendação: <span class="ref">' + esc(p.recomendacao) + '</span>' : '') + '</p></div>'; }).join(''));
     setText($('pend-meta'), ps.length + (ps.length === 1 ? ' aberta' : ' abertas'));
   }
+  var SPEC_CLS = { DRAFT: 'aguardando', APPROVED: 'andamento', IMPLEMENTED: 'concluida', VERIFIED: 'concluida' };
+  function renderUnitSpecs() {
+    var s = spec(); if (!s) return;
+    var us = s.unitSpecs || [];
+    if (!us.length) { morph($('unitspecs'), '<p class="vazio">nenhuma UNIT em .spec/units/</p>'); setText($('unitspec-meta'), '0'); return; }
+    morph($('unitspecs'), us.map(function (u) {
+      var st = String(u.status || '').toUpperCase();
+      return '<div class="item"><div class="item-head"><b>' + esc(u.id) + '</b><span class="chip ' + (SPEC_CLS[st] || '') + '">' + esc(st) + '</span>' +
+        (u.epico ? '<span class="chip">' + faseIco(u.epico) + ' ' + esc(u.epico) + '</span>' : '<span class="tag">sem épico</span>') +
+        '</div><p><span class="ref">' + esc(u.titulo) + '</span>' + (u.detalhe ? ' — ' + esc(u.detalhe) : '') + ' <span class="mono">' + esc(u.arquivo) + '</span></p></div>';
+    }).join(''));
+    var rascunho = us.filter(function (u) { return String(u.status).toUpperCase() === 'DRAFT'; }).length;
+    setText($('unitspec-meta'), us.length + ' UNITs · ' + rascunho + ' em rascunho');
+  }
   function renderAdrs() {
     var s = spec(); if (!s) return;
     var adrs = s.adrs || [];
@@ -1272,7 +1292,7 @@
     }).then(function (e) {
       live.estado = e; live.erro = null; live.lastOk = new Date();
       renderStatus(); renderTopo(); renderProxima(); renderLinks(); renderAgora(); renderQa(); renderProgresso(); renderTiles();
-      buildNodes(); renderAgentes(); renderPendencias(); renderAdrs(); renderTabela(); renderAoVivo();
+      buildNodes(); renderAgentes(); renderPendencias(); renderUnitSpecs(); renderAdrs(); renderTabela(); renderAoVivo();
       restaurarScroll();
     }).catch(function (err) {
       live.erro = String((err && err.message) || err); live.lastErr = new Date();
