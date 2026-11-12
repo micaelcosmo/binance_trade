@@ -139,44 +139,61 @@
   .proxima .prox-txt.vago { color: var(--muted); font-weight: 500; }
   .proxima .prox-txt a { color: var(--active); word-break: break-all; }
   .proxima.topo-prox { margin-bottom: 12px; padding: 14px 16px; }
-  /* ---------- topo em grade: [título | próxima+links] / [ao vivo | próxima+links] ---------- */
-  .cantos { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "topo pilha" "aovivo pilha"; grid-template-rows: auto 1fr; gap: 12px; margin-bottom: 12px; align-items: stretch; }
-  .cantos > .topo { grid-area: topo; margin: 0; align-items: flex-end; }
-  .cantos > .aovivo { grid-area: aovivo; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 8px; padding: 12px 14px; font-size: 12px; }
-  .cantos > .aovivo .av-tit { grid-column: 1 / -1; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-  .cantos > .aovivo .av-sep { display: none; }
-  .cantos > .aovivo .av-grp { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 4px; min-width: 0; padding: 7px 9px; border-radius: 9px; background: var(--surface-2); }
-  .cantos > .aovivo .av-grp > .k { flex: 0 0 100%; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-  .cantos > .aovivo .av-grp[data-k="git"] { grid-column: 1 / -1; }
-  .cantos > .aovivo .av-grp[data-k="web app"] { order: 1; } .cantos > .aovivo .av-grp[data-k="motor"] { order: 2; } .cantos > .aovivo .av-grp[data-k="estado"] { order: 3; }
-  .cantos > .aovivo .av-grp[data-k="coletor"] { order: 4; } .cantos > .aovivo .av-grp[data-k="processos"] { order: 5; } .cantos > .aovivo .av-grp[data-k="python"] { order: 6; }
-  .cantos > .aovivo .av-grp[data-k="STATUS.md"] { order: 7; } .cantos > .aovivo .av-grp[data-k="arch.yaml"] { order: 8; } .cantos > .aovivo .av-grp[data-k="disco"] { order: 9; }
-  .cantos > .aovivo .av-grp[data-k="git"] { order: 10; } .cantos > .aovivo .av-grp[data-k="bot"] { order: 1; grid-column: 1 / -1; }
-  .cantos > .aovivo .av-grp[data-k="git"] .av-txt { flex: 1 1 260px; min-width: 0; }
-  .cantos > .aovivo .av { white-space: normal; }
-  .cantos > .aovivo .av:not(.ok):not(.warn):not(.bad) { background: var(--surface); }
-  .cantos > .pilha { grid-area: pilha; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-  .pilha > section { margin: 0 !important; padding: 12px 14px !important; min-width: 0; }
-  .pilha > .proxima { flex: 1 1 auto; }
-  .pilha > .links { flex: 0 0 auto; }
-  .cantos .proxima .label, .cantos .links h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-  .cantos .proxima .prox-txt { font-size: 13.5px; line-height: 1.45; margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .cantos .prox-meta #ultimo { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .cantos .proxima:hover .prox-txt, .cantos .proxima:focus-within .prox-txt, .cantos .proxima:hover #ultimo { -webkit-line-clamp: unset; }
-  .cantos .prox-meta { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; }
-  .cantos .prox-meta .k { font-size: 10px; }
-  .cantos .prox-meta .v.timer-live { font-size: 13px; }
-  .cantos .links .card-head { margin-bottom: 8px; }
-  .cantos .links-lista { gap: 6px; }
-  .cantos .link-btn { min-height: 44px; padding: 8px 12px; border-radius: 10px; }
-  .cantos .link-btn .lb-tit { font-size: 14px; }
-  .cantos .link-btn .lb-url { font-size: 11px; }
-  .cantos .lb-nota { font-size: 11.5px; margin-top: 4px; }
-  @media (max-width: 960px) {
-    .cantos { grid-template-columns: minmax(0, 1fr); grid-template-areas: "topo" "aovivo" "pilha"; grid-template-rows: auto; }
-  }
-  @media (max-width: 640px) { .cantos .prox-meta { grid-template-columns: minmax(0, 1fr) !important; } .cantos > .aovivo { grid-template-columns: minmax(0, 1fr); } .cantos > .aovivo .av-grp { grid-column: auto !important; } }
-  @media (min-width: 641px) and (max-width: 760px) { .cantos > .aovivo { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  /* ---------- topo: [Agora (situação · sua vez · último movimento · sistema)] | [Links + Testes] ---------- */
+  .topo-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 12px; margin-bottom: 12px; align-items: start; }
+  .lateral { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .lateral > .card { margin: 0; padding: 14px; }
+  .lateral .links { border: 2px solid var(--active); background: linear-gradient(180deg, var(--active-bg), var(--surface)); }
+  .lateral .links .card-head { margin-bottom: 8px; }
+  .lateral .links-lista { gap: 6px; }
+  .lateral .link-btn { min-height: 44px; padding: 8px 12px; border-radius: 10px; }
+  .lateral .link-btn .lb-tit { font-size: 14px; }
+  .lateral .link-btn .lb-url { font-size: 11px; }
+  .lateral .lb-nota { font-size: 11.5px; margin-top: 4px; }
+  .lateral .qa-placar .chip { font-size: 11.5px; padding: 3px 9px; }
+  .lateral .qa-linha { font-size: 12.5px; }
+  .card.agora { margin: 0; padding: 16px; }
+  .ag-linha1 { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .ag-linha1 { align-items: stretch; }
+  .ag-linha1 > div { margin: 0 !important; }
+  .ag-linha1 > .ag-status { flex: 0 1 auto; align-items: center; }
+  .ag-linha1 > .ag-tarefa { flex: 1 1 320px; display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px; }
+  .ag-duo { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; }
+  .ag-prox, .ag-ult { border-radius: 12px; padding: 12px 14px; min-width: 0; }
+  .ag-prox { border: 2px solid var(--active); background: linear-gradient(180deg, var(--active-bg), var(--surface)); }
+  .ag-ult { border: 1px solid var(--border); background: var(--bg); }
+  .ag-sec { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .ag-prox .ag-sec { color: var(--active); }
+  .ag-prox .prox-txt { font-size: 14.5px; font-weight: 600; line-height: 1.45; margin: 0; }
+  .ag-prox .prox-meta { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; }
+  .ag-prox .prox-meta .k { font-size: 10px; }
+  .ag-prox .prox-meta .ult-entregue { grid-column: 1 / -1; }
+  .ag-prox .prox-meta .v.timer-live { font-size: 13px; }
+  .ag-ult .ag-top { grid-template-columns: 34px minmax(0, 1fr); gap: 8px; }
+  .ag-ult .ag-top .ag-ico { width: 34px; height: 34px; font-size: 17px; }
+  .ag-ult .ag-top .ag-desc { font-size: 13.5px; }
+  .ag-hist { margin-top: 10px; }
+  .ag-hist > summary { cursor: pointer; font-size: 12px; color: var(--muted); padding: 4px 0; }
+  .ag-hist .ag-lista { margin-top: 6px; }
+  .ag-hist .ag-lista li { grid-template-columns: 58px 20px minmax(0, 1fr); font-size: 12px; }
+  /* sistema (antiga faixa "ao vivo"), agora dentro do Agora */
+  .agora .aovivo { margin: 14px 0 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; box-shadow: none; background: none;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-content: start; font-size: 12px; }
+  .agora .aovivo .av-tit { grid-column: 1 / -1; }
+  .agora .aovivo .av-sep { display: none; }
+  .agora .aovivo .av-grp { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 4px; min-width: 0; padding: 7px 9px; border-radius: 9px; background: var(--surface-2); }
+  .agora .aovivo .av-grp > .k { flex: 0 0 100%; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .agora .aovivo .av { white-space: normal; }
+  .agora .aovivo .av:not(.ok):not(.warn):not(.bad) { background: var(--surface); }
+  .agora .aovivo .av-grp[data-k="web app"] { order: 1; } .agora .aovivo .av-grp[data-k="motor"] { order: 2; } .agora .aovivo .av-grp[data-k="estado"] { order: 3; }
+  .agora .aovivo .av-grp[data-k="coletor"] { order: 4; } .agora .aovivo .av-grp[data-k="processos"] { order: 5; } .agora .aovivo .av-grp[data-k="python"] { order: 6; }
+  .agora .aovivo .av-grp[data-k="STATUS.md"] { order: 7; } .agora .aovivo .av-grp[data-k="arch.yaml"] { order: 8; } .agora .aovivo .av-grp[data-k="disco"] { order: 9; }
+  .agora .aovivo .av-grp[data-k="git"] { order: 10; grid-column: 1 / -1; }
+  .agora .aovivo .av-grp[data-k="git"] .av-txt { flex: 1 1 260px; min-width: 0; }
+  .agora .aovivo .av-grp[data-k="bot"] { order: 1; grid-column: 1 / -1; }
+  @media (max-width: 1060px) { .topo-grid { grid-template-columns: minmax(0, 1fr); } .lateral { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; } }
+  @media (max-width: 760px) { .ag-duo { grid-template-columns: minmax(0, 1fr); } .agora .aovivo { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 480px) { .agora .aovivo { grid-template-columns: minmax(0, 1fr); } .ag-prox .prox-meta { grid-template-columns: minmax(0, 1fr) !important; } }
   .proxima.topo-prox .label { font-size: 12px; }
   .proxima .prox-txt { overflow-wrap: anywhere; }
   .prox-meta { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 16px; margin-top: 10px; font-size: 13px; }
@@ -220,10 +237,6 @@
 
   /* ---------- "Agora" (atividade.jsonl: o hook grava cada movimento do orquestrador) ---------- */
   .card.agora { margin: 0 0 12px; padding: 14px; }
-  /* Agora | Testes lado a lado */
-  .lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 12px; align-items: stretch; }
-  @media (min-width: 860px) { .lado { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-  .lado > .card { margin: 0 !important; }
   .agora .card-head { margin-bottom: 8px; }
   .ag-status { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 6px; font-size: 13px; font-weight: 600; padding: 8px 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); overflow-wrap: anywhere; }
   .ag-status .sub2 { font-weight: 500; }
@@ -430,7 +443,6 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="cantos">
   <header class="topo">
     <div>
       <div class="kicker">Painel de status</div>
@@ -442,46 +454,51 @@
       <button class="btn" id="theme" type="button" title="Alternar tema">Tema: auto</button>
     </div>
   </header>
-  <section class="aovivo" id="aovivo" aria-label="Ao vivo: coletor, bot, git, python e disco">
-    <span class="av-tit"><i class="dot" id="av-dot"></i>Ao vivo</span>
-    <span class="av-txt muted">aguardando estado.json…</span>
-  </section>
-  <div class="pilha">
-  <section class="tile proxima topo-prox" id="proxima-box" aria-label="Próxima interação do Micael">
-    <div class="label">Próxima interação do Micael</div>
-    <div class="prox-txt vago" id="prox">lendo STATUS.md…</div>
-    <div class="prox-meta">
-      <div><span class="k">Quando</span><span class="v" id="prox-quando">—</span></div>
-      <div><span class="k">Duração</span><span class="v" id="prox-dur">—</span></div>
-      <div><span class="k">Último entregue</span><span class="v" id="ultimo">—</span></div>
-      <div><span class="k">Em andamento</span><span class="v timer-live" id="t-ativo">—</span><span class="v sub" id="t-ativo-sub"></span></div>
+
+  <div class="topo-grid">
+    <section class="card agora" id="agora" aria-label="Agora: situação, sua vez, último movimento e sistema">
+      <div class="card-head"><h2>Agora</h2><span class="chip" id="agora-meta"></span></div>
+      <div class="ag-linha1">
+        <div class="ag-status" id="ag-status" role="status" hidden></div>
+        <div class="ag-tarefa" id="ag-tarefa" hidden></div>
+      </div>
+      <ul class="ag-fundo" id="ag-fundo" hidden></ul>
+      <div class="ag-duo">
+        <div class="ag-prox proxima" id="proxima-box" aria-label="Sua vez: próxima interação do Micael">
+          <div class="ag-sec">Sua vez · próxima interação</div>
+          <div class="prox-txt vago" id="prox">lendo STATUS.md…</div>
+          <div class="prox-meta">
+            <div><span class="k">Quando</span><span class="v" id="prox-quando">—</span></div>
+            <div><span class="k">Duração</span><span class="v" id="prox-dur">—</span></div>
+            <div class="ult-entregue"><span class="k">Último entregue</span><span class="v" id="ultimo">—</span></div>
+            <div hidden><span class="k">Em andamento</span><span class="v timer-live" id="t-ativo">—</span><span class="v sub" id="t-ativo-sub"></span></div>
+          </div>
+        </div>
+        <div class="ag-ult">
+          <div class="ag-sec">Último movimento</div>
+          <div id="ag-top"><p class="vazio">aguardando estado.json…</p></div>
+          <details class="ag-hist" open><summary>movimentos recentes</summary>
+            <ol class="ag-lista" id="ag-lista" hidden></ol>
+            <details id="ag-mais" hidden><summary>mais <span id="ag-mais-n"></span> anteriores</summary><ol class="ag-lista" id="ag-lista-mais"></ol></details>
+          </details>
+        </div>
+      </div>
+      <div class="aovivo" id="aovivo" aria-label="Sistema: bot, painel, arquivos e git">
+        <span class="av-tit"><i class="dot" id="av-dot"></i>Sistema</span>
+        <span class="av-txt muted">aguardando estado.json…</span>
+      </div>
+    </section>
+
+    <div class="lateral">
+      <section class="card links" id="links" aria-label="Links" hidden>
+        <div class="card-head"><h2>🔗 Links</h2><span class="chip" id="links-meta"></span></div>
+        <div class="links-lista" id="links-lista"></div>
+      </section>
+      <section class="card qa" id="qa" aria-label="Testes: último pytest e simulações">
+        <div class="card-head"><h2>Testes</h2><span class="chip" id="qa-meta"></span></div>
+        <div id="qa-corpo"><p class="vazio">aguardando estado.json…</p></div>
+      </section>
     </div>
-  </section>
-
-  <section class="card links" id="links" aria-label="Links" hidden>
-    <div class="card-head"><h2>🔗 Links</h2><span class="chip" id="links-meta"></span></div>
-    <div class="links-lista" id="links-lista"></div>
-  </section>
-  </div>
-  </div>
-
-
-
-  <div class="lado">
-  <section class="card agora" id="agora" aria-label="Agora: o que o orquestrador está fazendo">
-    <div class="card-head"><h2>Agora</h2><span class="chip" id="agora-meta"></span></div>
-    <div class="ag-tarefa" id="ag-tarefa" hidden></div>
-    <div class="ag-status" id="ag-status" role="status" hidden></div>
-    <ul class="ag-fundo" id="ag-fundo" hidden></ul>
-    <div id="ag-top"><p class="vazio">aguardando estado.json…</p></div>
-    <ol class="ag-lista" id="ag-lista" hidden></ol>
-    <details id="ag-mais" hidden><summary>mais <span id="ag-mais-n"></span> movimentos anteriores</summary><ol class="ag-lista" id="ag-lista-mais"></ol></details>
-  </section>
-
-  <section class="card qa" id="qa" aria-label="Testes: último pytest e simulações">
-    <div class="card-head"><h2>Testes</h2><span class="chip" id="qa-meta"></span></div>
-    <div id="qa-corpo"><p class="vazio">aguardando estado.json…</p></div>
-  </section>
   </div>
 
   <section class="destaque" aria-label="Progresso por fase">
@@ -740,11 +757,11 @@
   function renderAoVivo() {
     var e = live.estado, el = $('aovivo');
     if (!e) {
-      if (live.erro) { var h0 = '<span class="av-tit"><i class="dot bad" id="av-dot"></i>Ao vivo</span>' + av('bad', 'estado.json indisponível: ' + esc(live.erro)); if (h0 !== avHtml) { avHtml = h0; morph(el, h0); } }
+      if (live.erro) { var h0 = '<span class="av-tit"><i class="dot bad" id="av-dot"></i>Sistema</span>' + av('bad', 'estado.json indisponível: ' + esc(live.erro)); if (h0 !== avHtml) { avHtml = h0; morph(el, h0); } }
       return;
     }
     var parado = agoraS() - e.geradoEmEpoch > ESTADO_PARADO_S;
-    var partes = ['<span class="av-tit"><i class="dot ' + (parado || live.erro ? 'bad' : 'ok') + '" id="av-dot"></i>Ao vivo</span>'];
+    var partes = ['<span class="av-tit"><i class="dot ' + (parado || live.erro ? 'bad' : 'ok') + '" id="av-dot"></i>Sistema</span>'];
     partes.push(grp('coletor', parado ? av('bad', 'parado · ' + spanIdade(e.geradoEmEpoch, 'última coleta há '), 'geradoEm ' + e.geradoEm) : av('ok', spanIdade(e.geradoEmEpoch, 'há '), 'coletor PID ' + e.pid)));
     partes.push('<span class="av-sep"></span>');
     var bt = e.bot || {}, w = bt.web || {}, mo = bt.motor || {}, es = bt.estado || {};
@@ -817,7 +834,7 @@
   }
 
   // ------------------------------------------------------------------ "Agora"
-  var AGORA_QUIETO_S = 120, AGORA_LISTA = 8;
+  var AGORA_QUIETO_S = 120, AGORA_LISTA = 6;
   var FERR_ICO = { Bash: '⌨️', PowerShell: '⌨️', Read: '📄', Edit: '✏️', Write: '📝', NotebookEdit: '📝', Agent: '🤖', Grep: '🔍', Glob: '🔍', AskUserQuestion: '❓', SendMessage: '✉️', WebFetch: '🌐', WebSearch: '🌐' };
   var AG_VERBO = { Read: 'lendo ', Edit: 'editando ', Write: 'escrevendo ', NotebookEdit: 'editando ', Agent: 'criou agente: ' };
   function agEpoch(ev) { if (typeof ev.epoch === 'number') return ev.epoch; var t = Date.parse(ev.hora || ''); return isNaN(t) ? null : t / 1000; }

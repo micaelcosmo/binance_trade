@@ -408,6 +408,11 @@ def coletar_tarefa():
     if tk and tk.get("status") not in ("done", "cancelled"):
         ini = t["tasks"].get(tk["id"], {}).get("started_at") or orq.get("heartbeat")
         status = {"descricao": f"{tk['id']} · {tk.get('title')}", "desde": ini, "desdeEpoch": epoch_de(ini)}
+    if orq and not status and orq.get("status") in ("waiting", "idle"):
+        # terminou a vez: tarefa do hook só vale se for mais nova que o último sinal do orquestrador
+        hb = epoch_de(orq.get("heartbeat"))
+        if hook and hb and (hook.get("desdeEpoch") or 0) < hb:
+            hook = None
     candidatos = [c for c in (hook, status) if c and c.get("desdeEpoch")]
     return max(candidatos, key=lambda c: c["desdeEpoch"]) if candidatos else None
 

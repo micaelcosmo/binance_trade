@@ -1,13 +1,13 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T22:47:01-03:00** · branch `check_strategies` · versão `v3.13.6` · 24/24 tasks concluídas.
+> Atualizado em **2026-11-11T22:52:50-03:00** · branch `check_strategies` · versão `v3.13.7` · 25/25 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | T-050 | verificando Agora e Ao vivo | 2026-11-11T22:45:36-03:00 |
+| orquestrador | Orquestrador | active | T-051 | conferindo o Agora unificado | 2026-11-11T22:51:58-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
 | ag-sim | Simulador | done | T-024 | concluído (T-024) | 2026-11-11T01:14:20-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
@@ -51,6 +51,7 @@
 | T-008 | E0 | Painel: topo compacto (título / ao vivo / próxima+links no canto) e Agora/Testes lado a lado | done | orquestrador | 4/4 |
 | T-009 | E0 | Painel: topo em grade alinhada (título+ao vivo / próxima+links), alturas iguais | done | orquestrador | 4/4 |
 | T-050 | E0 | Painel: Agora com eventos reais do tracker e Ao vivo sem dado velho como atual | done | orquestrador | 4/4 |
+| T-051 | E0 | Painel: Agora unificado (situação, sua vez, último movimento, sistema) + Links/Testes laterais | done | orquestrador | 3/3 |
 
 ## Decisões para o Micael
 
@@ -78,6 +79,14 @@
 
 ## Últimos eventos
 
+- `2026-11-11T22:52:50-03:00` **orquestrador** — commit v3.13.7: Agora unificado
+- `2026-11-11T22:52:49-03:00` **orquestrador** — T-051 doing → done
+- `2026-11-11T22:52:49-03:00` **orquestrador** — T-051 ✓ prints desk/mobile
+- `2026-11-11T22:51:58-03:00` **orquestrador** — status → active
+- `2026-11-11T22:51:58-03:00` **orquestrador** — T-051 todo → doing
+- `2026-11-11T22:51:58-03:00` **orquestrador** — T-051 ✓ tarefa velha não aparece
+- `2026-11-11T22:51:58-03:00` **orquestrador** — T-051 ✓ cartão Agora unificado
+- `2026-11-11T22:47:06-03:00` **orquestrador** — status → waiting
 - `2026-11-11T22:47:01-03:00` **orquestrador** — commit v3.13.6: Agora com eventos reais e Ao vivo organizado
 - `2026-11-11T22:47:00-03:00` **orquestrador** — T-050 doing → done
 - `2026-11-11T22:47:00-03:00` **orquestrador** — T-050 ✓ grade 3x3 ordenada
@@ -85,21 +94,13 @@
 - `2026-11-11T22:45:36-03:00` **orquestrador** — T-050 ✓ células uniformes no Ao vivo
 - `2026-11-11T22:45:36-03:00` **orquestrador** — T-050 ✓ motor/estado históricos
 - `2026-11-11T22:45:36-03:00` **orquestrador** — T-050 ✓ feed Agora a partir do STATUS
-- `2026-11-11T22:45:35-03:00` **orquestrador** — T-010 restaurada (sobrescrita por engano; correção do painel virou T-050)
-- `2026-11-11T22:45:25-03:00` **orquestrador** — status → active
-- `2026-11-11T22:45:24-03:00` **orquestrador** — T-010 done → doing
-- `2026-11-11T22:42:44-03:00` **orquestrador** — commit v3.13.5: topo do painel em grade alinhada
-- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 doing → done
-- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 todo → doing
-- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 ✓ prints desk/mobile
-- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 ✓ textos limitados + idades em dias
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.13.6
+  version: v3.13.7
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -109,16 +110,12 @@ agents:
 - id: orquestrador
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
-  task: T-050
-  step: verificando Agora e Ao vivo
+  task: T-051
+  step: conferindo o Agora unificado
   kind: orchestrator
   status: active
-  heartbeat: '2026-11-11T22:45:36-03:00'
+  heartbeat: '2026-11-11T22:51:58-03:00'
   step_log:
-  - at: '2026-11-11T00:10:41-03:00'
-    step: supervisionando ag-spec, ag-sim, ag-ui; venv 3.13 p/ suíte completa
-  - at: '2026-11-11T00:10:56-03:00'
-    step: aguardando conclusão dos workers (acorda por notificação)
   - at: '2026-11-11T00:27:10-03:00'
     step: revisando e commitando E1
   - at: '2026-11-11T00:31:19-03:00'
@@ -155,6 +152,10 @@ agents:
     step: aguardando o Micael
   - at: '2026-11-11T22:45:25-03:00'
     step: verificando Agora e Ao vivo
+  - at: '2026-11-11T22:47:06-03:00'
+    step: Agora e Ao vivo corrigidos; aguardando o Micael
+  - at: '2026-11-11T22:51:58-03:00'
+    step: conferindo o Agora unificado
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -698,6 +699,21 @@ tasks:
   - name: grade 3x3 ordenada
     done: true
     at: '2026-11-11T22:47:00-03:00'
+- id: T-051
+  title: 'Painel: Agora unificado (situação, sua vez, último movimento, sistema) + Links/Testes laterais'
+  epic: E0
+  agent: orquestrador
+  status: done
+  steps:
+  - name: cartão Agora unificado
+    done: true
+    at: '2026-11-11T22:51:58-03:00'
+  - name: tarefa velha não aparece
+    done: true
+    at: '2026-11-11T22:51:58-03:00'
+  - name: prints desk/mobile
+    done: true
+    at: '2026-11-11T22:52:49-03:00'
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -1580,7 +1596,31 @@ events:
 - at: '2026-11-11T22:47:01-03:00'
   who: orquestrador
   msg: 'commit v3.13.6: Agora com eventos reais e Ao vivo organizado'
-updated_at: '2026-11-11T22:47:01-03:00'
+- at: '2026-11-11T22:47:06-03:00'
+  who: orquestrador
+  msg: status → waiting
+- at: '2026-11-11T22:51:58-03:00'
+  who: orquestrador
+  msg: T-051 ✓ cartão Agora unificado
+- at: '2026-11-11T22:51:58-03:00'
+  who: orquestrador
+  msg: T-051 ✓ tarefa velha não aparece
+- at: '2026-11-11T22:51:58-03:00'
+  who: orquestrador
+  msg: T-051 todo → doing
+- at: '2026-11-11T22:51:58-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T22:52:49-03:00'
+  who: orquestrador
+  msg: T-051 ✓ prints desk/mobile
+- at: '2026-11-11T22:52:49-03:00'
+  who: orquestrador
+  msg: T-051 doing → done
+- at: '2026-11-11T22:52:50-03:00'
+  who: orquestrador
+  msg: 'commit v3.13.7: Agora unificado'
+updated_at: '2026-11-11T22:52:50-03:00'
 proxima:
   texto: 'Revisar o painel novo e aprovar o hook do feed Agora (.claude/settings.json); depois decidir D-201/D-211
     (o que fazer com o live: a estratégia não paga os custos na simulação) e D-407 (manter o filtro SMA200 ligado).'
