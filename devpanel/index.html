@@ -587,7 +587,7 @@
   var ICO = { pendente: '○', andamento: '●', concluida: '✓', bloqueada: '⛔', aguardando: '✋' };
   var LBL_AG = { previsto: 'previsto', ativo: 'ativo', entregue: 'entregue', encerrado: 'encerrado' };
   var ICO_AG = { previsto: '○', ativo: '●', entregue: '✓', encerrado: '✕' };
-  var FASE_ICO = { E0: '📊', E1: '📐', E2: '🧪', E3: '🎨', E4: '⚙️' };
+  var FASE_ICO = { E0: '📊', E1: '📐', E2: '🧪', E3: '🎨', E4: '⚙️', UN: '📄' };
   var AG_ICO = { orquestrador: '🧠', 'ag-spec': '📐', 'ag-sim': '🧪', 'ag-ui': '🎨', 'ag-calib': '⚙️' };
   function estadoUnit(u) { var e = semAcento(u.estado); return LBL[e] ? e : 'pendente'; }
   function estadoAg(a) { var e = semAcento(a.estado); return LBL_AG[e] ? e : 'previsto'; }
@@ -943,7 +943,8 @@
   var canvasData = { units: [], agentes: [], blocos: [] };
   function nodeHtmlUnit(u) {
     var e = estadoUnit(u), foot;
-    if (e === 'concluida') foot = 'entregue <b>' + esc(dataCurta(u.entregue_em)) + '</b>' + (u.specStatus ? ' · spec ' + esc(u.specStatus) : '');
+    if (u.kind === 'spec') foot = 'UNIT <b>' + esc(u.specStatus || '?') + '</b> · ' + esc(u.quem || '');
+    else if (e === 'concluida') foot = 'entregue <b>' + esc(dataCurta(u.entregue_em)) + '</b>' + (u.specStatus ? ' · spec ' + esc(u.specStatus) : '');
     else if (e === 'andamento') foot = 'previsto <b>' + esc(u.previsto || '—') + '</b>' + (u.specStatus ? ' · spec ' + esc(u.specStatus) : '');
     else if (e === 'aguardando') foot = 'bola com <b>' + esc(u.quem || 'o Micael') + '</b>';
     else if (e === 'bloqueada') foot = 'bloqueada · ' + esc(u.nota || '');
@@ -966,7 +967,7 @@
   }
   function buildNodes() {
     var s = spec(); if (!s) return;
-    var units = s.units || [], fases = s.fases || [], ags = s.agentes || [];
+    var units = (s.units || []).concat(s.backlog || []), fases = (s.fases || []).concat(s.backlog && s.backlog.length && s.backlogFase ? [s.backlogFase] : []), ags = s.agentes || [];
     Object.keys(nodeEls).forEach(function (k) { nodeEls[k]._live = false; });
     var ordem = {}; fases.forEach(function (f, i) { ordem[f.id] = i; });
     var blocos = fases.map(function (f) { return { fase: f, units: units.filter(function (u) { return u.fase === f.id; }) }; }).filter(function (b) { return b.units.length; });

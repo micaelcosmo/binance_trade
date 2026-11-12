@@ -50,6 +50,7 @@ TASK_ESTADO = {"todo": "pendente", "doing": "andamento", "done": "concluida", "b
                "review": "aguardando", "cancelled": "concluida"}
 AGENTE_ESTADO = {"active": "ativo", "waiting": "ativo", "idle": "previsto", "done": "entregue",
                  "killed": "encerrado", "error": "encerrado"}
+SPEC_ESTADO = {"DRAFT": "pendente", "APPROVED": "aguardando", "IMPLEMENTED": "concluida", "VERIFIED": "concluida"}
 ADR_STATUS = {"accepted": "aceita", "proposed": "proposta", "deferred": "adiada", "rejected": "rejeitada",
               "superseded": "substituida"}
 
@@ -181,6 +182,17 @@ def coletar_spec() -> dict:
                    "recomendacao": d.get("recommendation"), "bloqueante": bool(d.get("blocking")),
                    "opcoes": d.get("options") or []}
                   for d in s["decisions"]]
+    # UNITs sem task viram uma faixa própria no fluxo (cor pelo status da spec);
+    # ficam fora do progresso e da tabela, que contam só tasks
+    specs = _unit_specs()
+    epicos_com_task = {u["fase"] for u in units}
+    backlog = [{
+        "id": sp["id"], "titulo": sp["titulo"], "fase": "UN", "kind": "spec",
+        "estado": SPEC_ESTADO.get(sp["status"], "pendente"), "quem": sp.get("epico") or "sem épico",
+        "spec": sp["arquivo"], "specStatus": sp["status"], "previsto": None, "depends_on": [], "arquivos": [],
+        "nota": sp.get("detalhe"), "entregue_em": None, "steps": [], "gastoMin": None,
+    } for sp in specs if sp.get("epico") not in epicos_com_task]
+    backlog_fase = {"id": "UN", "titulo": "UNITs sem task", "objetivo": "specs anteriores e backlog; cor = status da spec"}
     links = [ln for ln in s.get("links", []) if str(ln.get("url", "")).lower().startswith(("http://", "https://"))]
     p = s["project"]
     mtime = os.path.getmtime(track.STATUS_MD)
@@ -190,7 +202,8 @@ def coletar_spec() -> dict:
                     "atualizado": (s.get("updated_at") or "")[:10], "objetivo": p.get("goal"),
                     "sessaoInicio": p.get("session_started_at"), "sessaoPrazo": p.get("session_deadline")},
         "proximaInteracao": s.get("proxima") or {},
-        "fases": fases, "units": units, "unitSpecs": _unit_specs(), "adrs": _adrs(), "agentes": agentes, "pendencias": pendencias,
+        "fases": fases, "units": units, "unitSpecs": specs, "backlog": backlog, "backlogFase": backlog_fase,
+        "adrs": _adrs(), "agentes": agentes, "pendencias": pendencias,
         "links": links[:20], "linksRecusados": len(s.get("links", [])) - len(links),
         "statusMtimeEpoch": round(mtime, 3), "archMtimeEpoch": round(arch_mtime, 3), "archIso": iso_local(arch_mtime),
         "tempo": t.get("totals", {}),

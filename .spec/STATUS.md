@@ -1,13 +1,13 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T22:33:37-03:00** · branch `check_strategies` · versão `v3.13.2` · 20/20 tasks concluídas.
+> Atualizado em **2026-11-11T22:36:45-03:00** · branch `check_strategies` · versão `v3.13.3` · 21/21 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | waiting | — | app web :5000 e painel :5055 no ar | 2026-11-11T22:33:37-03:00 |
+| orquestrador | Orquestrador | waiting | — | aguardando o Micael | 2026-11-11T22:36:45-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
 | ag-sim | Simulador | done | T-024 | concluído (T-024) | 2026-11-11T01:14:20-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
@@ -47,6 +47,7 @@
 | T-024 | E2 | sim-002: variações estruturais (R:R, confirmação, custos) | done | ag-sim | 4/4 |
 | T-005 | E0 | Painel com a cara do modelo pedido (ao vivo, Agora, fluxo n8n, agentes, pendências) | done | orquestrador | 6/6 |
 | T-006 | E0 | Painel: tile/card de UNITs reais e 'tudo concluído' no progresso | done | orquestrador | 3/3 |
+| T-007 | E0 | Fluxo: faixa com UNITs sem task, cor pelo status da spec | done | orquestrador | 3/3 |
 
 ## Decisões para o Micael
 
@@ -74,6 +75,12 @@
 
 ## Últimos eventos
 
+- `2026-11-11T22:36:44-03:00` **orquestrador** — commit v3.13.3: UNITs sem task no fluxo do plano
+- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 doing → done
+- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 todo → doing
+- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 ✓ print tema escuro
+- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 ✓ faixa no canvas
+- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 ✓ coletor backlog
 - `2026-11-11T22:33:36-03:00` **orquestrador** — commit v3.13.2: UNITs reais no painel; app web no ar em :5000
 - `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 doing → done
 - `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 todo → doing
@@ -83,19 +90,13 @@
 - `2026-11-11T22:22:22-03:00` **orquestrador** — status → waiting
 - `2026-11-11T22:22:21-03:00` **orquestrador** — commit v3.13.0: painel refeito com a cara do modelo
 - `2026-11-11T22:22:20-03:00` **orquestrador** — decisão aberta D-008: Ligar o hook do feed Agora (.claude/settings.json → devpanel/registrar_atividade.py em PreToolUse/PostToolUse/UserPromptSubmit/Stop/SubagentStop)? Só vale abrindo o Claude Code em D:\binance_trade.
-- `2026-11-11T22:22:20-03:00` **orquestrador** — T-005 doing → done
-- `2026-11-11T22:22:20-03:00` **orquestrador** — T-005 ✓ hook do feed Agora
-- `2026-11-11T22:22:20-03:00` **orquestrador** — T-005 ✓ verificação visual 1440/390
-- `2026-11-11T22:21:11-03:00` **orquestrador** — T-005 ✓ testes testes/sim no card
-- `2026-11-11T22:21:11-03:00` **orquestrador** — T-005 ✓ página adaptada
-- `2026-11-11T22:21:11-03:00` **orquestrador** — T-005 ✓ coletor estado.json com nossas fontes
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.13.2
+  version: v3.13.3
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -106,13 +107,11 @@ agents:
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
   task: —
-  step: app web :5000 e painel :5055 no ar
+  step: aguardando o Micael
   kind: orchestrator
   status: waiting
-  heartbeat: '2026-11-11T22:33:37-03:00'
+  heartbeat: '2026-11-11T22:36:45-03:00'
   step_log:
-  - at: '2026-11-10T23:49:29-03:00'
-    step: construindo painel
   - at: '2026-11-10T23:54:05-03:00'
     step: testando painel
   - at: '2026-11-11T00:10:41-03:00'
@@ -151,6 +150,8 @@ agents:
     step: painel refeito; aguardando o Micael
   - at: '2026-11-11T22:33:37-03:00'
     step: app web :5000 e painel :5055 no ar
+  - at: '2026-11-11T22:36:45-03:00'
+    step: aguardando o Micael
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -625,6 +626,21 @@ tasks:
   - name: tile + card UNITs
     done: true
     at: '2026-11-11T22:33:35-03:00'
+- id: T-007
+  title: 'Fluxo: faixa com UNITs sem task, cor pelo status da spec'
+  epic: E0
+  agent: orquestrador
+  status: done
+  steps:
+  - name: coletor backlog
+    done: true
+    at: '2026-11-11T22:36:43-03:00'
+  - name: faixa no canvas
+    done: true
+    at: '2026-11-11T22:36:43-03:00'
+  - name: print tema escuro
+    done: true
+    at: '2026-11-11T22:36:43-03:00'
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -1417,7 +1433,25 @@ events:
 - at: '2026-11-11T22:33:36-03:00'
   who: orquestrador
   msg: 'commit v3.13.2: UNITs reais no painel; app web no ar em :5000'
-updated_at: '2026-11-11T22:33:37-03:00'
+- at: '2026-11-11T22:36:43-03:00'
+  who: orquestrador
+  msg: T-007 ✓ coletor backlog
+- at: '2026-11-11T22:36:43-03:00'
+  who: orquestrador
+  msg: T-007 ✓ faixa no canvas
+- at: '2026-11-11T22:36:43-03:00'
+  who: orquestrador
+  msg: T-007 ✓ print tema escuro
+- at: '2026-11-11T22:36:43-03:00'
+  who: orquestrador
+  msg: T-007 todo → doing
+- at: '2026-11-11T22:36:43-03:00'
+  who: orquestrador
+  msg: T-007 doing → done
+- at: '2026-11-11T22:36:44-03:00'
+  who: orquestrador
+  msg: 'commit v3.13.3: UNITs sem task no fluxo do plano'
+updated_at: '2026-11-11T22:36:45-03:00'
 proxima:
   texto: 'Revisar o painel novo e aprovar o hook do feed Agora (.claude/settings.json); depois decidir D-201/D-211
     (o que fazer com o live: a estratégia não paga os custos na simulação) e D-407 (manter o filtro SMA200 ligado).'
