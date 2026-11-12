@@ -139,6 +139,30 @@
   .proxima .prox-txt.vago { color: var(--muted); font-weight: 500; }
   .proxima .prox-txt a { color: var(--active); word-break: break-all; }
   .proxima.topo-prox { margin-bottom: 12px; padding: 14px 16px; }
+  /* ---------- cantos: próxima interação + links compactos no canto superior direito ---------- */
+  .cantos { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .cantos > .topo { flex: 1 1 300px; min-width: 0; margin: 0; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; }
+  .cantos > .aovivo { flex: 0 1 400px; align-content: flex-start; gap: 5px 8px; font-size: 11px; }
+  .cantos > .aovivo .av { font-size: 10.5px; padding: 1px 7px; white-space: normal; }
+  .cantos > .aovivo .av-sep { display: none; }
+  .cantos > .aovivo .av-txt { font-size: 11px; }
+  .cantos > .pilha { flex: 0 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+  .cantos > section, .pilha > section { flex: 0 1 340px; min-width: 0; margin: 0 !important; padding: 10px 12px !important; }
+  .pilha > section { flex: 0 0 auto; }
+  .cantos .proxima .label, .cantos .links h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .cantos .proxima .prox-txt { font-size: 13px; line-height: 1.4; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .cantos .proxima:hover .prox-txt, .cantos .proxima:focus-within .prox-txt { -webkit-line-clamp: unset; }
+  .cantos .prox-meta { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 4px 12px; margin-top: 8px; font-size: 12px; }
+  .cantos .prox-meta .k { font-size: 10px; }
+  .cantos .prox-meta .v.timer-live { font-size: 13px; }
+  .cantos .links .card-head { margin-bottom: 6px; }
+  .cantos .links-lista { gap: 6px; }
+  .cantos .link-btn { min-height: 40px; padding: 7px 12px; border-radius: 10px; }
+  .cantos .link-btn .lb-tit { font-size: 14px; }
+  .cantos .link-btn .lb-url { font-size: 11px; }
+  .cantos .lb-nota { font-size: 11.5px; margin-top: 3px; }
+  @media (max-width: 1100px) { .cantos > .topo { flex-basis: 100%; } }
+  @media (max-width: 640px) { .cantos > section, .cantos > .pilha { flex-basis: 100%; } .cantos .prox-meta { grid-template-columns: minmax(0, 1fr) !important; } }
   .proxima.topo-prox .label { font-size: 12px; }
   .proxima .prox-txt { overflow-wrap: anywhere; }
   .prox-meta { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 16px; margin-top: 10px; font-size: 13px; }
@@ -182,6 +206,10 @@
 
   /* ---------- "Agora" (atividade.jsonl: o hook grava cada movimento do orquestrador) ---------- */
   .card.agora { margin: 0 0 12px; padding: 14px; }
+  /* Agora | Testes lado a lado */
+  .lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 12px; align-items: start; }
+  @media (min-width: 860px) { .lado { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .lado > .card { margin: 0 !important; }
   .agora .card-head { margin-bottom: 8px; }
   .ag-status { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 6px; font-size: 13px; font-weight: 600; padding: 8px 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); overflow-wrap: anywhere; }
   .ag-status .sub2 { font-weight: 500; }
@@ -318,7 +346,7 @@
   .item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
   .item-head b { font-family: var(--mono); font-size: 13px; }
   .item-head .tag { font-size: 11px; color: var(--muted); }
-  .item p { margin: 5px 0 0; font-size: 12.5px; color: var(--muted); }
+  .item p { margin: 5px 0 0; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
   .item p .ref { color: var(--text); }
   details { margin-top: 10px; font-size: 12px; color: var(--muted); }
   details pre { font-family: var(--mono); font-size: 11px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; background: var(--surface-2); padding: 10px; border-radius: 8px; max-height: 320px; overflow: auto; }
@@ -388,6 +416,23 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="cantos">
+  <header class="topo">
+    <div>
+      <div class="kicker">Painel de status</div>
+      <h1><span id="h1-nome">binance_trade</span> · trade bot · branch <code id="h1-branch">main</code></h1>
+      <div class="sub" id="h1-sub">lendo STATUS.md…</div>
+    </div>
+    <div class="meta">
+      <span class="status" id="status"><i class="dot"></i><span id="status-txt">carregando…</span></span>
+      <button class="btn" id="theme" type="button" title="Alternar tema">Tema: auto</button>
+    </div>
+  </header>
+  <section class="aovivo" id="aovivo" aria-label="Ao vivo: coletor, bot, git, python e disco">
+    <span class="av-tit"><i class="dot" id="av-dot"></i>Ao vivo</span>
+    <span class="av-txt muted">aguardando estado.json…</span>
+  </section>
+  <div class="pilha">
   <section class="tile proxima topo-prox" id="proxima-box" aria-label="Próxima interação do Micael">
     <div class="label">Próxima interação do Micael</div>
     <div class="prox-txt vago" id="prox">lendo STATUS.md…</div>
@@ -403,24 +448,12 @@
     <div class="card-head"><h2>🔗 Links</h2><span class="chip" id="links-meta"></span></div>
     <div class="links-lista" id="links-lista"></div>
   </section>
+  </div>
+  </div>
 
-  <header class="topo">
-    <div>
-      <div class="kicker">Painel de status</div>
-      <h1><span id="h1-nome">binance_trade</span> · trade bot · branch <code id="h1-branch">main</code></h1>
-      <div class="sub" id="h1-sub">lendo STATUS.md…</div>
-    </div>
-    <div class="meta">
-      <span class="status" id="status"><i class="dot"></i><span id="status-txt">carregando…</span></span>
-      <button class="btn" id="theme" type="button" title="Alternar tema">Tema: auto</button>
-    </div>
-  </header>
 
-  <section class="aovivo" id="aovivo" aria-label="Ao vivo: coletor, bot, git, python e disco">
-    <span class="av-tit"><i class="dot" id="av-dot"></i>Ao vivo</span>
-    <span class="av-txt muted">aguardando estado.json…</span>
-  </section>
 
+  <div class="lado">
   <section class="card agora" id="agora" aria-label="Agora: o que o orquestrador está fazendo">
     <div class="card-head"><h2>Agora</h2><span class="chip" id="agora-meta"></span></div>
     <div class="ag-tarefa" id="ag-tarefa" hidden></div>
@@ -435,6 +468,7 @@
     <div class="card-head"><h2>Testes</h2><span class="chip" id="qa-meta"></span></div>
     <div id="qa-corpo"><p class="vazio">aguardando estado.json…</p></div>
   </section>
+  </div>
 
   <section class="destaque" aria-label="Progresso por fase">
     <div class="tile">
@@ -629,7 +663,8 @@
     setText($('h1-nome'), p.nome || 'binance_trade');
     setText($('h1-branch'), (live.estado.git && live.estado.git.branch) || p.branch || 'main');
     var atual = faseAtual(units, fases);
-    var sub = (atual ? 'épico atual: ' + atual.id + ' · ' + atual.titulo : 'sem épico atual') + ' · ' + units.length + ' tasks · ' + (s.agentes || []).length + ' agentes · versão ' + (p.versao || '—') + ' · STATUS de ' + (p.atualizado || '—');
+    if (units.length && units.every(function (u) { return estadoUnit(u) === 'concluida'; })) atual = { id: '✓', titulo: 'tudo concluído' };
+    var sub = (atual ? (atual.id === '✓' ? '' : 'épico atual: ') + (atual.id === '✓' ? '' : atual.id + ' · ') + atual.titulo : 'sem épico atual') + ' · ' + units.length + ' tasks · ' + (s.agentes || []).length + ' agentes · versão ' + (p.versao || '—') + ' · STATUS de ' + (p.atualizado || '—');
     setText($('h1-sub'), sub);
   }
   function faseAtual(units, fases) {

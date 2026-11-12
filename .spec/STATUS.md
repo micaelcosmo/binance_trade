@@ -1,6 +1,6 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T22:36:45-03:00** · branch `check_strategies` · versão `v3.13.3` · 21/21 tasks concluídas.
+> Atualizado em **2026-11-11T22:40:58-03:00** · branch `check_strategies` · versão `v3.13.4` · 22/22 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
@@ -48,6 +48,7 @@
 | T-005 | E0 | Painel com a cara do modelo pedido (ao vivo, Agora, fluxo n8n, agentes, pendências) | done | orquestrador | 6/6 |
 | T-006 | E0 | Painel: tile/card de UNITs reais e 'tudo concluído' no progresso | done | orquestrador | 3/3 |
 | T-007 | E0 | Fluxo: faixa com UNITs sem task, cor pelo status da spec | done | orquestrador | 3/3 |
+| T-008 | E0 | Painel: topo compacto (título / ao vivo / próxima+links no canto) e Agora/Testes lado a lado | done | orquestrador | 4/4 |
 
 ## Decisões para o Micael
 
@@ -75,6 +76,13 @@
 
 ## Últimos eventos
 
+- `2026-11-11T22:40:58-03:00` **orquestrador** — commit v3.13.4: topo compacto e Agora|Testes lado a lado
+- `2026-11-11T22:40:57-03:00` **orquestrador** — T-008 doing → done
+- `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 todo → doing
+- `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 ✓ prints desk/mobile
+- `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 ✓ fix overflow 390px
+- `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 ✓ Agora e Testes lado a lado
+- `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 ✓ cantos compactos
 - `2026-11-11T22:36:44-03:00` **orquestrador** — commit v3.13.3: UNITs sem task no fluxo do plano
 - `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 doing → done
 - `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 todo → doing
@@ -83,20 +91,13 @@
 - `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 ✓ coletor backlog
 - `2026-11-11T22:33:36-03:00` **orquestrador** — commit v3.13.2: UNITs reais no painel; app web no ar em :5000
 - `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 doing → done
-- `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 todo → doing
-- `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 ✓ tile + card UNITs
-- `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 ✓ coletor unitSpecs
-- `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 ✓ UNIT-011 atualizada
-- `2026-11-11T22:22:22-03:00` **orquestrador** — status → waiting
-- `2026-11-11T22:22:21-03:00` **orquestrador** — commit v3.13.0: painel refeito com a cara do modelo
-- `2026-11-11T22:22:20-03:00` **orquestrador** — decisão aberta D-008: Ligar o hook do feed Agora (.claude/settings.json → devpanel/registrar_atividade.py em PreToolUse/PostToolUse/UserPromptSubmit/Stop/SubagentStop)? Só vale abrindo o Claude Code em D:\binance_trade.
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.13.3
+  version: v3.13.4
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -641,6 +642,24 @@ tasks:
   - name: print tema escuro
     done: true
     at: '2026-11-11T22:36:43-03:00'
+- id: T-008
+  title: 'Painel: topo compacto (título | ao vivo | próxima+links no canto) e Agora|Testes lado a lado'
+  epic: E0
+  agent: orquestrador
+  status: done
+  steps:
+  - name: cantos compactos
+    done: true
+    at: '2026-11-11T22:40:56-03:00'
+  - name: Agora e Testes lado a lado
+    done: true
+    at: '2026-11-11T22:40:56-03:00'
+  - name: fix overflow 390px
+    done: true
+    at: '2026-11-11T22:40:56-03:00'
+  - name: prints desk/mobile
+    done: true
+    at: '2026-11-11T22:40:56-03:00'
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -1451,7 +1470,28 @@ events:
 - at: '2026-11-11T22:36:44-03:00'
   who: orquestrador
   msg: 'commit v3.13.3: UNITs sem task no fluxo do plano'
-updated_at: '2026-11-11T22:36:45-03:00'
+- at: '2026-11-11T22:40:56-03:00'
+  who: orquestrador
+  msg: T-008 ✓ cantos compactos
+- at: '2026-11-11T22:40:56-03:00'
+  who: orquestrador
+  msg: T-008 ✓ Agora e Testes lado a lado
+- at: '2026-11-11T22:40:56-03:00'
+  who: orquestrador
+  msg: T-008 ✓ fix overflow 390px
+- at: '2026-11-11T22:40:56-03:00'
+  who: orquestrador
+  msg: T-008 ✓ prints desk/mobile
+- at: '2026-11-11T22:40:56-03:00'
+  who: orquestrador
+  msg: T-008 todo → doing
+- at: '2026-11-11T22:40:57-03:00'
+  who: orquestrador
+  msg: T-008 doing → done
+- at: '2026-11-11T22:40:58-03:00'
+  who: orquestrador
+  msg: 'commit v3.13.4: topo compacto e Agora|Testes lado a lado'
+updated_at: '2026-11-11T22:40:58-03:00'
 proxima:
   texto: 'Revisar o painel novo e aprovar o hook do feed Agora (.claude/settings.json); depois decidir D-201/D-211
     (o que fazer com o live: a estratégia não paga os custos na simulação) e D-407 (manter o filtro SMA200 ligado).'
