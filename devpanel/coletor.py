@@ -34,6 +34,8 @@ ROOT = track.ROOT
 DEVPANEL = os.path.join(ROOT, "devpanel")
 SPEC = track.SPEC
 ATIVIDADE = os.path.join(DEVPANEL, "atividade.jsonl")
+PAPEL_DIR = os.environ.get("PAINEL_PAPEL_DIR") or os.path.join(ROOT, "data", "paper")
+PAPEL_PARADO_S = 300   # sem ciclo há mais que isso: processo papel parado
 TESTES = os.path.join(DEVPANEL, "testes.json")
 WEBAPP_URL = os.environ.get("PAINEL_WEBAPP_URL", "http://127.0.0.1:5000/")
 SEM_JANELA = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -418,6 +420,85 @@ def coletar_tarefa():
 
 
 # ------------------------------------------------------------------ montagem
+# ------------------------------------------------------------------ modo papel (UNIT-013)
+def _ler_jsonl_fim(path: str, n: int, max_bytes: int = 512 * 1024) -> list:
+    if not os.path.exists(path):
+        return []
+    with open(path, "rb") as f:
+        f.seek(0, 2)
+        tam = f.tell()
+        f.seek(max(0, tam - max_bytes))
+        linhas = f.read().decode("utf-8", "replace").splitlines()
+    if tam > max_bytes:
+        linhas = linhas[1:]
+    out = []
+    for ln in linhas[-n:]:
+        try:
+            v = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(v, dict):
+            out.append(v)
+    return out
+
+
+def _estado_papel() -> dict | None:
+    path = os.path.join(PAPEL_DIR, "estado.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        est = json.load(f)
+    hb = est.get("heartbeatEpoch")
+    est["parado"] = not isinstance(hb, (int, float)) or (time.time() - hb) > PAPEL_PARADO_S
+    return est
+
+
+def coletar_papel() -> dict:
+    """Resumo do modo papel para o painel principal (card)."""
+    est = _estado_papel()
+    if est is None:
+        return {"existe": False}
+    resumo = {k: est.get(k) for k in ("ia", "iniciadoEm", "atualizadoEm", "heartbeatEpoch", "saldoInicialUSDT",
+                                       "usdt", "equity", "pnlPct", "trades", "ganhos", "perdas", "ciclos",
+                                       "posicao", "ultimoScan", "funil", "parado")}
+    resumo["existe"] = True
+    resumo["equityRecente"] = [e.get("equity") for e in _ler_jsonl_fim(os.path.join(PAPEL_DIR, "equity.jsonl"), 120)]
+    return resumo
+
+
+def _trades_papel() -> list:
+    """Compras e vendas do diário inteiro (o feed de eventos só traz o fim; os trades precisam do todo)."""
+    path = os.path.join(PAPEL_DIR, "eventos.jsonl")
+    if not os.path.exists(path):
+        return []
+    out = []
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for ln in f:
+            if '"compra"' not in ln and '"venda"' not in ln:
+                continue
+            try:
+                ev = json.loads(ln)
+            except ValueError:
+                continue
+            if isinstance(ev, dict) and ev.get("tipo") in ("compra", "venda"):
+                out.append(ev)
+    return out[-400:]
+
+
+def papel_completo() -> dict:
+    """Tudo o que a view /papel desenha: estado, eventos, curva de patrimônio e preços da posição."""
+    agora = time.time()
+    est = seguro(_estado_papel)
+    return {
+        "geradoEmEpoch": round(agora, 3),
+        "estado": est if est is not None else {"existe": False},
+        "eventos": seguro(lambda: _ler_jsonl_fim(os.path.join(PAPEL_DIR, "eventos.jsonl"), 300)),
+        "trades": seguro(_trades_papel),
+        "equity": seguro(lambda: _ler_jsonl_fim(os.path.join(PAPEL_DIR, "equity.jsonl"), 3000)),
+        "precos": seguro(lambda: _ler_jsonl_fim(os.path.join(PAPEL_DIR, "precos.jsonl"), 2000)),
+    }
+
+
 def coletar(processos: dict | None = None) -> dict:
     agora = time.time()
     return {
@@ -426,6 +507,7 @@ def coletar(processos: dict | None = None) -> dict:
         "spec": seguro(coletar_spec), "git": seguro(coletar_git), "disco": seguro(coletar_disco),
         "bot": seguro(coletar_bot), "testes": seguro(coletar_testes),
         "atividade": seguro(coletar_atividade), "rodando": seguro(coletar_rodando), "tarefa": seguro(coletar_tarefa),
+        "papel": seguro(coletar_papel),
         "processos": processos or {},
     }
 

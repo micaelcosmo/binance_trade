@@ -3,7 +3,7 @@
     .venv/Scripts/python devpanel/server.py [--port 5055]   →  http://127.0.0.1:5055
 
 Rotas fixas, só GET/HEAD: /, /index.html, /estado.json (montado pelo coletor, cache de 2 s),
-/arch.yaml (o de .spec/). Qualquer outro caminho → 404; outros métodos → 405.
+/arch.yaml (o de .spec/), /papel (view do modo papel) e /papel.json (diário de data/paper/). Qualquer outro caminho → 404; outros métodos → 405.
 X-Painel-Versao = mtime do index.html: abas abertas recarregam sozinhas quando a página muda.
 """
 from __future__ import annotations
@@ -21,6 +21,7 @@ import coletor  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PAGINA = os.path.join(HERE, "index.html")
+PAGINA_PAPEL = os.path.join(HERE, "papel.html")
 ARCH = os.path.join(coletor.SPEC, "arch.yaml")
 CACHE_S = 2.0
 
@@ -40,12 +41,12 @@ def estado_json() -> bytes:
 class Handler(BaseHTTPRequestHandler):
     server_version = "painel-dev"
 
-    def _enviar(self, corpo: bytes, tipo: str, so_cabecalho: bool = False):
+    def _enviar(self, corpo: bytes, tipo: str, so_cabecalho: bool = False, pagina: str = PAGINA):
         self.send_response(200)
         self.send_header("Content-Type", tipo)
         self.send_header("Content-Length", str(len(corpo)))
         self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Painel-Versao", str(int(os.path.getmtime(PAGINA))))
+        self.send_header("X-Painel-Versao", str(int(os.path.getmtime(pagina))))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
@@ -62,6 +63,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._enviar(f.read(), "text/html; charset=utf-8", so_cabecalho)
             if caminho == "/estado.json":
                 return self._enviar(estado_json(), "application/json; charset=utf-8", so_cabecalho)
+            if caminho in ("/papel", "/papel.html"):
+                with open(PAGINA_PAPEL, "rb") as f:
+                    return self._enviar(f.read(), "text/html; charset=utf-8", so_cabecalho, PAGINA_PAPEL)
+            if caminho == "/papel.json":
+                corpo = json.dumps(coletor.papel_completo(), ensure_ascii=False).encode("utf-8")
+                return self._enviar(corpo, "application/json; charset=utf-8", so_cabecalho, PAGINA_PAPEL)
             if caminho == "/arch.yaml":
                 with open(ARCH, "rb") as f:
                     return self._enviar(f.read(), "text/plain; charset=utf-8", so_cabecalho)

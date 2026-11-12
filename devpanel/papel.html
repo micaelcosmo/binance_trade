@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modo papel · binance_trade</title>
+<meta name="description" content="Modo papel do binance_trade ao vivo: motor real com preços públicos da Binance, ordens numa exchange simulada e IA stub. Patrimônio, preço da posição, fluxo de decisões, trades e eventos lidos de data/paper/.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3f5f8; --surface: #ffffff; --surface-2: #eceff3; --border: #d7dce3; --text: #171a1f; --muted: #5e6776;
+    --canvas: #f8f9fb; --grid: #c6cdd6; --pend: #9aa3b0; --pend-bg: #f3f5f8;
+    --active: #2f6fed; --active-bg: #e9f0ff; --active-ring: rgba(47, 111, 237, .45); --active-ring-0: rgba(47, 111, 237, 0);
+    --done: #1f9d55; --done-bg: #e6f6ec; --block: #d9791a; --block-bg: #fff3e2;
+    --wait: #a16207; --wait-bg: #fdf6c8; --warn: #d14343; --warn-bg: #fdecec;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .08); --radius: 12px;
+    --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1217; --surface: #171b22; --surface-2: #1f252e; --border: #2b323c; --text: #e6e9ee; --muted: #9aa3b2;
+      --canvas: #12161c; --grid: #2b333e; --pend: #6b7483; --pend-bg: #1b2028;
+      --active: #5b8dff; --active-bg: #162440; --active-ring: rgba(91, 141, 255, .5); --active-ring-0: rgba(91, 141, 255, 0);
+      --done: #3ccf7a; --done-bg: #122a1d; --block: #f0a23c; --block-bg: #2c2113; --wait: #facc15; --wait-bg: #3a3208;
+      --warn: #ff6b6b; --warn-bg: #3a1717; --shadow: 0 1px 2px rgba(0, 0, 0, .45); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1217; --surface: #171b22; --surface-2: #1f252e; --border: #2b323c; --text: #e6e9ee; --muted: #9aa3b2;
+    --canvas: #12161c; --grid: #2b333e; --pend: #6b7483; --pend-bg: #1b2028;
+    --active: #5b8dff; --active-bg: #162440; --active-ring: rgba(91, 141, 255, .5); --active-ring-0: rgba(91, 141, 255, 0);
+    --done: #3ccf7a; --done-bg: #122a1d; --block: #f0a23c; --block-bg: #2c2113; --wait: #facc15; --wait-bg: #3a3208;
+    --warn: #ff6b6b; --warn-bg: #3a1717; --shadow: 0 1px 2px rgba(0, 0, 0, .45); color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px 32px; }
+  .mono, code { font-family: var(--mono); }
+  h1, h2 { margin: 0; }
+  a { color: var(--active); }
+
+  .topo { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; }
+  .kicker { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .kicker a { text-decoration: none; }
+  .topo h1 { font-size: 20px; font-weight: 700; margin-top: 2px; }
+  .topo .sub { color: var(--muted); font-size: 13px; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--pend); }
+  .status.ok .dot { background: var(--done); animation: blink 2.4s ease-in-out infinite; }
+  .status.err { color: var(--warn); } .status.err .dot { background: var(--warn); }
+  .status.parado { color: var(--block); } .status.parado .dot { background: var(--block); }
+  .btn { font: 500 12px var(--font); color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px; cursor: pointer; text-decoration: none; }
+  .btn:hover { border-color: var(--muted); }
+  .chip { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .chip.ok { color: var(--done); border-color: var(--done); background: var(--done-bg); }
+  .chip.ativo { color: var(--active); border-color: var(--active); background: var(--active-bg); }
+  .chip.warn { color: var(--block); border-color: var(--block); background: var(--block-bg); }
+  .chip.bad { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
+  .tile .label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .tile .value { font-size: 24px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .value .small { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .tile .sub { font-size: 12px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+  .good { color: var(--done) !important; } .bad { color: var(--warn) !important; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-top: 12px; min-width: 0; }
+  .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; font-weight: 700; }
+  .duas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  @media (min-width: 900px) { .duas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .duas.larga { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+  .duas > .card { margin-top: 12px; }
+  .vazio { color: var(--muted); font-size: 13px; margin: 0; }
+
+  /* ---------- fluxo de decisões (canvas estilo n8n) ---------- */
+  .canvas { position: relative; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; background-color: var(--canvas);
+    background-image: radial-gradient(circle, var(--grid) 1px, transparent 1.3px); background-size: 22px 22px; background-position: 9px 9px; }
+  .fluxo { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 22px; }
+  .fluxo svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .no { position: relative; z-index: 1; background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 10px; box-shadow: var(--shadow); min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .no .n-top { display: flex; align-items: center; gap: 6px; }
+  .no .n-ico { width: 30px; height: 30px; border-radius: 9px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 16px; flex: none; }
+  .no .n-tit { font-size: 12px; font-weight: 700; line-height: 1.2; }
+  .no .n-num { font: 700 20px var(--mono); font-variant-numeric: tabular-nums; }
+  .no .n-sub { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+  .no.passou { border-color: var(--done); background: var(--done-bg); }
+  .no.ativo { border-color: var(--active); background: var(--active-bg); animation: pulse 1.8s ease-out infinite; }
+  .no.barrou { border-color: var(--block); background: var(--block-bg); }
+  .no.parado { color: var(--muted); border-style: dashed; background: var(--pend-bg); }
+  .edge { fill: none; stroke: var(--pend); stroke-width: 2.2; stroke-dasharray: 5 7; opacity: .55; }
+  .edge.done { stroke: var(--done); stroke-dasharray: none; opacity: 1; }
+  .edge.active { stroke: var(--active); stroke-dasharray: none; stroke-width: 2.8; opacity: 1; }
+  .pulse { fill: var(--active); filter: drop-shadow(0 0 3px var(--active)); }
+  .fluxo-rodape { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+  .fluxo-rodape b { color: var(--text); }
+  @media (max-width: 900px) { .fluxo { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fluxo svg { display: none; } }
+
+  /* ---------- gráficos ---------- */
+  .grafico { width: 100%; height: 240px; display: block; }
+  .grafico text { font: 11px var(--mono); fill: var(--muted); }
+  .grafico .eixo { stroke: var(--border); stroke-width: 1; }
+  .grafico .grade { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 4; opacity: .7; }
+  .grafico .linha { fill: none; stroke: var(--active); stroke-width: 2; }
+  .grafico .area { fill: var(--active); opacity: .08; }
+  .grafico .base { stroke: var(--muted); stroke-dasharray: 4 4; stroke-width: 1.2; }
+  .grafico .alvo { stroke: var(--done); stroke-dasharray: 6 4; stroke-width: 1.4; fill: none; }
+  .grafico .stop { stroke: var(--block); stroke-dasharray: 6 4; stroke-width: 1.4; fill: none; }
+  .grafico .compra { fill: var(--done); } .grafico .venda { fill: var(--warn); }
+  .grafico .rotulo { font: 600 10.5px var(--font); }
+  .legenda { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); }
+  .legenda i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+
+  /* ---------- listas ---------- */
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-family: var(--mono); }
+  .tabela-wrap { overflow-x: auto; }
+  .eventos { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow: auto; }
+  .eventos li { display: grid; grid-template-columns: 64px 22px minmax(0, 1fr); gap: 4px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .eventos .h { font: 11.5px var(--mono); color: var(--muted); }
+  .eventos .t { overflow-wrap: anywhere; } .eventos .t b { font-weight: 600; }
+  .eventos li.compra .t b { color: var(--done); } .eventos li.venda .t b { color: var(--warn); } .eventos li.regime .t b { color: var(--block); } .eventos li.erro .t { color: var(--warn); }
+  .filtros { display: flex; gap: 4px; flex-wrap: wrap; }
+  .filtros button { font: 500 11.5px var(--font); color: var(--muted); background: none; border: 1px solid transparent; border-radius: 8px; padding: 3px 9px; cursor: pointer; }
+  .filtros button.on { color: var(--text); background: var(--surface-2); border-color: var(--border); }
+  .aviso { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius); border: 1px dashed var(--border); color: var(--muted); font-size: 13px; background: var(--surface); }
+  footer { margin-top: 24px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.6; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--active-ring); } 70% { box-shadow: 0 0 0 12px var(--active-ring-0); } 100% { box-shadow: 0 0 0 0 var(--active-ring-0); } }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topo">
+    <div>
+      <div class="kicker"><a href="/">← Painel de status</a> · Modo papel</div>
+      <h1>Modo papel · motor real, dinheiro de mentira</h1>
+      <div class="sub"><span class="chip ativo">dados públicos da Binance</span><span class="chip">ordens numa exchange simulada</span><span class="chip" id="chip-ia">IA stub</span><span class="chip">taxa 0,1% + slippage 0,05%</span></div>
+    </div>
+    <div class="meta">
+      <span class="status" id="status"><i class="dot"></i><span id="status-txt">carregando…</span></span>
+      <a class="btn" href="/">Voltar ao painel</a>
+      <button class="btn" id="theme" type="button">Tema: auto</button>
+    </div>
+  </header>
+
+  <div class="aviso" id="sem-dados" hidden>O modo papel ainda não gravou nada em <code>data/paper/</code>. Ele sobe com <code>PAPER=1 python -m binance_trade_bot</code> (venv 3.13) e grava a cada ciclo do scout.</div>
+
+  <section class="tiles" aria-label="Resumo">
+    <div class="tile"><div class="label">Patrimônio virtual</div><div class="value" id="k-eq">—</div><div class="sub" id="k-eq-sub">&nbsp;</div></div>
+    <div class="tile"><div class="label">Trades</div><div class="value" id="k-tr">—</div><div class="sub" id="k-tr-sub">&nbsp;</div></div>
+    <div class="tile"><div class="label">Posição</div><div class="value" id="k-pos">—</div><div class="sub" id="k-pos-sub">&nbsp;</div></div>
+    <div class="tile"><div class="label">Ciclos do motor</div><div class="value" id="k-ci">—</div><div class="sub" id="k-ci-sub">&nbsp;</div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Fluxo de decisões</h2><span class="chip" id="fluxo-meta">acumulado desde o início</span></div>
+    <div class="canvas"><div class="fluxo" id="fluxo"><svg id="fluxo-svg" aria-hidden="true"><g id="g-edges"></g><g id="g-pulses"></g></svg></div></div>
+    <div class="fluxo-rodape" id="fluxo-rodape"></div>
+  </section>
+
+  <div class="duas">
+    <section class="card">
+      <div class="card-head"><h2>Patrimônio</h2><div class="legenda"><span><i style="background:var(--active)"></i>patrimônio</span><span><i style="background:var(--muted)"></i>saldo inicial</span></div></div>
+      <svg class="grafico" id="g-eq" role="img" aria-label="Curva de patrimônio virtual"></svg>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2 id="g-px-tit">Preço da posição</h2><div class="legenda"><span><i style="background:var(--active)"></i>preço</span><span><i style="background:var(--done)"></i>alvo</span><span><i style="background:var(--block)"></i>stop</span><span>▲ compra · ▼ venda</span></div></div>
+      <svg class="grafico" id="g-px" role="img" aria-label="Preço da moeda em posição com alvo, stop e marcas de compra e venda"></svg>
+    </section>
+  </div>
+
+  <div class="duas larga">
+    <section class="card">
+      <div class="card-head"><h2>Trades</h2><span class="chip" id="trades-meta"></span></div>
+      <div class="tabela-wrap"><table id="trades"><thead><tr><th>Moeda</th><th>Entrada</th><th class="num">Compra</th><th class="num">Venda</th><th class="num">P/L</th><th>Saída</th><th class="num">Duração</th></tr></thead><tbody></tbody></table></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Eventos</h2>
+        <div class="filtros" id="filtros"><button data-f="tudo">tudo</button><button class="on" data-f="decisoes">decisões</button><button data-f="trades">trades</button></div>
+      </div>
+      <ol class="eventos" id="eventos"></ol>
+    </section>
+  </div>
+
+  <footer>Modo papel: o motor real da profit_gain roda com preços públicos da Binance, sem chaves; ordens e saldo vivem numa exchange simulada e o Gemini é trocado por um stub. Fonte: data/paper/ (estado.json, eventos.jsonl, equity.jsonl, precos.jsonl). Atualiza a cada 3 s.</footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function hm(ep) { var d = new Date(ep * 1000); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+  function hms(d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+  function num(v, c) { return v == null || isNaN(v) ? '—' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c }); }
+  function preco(v) { if (v == null || isNaN(v)) return '—'; var a = Math.abs(v); return num(v, a >= 100 ? 2 : a >= 1 ? 4 : 6); }
+  function pct(v) { return v == null || isNaN(v) ? '—' : (v > 0 ? '+' : '') + num(v, 2) + '%'; }
+  function dur(s) { s = Math.max(0, Math.round(s)); if (s < 90) return s + ' s'; var m = Math.round(s / 60); return m < 90 ? m + ' min' : Math.floor(m / 60) + ' h ' + pad2(m % 60); }
+  function setText(el, v) { v = String(v); if (el.textContent !== v) el.textContent = v; }
+  function setHtml(el, v) { if (el._h !== v) { el._h = v; el.innerHTML = v; } }
+
+  var dados = null, lastOk = null, erro = null, filtro = 'decisoes';
+
+  // ---------------------------------------------------------------- resumo
+  function renderTopo() {
+    var e = dados.estado || {}, st = $('status');
+    var sem = !e || e.existe === false || e.erro;
+    $('sem-dados').hidden = !sem;
+    if (erro) { st.className = 'status err'; setText($('status-txt'), 'sem conexão com o painel · ' + erro); return; }
+    if (sem) { st.className = 'status'; setText($('status-txt'), e && e.erro ? 'erro ao ler o diário: ' + e.erro : 'aguardando o primeiro ciclo'); return; }
+    var idade = Date.now() / 1000 - (e.heartbeatEpoch || 0);
+    st.className = 'status ' + (e.parado ? 'parado' : 'ok');
+    setText($('status-txt'), (e.parado ? 'parado · último ciclo há ' + dur(idade) : 'rodando · último ciclo há ' + dur(idade)) + ' · lido às ' + hms(lastOk));
+    setText($('chip-ia'), e.ia === 'gemini' ? 'IA real (Gemini)' : 'IA stub (não é o Gemini)');
+  }
+  function renderTiles() {
+    var e = dados.estado || {};
+    if (e.existe === false || e.erro) return;
+    var eq = $('k-eq'); setText(eq, 'US$ ' + num(e.equity, 2)); eq.className = 'value ' + ((e.pnlPct || 0) >= 0 ? 'good' : 'bad');
+    setText($('k-eq-sub'), pct(e.pnlPct) + ' sobre ' + num(e.saldoInicialUSDT, 0) + ' USDT virtuais · livre ' + num(e.usdt, 2));
+    var wr = e.trades ? Math.round((e.ganhos || 0) / e.trades * 100) : null;
+    setHtml($('k-tr'), esc(e.trades || 0) + '<span class="small"> · ' + esc(e.ganhos || 0) + 'G / ' + esc(e.perdas || 0) + 'P</span>');
+    setText($('k-tr-sub'), wr == null ? 'nenhum trade fechado ainda' : 'acerto ' + wr + '%');
+    var p = e.posicao, kp = $('k-pos');
+    if (p) { setHtml(kp, esc(p.moeda) + ' <span class="small ' + ((p.plPct || 0) >= 0 ? 'good' : 'bad') + '">' + esc(pct(p.plPct)) + '</span>'); setText($('k-pos-sub'), 'compra ' + preco(p.precoCompra) + ' · atual ' + preco(p.precoAtual) + ' · pico ' + pct(p.pico) + ' · há ' + dur(Date.now() / 1000 - p.desdeEpoch)); }
+    else { setText(kp, 'sem posição'); setText($('k-pos-sub'), 'caçando entrada a cada ciclo'); }
+    setText($('k-ci'), num(e.ciclos, 0));
+    var u = e.ultimoScan || {};
+    setText($('k-ci-sub'), u.resultado ? 'último: ' + u.resultado : 'desde ' + (e.iniciadoEm || '').replace('T', ' ').slice(0, 16));
+  }
+
+  // ---------------------------------------------------------------- fluxo de decisões
+  var ETAPAS = [
+    { k: 'varredura', ico: '🔭', tit: 'Varredura', sub: 'moedas analisadas' },
+    { k: 'porteiro', ico: '🧮', tit: 'Porteiro', sub: 'candidatas (ATR, Bollinger, volume, EMA)' },
+    { k: 'regime', ico: '🧭', tit: 'Regime SMA200', sub: 'passaram o filtro diário' },
+    { k: 'ia', ico: '🤖', tit: 'IA (stub)', sub: 'aprovadas' },
+    { k: 'compra', ico: '🟢', tit: 'Compra', sub: 'ordens simuladas' },
+    { k: 'monitor', ico: '📈', tit: 'Monitor', sub: 'trailing · stop ATR · disaster' },
+    { k: 'venda', ico: '🔴', tit: 'Venda', sub: 'posições encerradas' }
+  ];
+  function etapaAtiva(e) {
+    if (e.posicao) return 'monitor';
+    var u = e.ultimoScan || {};
+    if (u.aprovadasIA > 0) return 'compra';
+    if (u.enviadasIA > 0) return 'ia';
+    if (u.candidatas > 0) return 'regime';
+    return 'porteiro';
+  }
+  function renderFluxo() {
+    var e = dados.estado || {}, f = e.funil || {}, cont = $('fluxo');
+    if (e.existe === false || e.erro) return;
+    var passaram = Math.max(0, (f.candidatas || 0) - (f.bloqueadasRegime || 0));
+    var vals = {
+      varredura: [f.varridas, 'moedas analisadas'],
+      porteiro: [f.candidatas, 'candidatas (ATR, Bollinger, volume, EMA)'],
+      regime: [passaram, (f.bloqueadasRegime || 0) + ' barradas pela SMA200'],
+      ia: [f.aprovadasIA, 'aprovadas de ' + (f.enviadasIA || 0) + ' enviadas'],
+      compra: [f.compras, 'ordens simuladas'],
+      monitor: [e.posicao ? 1 : 0, e.posicao ? esc(e.posicao.moeda) + ' ' + pct(e.posicao.plPct) : 'nenhuma posição aberta'],
+      venda: [f.vendas, 'posições encerradas']
+    };
+    var ativa = etapaAtiva(e), idxA = ETAPAS.findIndex(function (x) { return x.k === ativa; });
+    var u = e.ultimoScan || {}, barrouRegime = !e.posicao && u.candidatas > 0 && u.enviadasIA === 0 && u.bloqueadasRegime > 0;
+    ETAPAS.forEach(function (et, i) {
+      var el = cont.querySelector('[data-k="' + et.k + '"]');
+      if (!el) { el = document.createElement('div'); el.dataset.k = et.k; cont.appendChild(el); }
+      var cls = 'no ' + (i < idxA ? 'passou' : i === idxA ? 'ativo' : 'parado');
+      if (et.k === 'regime' && barrouRegime) cls = 'no barrou';
+      if (el.className !== cls) el.className = cls;
+      setHtml(el, '<div class="n-top"><span class="n-ico">' + et.ico + '</span><span class="n-tit">' + et.tit + '</span></div><div class="n-num">' + num(vals[et.k][0] || 0, 0) + '</div><div class="n-sub">' + vals[et.k][1] + '</div>');
+    });
+    desenharArestas(idxA);
+    var conv = f.candidatas ? Math.round((f.compras || 0) / f.candidatas * 100) : 0;
+    setHtml($('fluxo-rodape'), '<span>último ciclo: <b>' + esc(u.resultado || '—') + '</b>' + (u.epoch ? ' às ' + hm(u.epoch) : '') + '</span>' +
+      '<span>neste ciclo: ' + esc(u.moedas || 0) + ' varridas · ' + esc(u.candidatas || 0) + ' candidatas · ' + esc(u.bloqueadasRegime || 0) + ' barradas · ' + esc(u.aprovadasIA || 0) + ' aprovadas</span>' +
+      '<span>conversão candidata → compra: <b>' + conv + '%</b></span>');
+  }
+  function desenharArestas(idxA) {
+    var svg = $('fluxo-svg'), ge = $('g-edges'), gp = $('g-pulses'), cont = $('fluxo');
+    var nos = ETAPAS.map(function (et) { return cont.querySelector('[data-k="' + et.k + '"]'); });
+    if (getComputedStyle(svg).display === 'none' || !nos[0]) return;
+    var base = cont.getBoundingClientRect(), html = '', pul = '';
+    for (var i = 0; i < nos.length - 1; i++) {
+      var a = nos[i].getBoundingClientRect(), b = nos[i + 1].getBoundingClientRect();
+      var x1 = a.right - base.left, y1 = a.top + a.height / 2 - base.top, x2 = b.left - base.left, y2 = b.top + b.height / 2 - base.top;
+      var d = 'M' + x1 + ' ' + y1 + ' C' + (x1 + 14) + ' ' + y1 + ' ' + (x2 - 14) + ' ' + y2 + ' ' + x2 + ' ' + y2;
+      var cls = i + 1 < idxA ? 'edge done' : i + 1 === idxA ? 'edge active' : 'edge';
+      html += '<path id="pe' + i + '" class="' + cls + '" d="' + d + '"/>';
+      if (i + 1 === idxA) pul += '<circle r="4" class="pulse"><animateMotion dur="1.4s" repeatCount="indefinite"><mpath href="#pe' + i + '"/></animateMotion></circle>';
+    }
+    setHtml(ge, html); setHtml(gp, pul);
+  }
+
+  // ---------------------------------------------------------------- gráficos (SVG puro)
+  function escala(min, max, a, b) { var span = max - min || 1; return function (v) { return a + (v - min) / span * (b - a); }; }
+  function eixoTempo(x, t0, t1, H, W) {
+    var n = W < 500 ? 3 : 5, out = '';
+    for (var i = 0; i <= n; i++) { var t = t0 + (t1 - t0) * i / n, xx = x(t); out += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="' + (i === 0 ? 'start' : i === n ? 'end' : 'middle') + '">' + hm(t) + '</text>'; }
+    return out;
+  }
+  function eixoValor(y, v0, v1, W, fmt) {
+    var out = '';
+    for (var i = 0; i <= 3; i++) { var v = v0 + (v1 - v0) * i / 3, yy = y(v); out += '<line class="grade" x1="0" x2="' + W + '" y1="' + yy + '" y2="' + yy + '"/><text x="' + (W - 2) + '" y="' + (yy - 3) + '" text-anchor="end">' + fmt(v) + '</text>'; }
+    return out;
+  }
+  function renderEquity() {
+    var svg = $('g-eq'), pts = (Array.isArray(dados.equity) ? dados.equity : []).filter(function (p) { return p && isFinite(p.epoch) && isFinite(p.equity); });
+    var W = svg.clientWidth || 600, H = 240, top = 18, bot = H - 20;
+    if (pts.length < 2) { setHtml(svg, '<text x="' + W / 2 + '" y="' + H / 2 + '" text-anchor="middle">aguardando ciclos do motor</text>'); return; }
+    var e = dados.estado || {}, base = e.saldoInicialUSDT || pts[0].equity;
+    var vs = pts.map(function (p) { return p.equity; }).concat([base]);
+    var v0 = Math.min.apply(null, vs), v1 = Math.max.apply(null, vs), pad = (v1 - v0) * .1 || 1; v0 -= pad; v1 += pad;
+    var t0 = pts[0].epoch, t1 = pts[pts.length - 1].epoch, x = escala(t0, t1, 0, W), y = escala(v0, v1, bot, top);
+    var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + x(p.epoch).toFixed(1) + ' ' + y(p.equity).toFixed(1); }).join(' ');
+    var area = d + ' L' + x(t1) + ' ' + bot + ' L' + x(t0) + ' ' + bot + ' Z';
+    var ult = pts[pts.length - 1];
+    setHtml(svg, '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' + eixoValor(y, v0, v1, W, function (v) { return num(v, 0); }) +
+      '<line class="base" x1="0" x2="' + W + '" y1="' + y(base) + '" y2="' + y(base) + '"/><path class="area" d="' + area + '"/><path class="linha" d="' + d + '"/>' +
+      '<circle cx="' + x(ult.epoch) + '" cy="' + y(ult.equity) + '" r="4" fill="var(--active)"/>' + eixoTempo(x, t0, t1, H, W) + '</svg>');
+  }
+  function renderPreco() {
+    var svg = $('g-px'), ps = (Array.isArray(dados.precos) ? dados.precos : []).filter(function (p) { return p && isFinite(p.epoch) && isFinite(p.preco); });
+    var W = svg.clientWidth || 600, H = 240, top = 22, bot = H - 22;
+    var e = dados.estado || {}, moeda = (e.posicao && e.posicao.moeda) || (ps.length ? ps[ps.length - 1].moeda : null);
+    setText($('g-px-tit'), moeda ? 'Preço da posição · ' + moeda + (e.posicao ? '' : ' (última)') : 'Preço da posição');
+    if (!moeda) { setHtml(svg, '<text x="' + W / 2 + '" y="' + H / 2 + '" text-anchor="middle">nenhuma posição aberta ainda</text>'); return; }
+    // só o último trecho contínuo desta moeda
+    var serie = [];
+    for (var i = ps.length - 1; i >= 0; i--) { if (ps[i].moeda !== moeda) break; serie.unshift(ps[i]); if (serie.length > 1 && serie[1].epoch - ps[i].epoch > 1800) { serie.shift(); break; } }
+    if (serie.length < 2) { setHtml(svg, '<text x="' + W / 2 + '" y="' + H / 2 + '" text-anchor="middle">juntando pontos de ' + esc(moeda) + '…</text>'); return; }
+    var t0 = serie[0].epoch, t1 = serie[serie.length - 1].epoch;
+    var marcas = (Array.isArray(dados.trades) ? dados.trades : Array.isArray(dados.eventos) ? dados.eventos : []).filter(function (ev) { return (ev.tipo === 'compra' || ev.tipo === 'venda') && ev.moeda === moeda && ev.epoch >= t0 - 120 && ev.epoch <= t1 + 120 && isFinite(ev.preco); });
+    var vs = []; serie.forEach(function (p) { vs.push(p.preco); if (isFinite(p.alvo)) vs.push(p.alvo); if (isFinite(p.stop)) vs.push(p.stop); }); marcas.forEach(function (m) { vs.push(m.preco); });
+    var v0 = Math.min.apply(null, vs), v1 = Math.max.apply(null, vs), pad = (v1 - v0) * .08 || v1 * .01; v0 -= pad; v1 += pad;
+    var x = escala(t0, t1, 0, W - 4), y = escala(v0, v1, bot, top);
+    function linha(campo) { return serie.filter(function (p) { return isFinite(p[campo]); }).map(function (p, k) { return (k ? 'L' : 'M') + x(p.epoch).toFixed(1) + ' ' + y(p[campo]).toFixed(1); }).join(' '); }
+    var out = eixoValor(y, v0, v1, W, preco) + '<path class="alvo" d="' + linha('alvo') + '"/><path class="stop" d="' + linha('stop') + '"/><path class="linha" d="' + linha('preco') + '"/>';
+    marcas.forEach(function (m) {
+      var cx = Math.min(Math.max(x(m.epoch), 6), W - 6), cy = y(m.preco), c = m.tipo === 'compra';
+      out += c ? '<path class="compra" d="M' + cx + ' ' + (cy - 7) + ' l6 10 h-12 z"/>' : '<path class="venda" d="M' + cx + ' ' + (cy + 7) + ' l6 -10 h-12 z"/>';
+      var anc = cx < 60 ? 'start' : cx > W - 60 ? 'end' : 'middle', tx = anc === 'start' ? cx - 4 : anc === 'end' ? cx + 4 : cx;
+      out += '<text class="rotulo" x="' + tx + '" y="' + (c ? cy + 18 : cy - 12) + '" text-anchor="' + anc + '">' + (c ? 'compra' : 'venda ' + pct(m.plPct)) + '</text>';
+    });
+    setHtml(svg, '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' + out + eixoTempo(x, t0, t1, H, W) + '</svg>');
+  }
+
+  // ---------------------------------------------------------------- trades e eventos
+  function renderTrades() {
+    var evs = Array.isArray(dados.trades) ? dados.trades : Array.isArray(dados.eventos) ? dados.eventos : [], abertas = {}, linhas = [];
+    evs.forEach(function (ev) {
+      if (ev.tipo === 'compra') abertas[ev.moeda] = ev;
+      else if (ev.tipo === 'venda' && abertas[ev.moeda]) { linhas.push({ c: abertas[ev.moeda], v: ev }); delete abertas[ev.moeda]; }
+    });
+    var e = dados.estado || {};
+    Object.keys(abertas).forEach(function (m) { linhas.push({ c: abertas[m], v: null, pos: e.posicao && e.posicao.moeda === m ? e.posicao : null }); });
+    linhas.sort(function (a, b) { return b.c.epoch - a.c.epoch; });
+    var html = linhas.slice(0, 40).map(function (l) {
+      var pl = l.v ? l.v.plPct : l.pos ? l.pos.plPct : null, cls = pl == null ? '' : pl >= 0 ? 'good' : 'bad';
+      var fim = l.v ? l.v.epoch : Date.now() / 1000;
+      return '<tr><td><b>' + esc(l.c.moeda) + '</b></td><td class="mono">' + hm(l.c.epoch) + '</td><td class="num">' + preco(l.c.preco) + '</td><td class="num">' + (l.v ? preco(l.v.preco) : l.pos ? preco(l.pos.precoAtual) + ' *' : '—') +
+        '</td><td class="num ' + cls + '">' + pct(pl) + '</td><td>' + (l.v ? '<span class="chip ' + (l.v.motivo === 'trailing' ? 'ok' : 'warn') + '">' + esc(l.v.motivo || 'venda') + '</span>' : '<span class="chip ativo">aberta</span>') + '</td><td class="num">' + dur(fim - l.c.epoch) + '</td></tr>';
+    }).join('');
+    setHtml($('trades').tBodies[0], html || '<tr><td colspan="7" class="vazio">nenhum trade ainda · o motor compra quando uma candidata passa no Porteiro, no regime e na IA</td></tr>');
+    setText($('trades-meta'), linhas.length + (linhas.length === 1 ? ' trade' : ' trades') + (Object.keys(abertas).length ? ' · * preço atual' : ''));
+  }
+  var ICO = { scan: '🔭', candidata: '🧮', regime: '🧭', ia: '🤖', compra: '🟢', venda: '🔴', erro: '⚠️', inicio: '▶️', fim: '⏹️' };
+  var GRUPO = { tudo: null, decisoes: ['candidata', 'regime', 'ia', 'compra', 'venda', 'erro', 'inicio', 'fim'], trades: ['compra', 'venda'] };
+  function renderEventos() {
+    var evs = (Array.isArray(dados.eventos) ? dados.eventos : []).slice().reverse(), g = GRUPO[filtro];
+    if (g) evs = evs.filter(function (ev) { return g.indexOf(ev.tipo) >= 0; });
+    setHtml($('eventos'), evs.slice(0, 80).map(function (ev) {
+      return '<li class="' + esc(ev.tipo) + '"><span class="h">' + hm(ev.epoch) + '</span><span aria-hidden="true">' + (ICO[ev.tipo] || '•') + '</span><span class="t"><b>' + esc(ev.tipo) + (ev.moeda ? ' ' + esc(ev.moeda) : '') + '</b> ' +
+        esc(ev.detalhe || '') + (ev.preco != null ? ' · ' + preco(ev.preco) : '') + (ev.plPct != null ? ' · ' + pct(ev.plPct) : '') + '</span></li>';
+    }).join('') || '<li><span></span><span></span><span class="t vazio">sem eventos neste filtro</span></li>');
+  }
+  $('filtros').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return; filtro = b.dataset.f;
+    this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); if (dados) renderEventos();
+  });
+
+  // ---------------------------------------------------------------- tema, auto-reload e ciclo
+  var themeBtn = $('theme'), themes = ['auto', 'light', 'dark'], lbl = { auto: 'Tema: auto', light: 'Tema: claro', dark: 'Tema: escuro' }, theme = 'auto';
+  try { theme = localStorage.getItem('painel-dev-tema') || 'auto'; } catch (e) { }
+  function applyTheme() { if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme); themeBtn.textContent = lbl[theme]; }
+  themeBtn.addEventListener('click', function () { theme = themes[(themes.indexOf(theme) + 1) % 3]; try { localStorage.setItem('painel-dev-tema', theme); } catch (e) { } applyTheme(); if (dados) render(); });
+  applyTheme();
+  var versao = null;
+  function render() { renderTopo(); renderTiles(); renderFluxo(); renderEquity(); renderPreco(); renderTrades(); renderEventos(); }
+  function poll() {
+    fetch('papel.json', { cache: 'no-store' }).then(function (r) {
+      var v = r.headers.get('X-Painel-Versao'); if (v) { if (versao && v !== versao) { location.reload(); return null; } versao = v; }
+      if (!r.ok) throw new Error('HTTP ' + r.status); return r.json();
+    }).then(function (j) { if (!j) return; dados = j; erro = null; lastOk = new Date(); render(); })
+      .catch(function (e) { erro = String(e && e.message || e); if (dados) renderTopo(); else { $('status').className = 'status err'; setText($('status-txt'), 'sem conexão: ' + erro); } });
+  }
+  var rt = null; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (dados) render(); }, 150); });
+  poll(); setInterval(poll, 3000);
+})();
+</script>
+</body>
+</html>

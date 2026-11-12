@@ -1,6 +1,6 @@
 # TEMPO — estimado × gasto
 
-> Atualizado em **2026-11-11T22:52:50-03:00** · estimado total **965 min** · gasto total **242 min**. Tempos em minutos (relógio de parede).
+> Atualizado em **2026-11-11T23:06:35-03:00** · estimado total **1185 min** · gasto total **250 min**. Tempos em minutos (relógio de parede).
 
 ## Por task
 
@@ -31,16 +31,24 @@
 | T-009 | Painel: topo em grade alinhada (título+ao vivo / próxima+links), alturas iguais | 20.0 | — | — | 2026-11-11T22:42:43-03:00 | 2026-11-11T22:42:43-03:00 |
 | T-050 | Painel: Agora com eventos reais do tracker e Ao vivo sem dado velho como atual | 20.0 | 1.4 | -19 | 2026-11-11T22:45:36-03:00 | 2026-11-11T22:47:00-03:00 |
 | T-051 | Painel: Agora unificado (situação, sua vez, último movimento, sistema) + Links/Testes laterais | 30.0 | 0.8 | -29 | 2026-11-11T22:51:58-03:00 | 2026-11-11T22:52:49-03:00 |
+| T-060 | Contrato do diário data/paper (UNIT-013) | 10.0 | — | — | 2026-11-11T23:01:03-03:00 | 2026-11-11T23:01:04-03:00 |
+| T-061 | PaperClient: dados públicos + exchange simulada, sem chaves | 45.0 | 4.8 | -40 | 2026-11-11T23:01:46-03:00 | — |
+| T-062 | IA stub + diário (estado, eventos, equity, preços) | 40.0 | — | — | — | — |
+| T-063 | Testes do modo papel (sem endpoint privado, sem Gemini) | 30.0 | — | — | — | — |
+| T-064 | Rodar o modo papel em paralelo (processo no D:) | 15.0 | — | — | — | — |
+| T-065 | View /papel no painel: gráficos + fluxo de decisões | 60.0 | 1.6 | -58 | 2026-11-11T23:05:01-03:00 | — |
+| T-066 | Card Modo papel no painel + botão para a view | 20.0 | 1.5 | -18 | 2026-11-11T23:05:01-03:00 | 2026-11-11T23:06:33-03:00 |
 
 ## Por agente
 
 | agente | criado | encerrado | vivo (min) |
 |---|---|---|---|
-| orquestrador | 2026-11-10T23:49:29-03:00 | — | 1383.4 |
+| orquestrador | 2026-11-10T23:49:29-03:00 | — | 1397.1 |
 | ag-spec | 2026-11-10T23:51:53-03:00 | 2026-11-11T00:18:26-03:00 | 26.6 |
 | ag-sim | 2026-11-10T23:52:06-03:00 | 2026-11-11T01:14:20-03:00 | 82.2 |
 | ag-ui | 2026-11-10T23:52:07-03:00 | 2026-11-11T00:36:13-03:00 | 44.1 |
 | ag-calib | 2026-11-11T00:31:17-03:00 | 2026-11-11T00:53:50-03:00 | 22.6 |
+| ag-paper | 2026-11-11T23:01:45-03:00 | — | 4.8 |
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
@@ -170,10 +178,37 @@ tasks:
     started_at: '2026-11-11T22:51:58-03:00'
     spent_min: 0.8
     finished_at: '2026-11-11T22:52:49-03:00'
+  T-060:
+    estimate_min: 10.0
+    started_at: '2026-11-11T23:01:03-03:00'
+    spent_min: 0.0
+    finished_at: '2026-11-11T23:01:04-03:00'
+  T-061:
+    estimate_min: 45.0
+    spent_min: 4.8
+    started_at: '2026-11-11T23:01:46-03:00'
+  T-062:
+    estimate_min: 40.0
+    spent_min: 0.0
+  T-063:
+    estimate_min: 30.0
+    spent_min: 0.0
+  T-064:
+    estimate_min: 15.0
+    spent_min: 0.0
+  T-065:
+    estimate_min: 60.0
+    spent_min: 1.6
+    started_at: '2026-11-11T23:05:01-03:00'
+  T-066:
+    estimate_min: 20.0
+    spent_min: 1.5
+    started_at: '2026-11-11T23:05:01-03:00'
+    finished_at: '2026-11-11T23:06:33-03:00'
 agents:
   orquestrador:
     spawned_at: '2026-11-10T23:49:29-03:00'
-    alive_min: 1383.4
+    alive_min: 1397.1
   ag-spec:
     spawned_at: '2026-11-10T23:51:53-03:00'
     alive_min: 26.6
@@ -190,8 +225,11 @@ agents:
     spawned_at: '2026-11-11T00:31:17-03:00'
     alive_min: 22.6
     ended_at: '2026-11-11T00:53:50-03:00'
+  ag-paper:
+    spawned_at: '2026-11-11T23:01:45-03:00'
+    alive_min: 4.8
 totals:
-  estimate_min: 965.0
-  spent_min: 242.2
+  estimate_min: 1185.0
+  spent_min: 250.1
 ```
 <!-- DATA:END -->

@@ -150,6 +150,17 @@
   .lateral .link-btn .lb-tit { font-size: 14px; }
   .lateral .link-btn .lb-url { font-size: 11px; }
   .lateral .lb-nota { font-size: 11.5px; margin-top: 4px; }
+  .lateral .papel { border: 2px solid var(--done); background: linear-gradient(180deg, var(--done-bg), var(--surface)); }
+  .papel .pp-num { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .papel .pp-eq { font: 700 22px var(--mono); font-variant-numeric: tabular-nums; }
+  .papel .pp-pct { font: 600 13px var(--mono); }
+  .papel .pp-linhas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin-top: 8px; font-size: 12px; }
+  .papel .pp-linhas .k { display: block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .papel .pp-spark { display: block; width: 100%; height: 38px; margin-top: 8px; }
+  .papel .pp-spark path { fill: none; stroke: var(--done); stroke-width: 1.8; }
+  .papel-btn { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; padding: 9px 12px; border-radius: 10px; background: var(--done); color: #fff; text-decoration: none; font-weight: 700; font-size: 14px; }
+  .papel-btn span { font-weight: 500; font-size: 11.5px; opacity: .9; }
+  .papel-btn:hover { filter: brightness(1.08); }
   .lateral .qa-placar .chip { font-size: 11.5px; padding: 3px 9px; }
   .lateral .qa-linha { font-size: 12.5px; }
   .card.agora { margin: 0; padding: 16px; }
@@ -490,6 +501,11 @@
     </section>
 
     <div class="lateral">
+      <section class="card papel" id="papel" aria-label="Modo papel: motor real com dinheiro de mentira">
+        <div class="card-head"><h2>🧪 Modo papel</h2><span class="chip" id="papel-meta">—</span></div>
+        <div id="papel-corpo"><p class="vazio">aguardando estado.json…</p></div>
+        <a class="papel-btn" href="/papel">Abrir a view ao vivo ▸<span>gráficos, fluxo de decisões e trades</span></a>
+      </section>
       <section class="card links" id="links" aria-label="Links" hidden>
         <div class="card-head"><h2>🔗 Links</h2><span class="chip" id="links-meta"></span></div>
         <div class="links-lista" id="links-lista"></div>
@@ -923,6 +939,29 @@
     setHidden($('ag-lista'), !h1); morph($('ag-lista'), h1);
     setHidden($('ag-mais'), !h2); setText($('ag-mais-n'), Math.max(0, ant.length - AGORA_LISTA)); morph($('ag-lista-mais'), h2);
     setText($('agora-meta'), 'últimos ' + lista.length + ' movimentos');
+  }
+
+  // ------------------------------------------------------------------ Modo papel (resumo; a view completa fica em /papel)
+  function renderPapel() {
+    var e = live.estado; if (!e) return;
+    var p = e.papel, corpo = $('papel-corpo');
+    if (!p || p.erro) { setText($('papel-meta'), 'erro'); morph(corpo, '<p class="vazio">Não deu para ler data/paper/: ' + esc(p && p.erro || '?') + '</p>'); return; }
+    if (!p.existe) { setText($('papel-meta'), 'não iniciado'); morph(corpo, '<p class="vazio">O motor em papel ainda não gravou o diário (data/paper/). Ele sobe com PAPER=1.</p>'); return; }
+    setText($('papel-meta'), p.parado ? 'parado' : 'rodando');
+    setCls($('papel-meta'), 'chip ' + (p.parado ? 'bloqueada' : 'concluida'));
+    var pct = typeof p.pnlPct === 'number' ? (p.pnlPct > 0 ? '+' : '') + p.pnlPct.toFixed(2) + '%' : '—';
+    var eq = typeof p.equity === 'number' ? 'US$ ' + p.equity.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    var pos = p.posicao ? esc(p.posicao.moeda) + ' ' + (typeof p.posicao.plPct === 'number' ? (p.posicao.plPct > 0 ? '+' : '') + p.posicao.plPct.toFixed(2) + '%' : '') : 'sem posição';
+    var u = p.ultimoScan || {}, f = p.funil || {};
+    var serie = (p.equityRecente || []).filter(function (v) { return typeof v === 'number'; }), sp = '';
+    if (serie.length > 1) {
+      var mn = Math.min.apply(null, serie), mx = Math.max.apply(null, serie), rg = mx - mn || 1;
+      sp = '<svg class="pp-spark" viewBox="0 0 100 38" preserveAspectRatio="none"><path vector-effect="non-scaling-stroke" d="' + serie.map(function (v, i) { return (i ? 'L' : 'M') + (i / (serie.length - 1) * 100).toFixed(2) + ' ' + (34 - (v - mn) / rg * 30).toFixed(2); }).join(' ') + '"/></svg>';
+    }
+    morph(corpo, '<div class="pp-num"><span class="pp-eq">' + eq + '</span><span class="pp-pct ' + ((p.pnlPct || 0) >= 0 ? 'neg' : 'pos') + '">' + pct + '</span></div>' + sp +
+      '<div class="pp-linhas"><div><span class="k">Trades</span>' + esc(p.trades || 0) + ' · ' + esc(p.ganhos || 0) + 'G/' + esc(p.perdas || 0) + 'P</div><div><span class="k">Posição</span>' + pos + '</div>' +
+      '<div><span class="k">Funil</span>' + esc(f.candidatas || 0) + ' cand. → ' + esc(f.compras || 0) + ' compras</div><div><span class="k">Último ciclo</span>' + spanIdade(p.heartbeatEpoch, 'há ') + '</div></div>' +
+      (u.resultado ? '<p class="vazio" style="margin-top:6px;font-size:12px">' + esc(u.resultado) + '</p>' : ''));
   }
 
   // ------------------------------------------------------------------ Testes (devpanel/testes.json do rodar_testes.py + simulation/reports/)
@@ -1365,7 +1404,7 @@
       return r.json();
     }).then(function (e) {
       live.estado = e; live.erro = null; live.lastOk = new Date();
-      renderStatus(); renderTopo(); renderProxima(); renderLinks(); renderAgora(); renderQa(); renderProgresso(); renderTiles();
+      renderStatus(); renderTopo(); renderProxima(); renderLinks(); renderAgora(); renderPapel(); renderQa(); renderProgresso(); renderTiles();
       buildNodes(); renderAgentes(); renderPendencias(); renderUnitSpecs(); renderAdrs(); renderTabela(); renderAoVivo();
       restaurarScroll();
     }).catch(function (err) {

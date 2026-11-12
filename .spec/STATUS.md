@@ -1,17 +1,18 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T22:52:50-03:00** · branch `check_strategies` · versão `v3.13.7` · 25/25 tasks concluídas.
+> Atualizado em **2026-11-11T23:06:35-03:00** · branch `check_strategies` · versão `v3.14.0` · 27/32 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | T-051 | conferindo o Agora unificado | 2026-11-11T22:51:58-03:00 |
+| orquestrador | Orquestrador | active | T-065 | despachando ag-paper; começando a view | 2026-11-11T23:01:07-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
 | ag-sim | Simulador | done | T-024 | concluído (T-024) | 2026-11-11T01:14:20-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
 | ag-calib | Calibrador | done | T-040 | concluído T-040 | 2026-11-11T00:53:50-03:00 |
+| ag-paper | Modo papel | active | T-061 | escrevendo PaperClient | 2026-11-11T23:04:38-03:00 |
 
 ## Épicos
 
@@ -22,6 +23,7 @@
 | E2 | 1 | Simulação ≥50 variações (mock) p/ calibrar previsão, entrada, stoploss/stopwin | done |
 | E3 | 2 | Repaginar página do app (amigável/futurista, sóbria) | done |
 | E4 | 2 | Aplicar calibração na profit_gain (após simulação) | review |
+| E5 | 0 | Modo papel + view ao vivo no painel | doing |
 
 ## Tasks
 
@@ -52,6 +54,13 @@
 | T-009 | E0 | Painel: topo em grade alinhada (título+ao vivo / próxima+links), alturas iguais | done | orquestrador | 4/4 |
 | T-050 | E0 | Painel: Agora com eventos reais do tracker e Ao vivo sem dado velho como atual | done | orquestrador | 4/4 |
 | T-051 | E0 | Painel: Agora unificado (situação, sua vez, último movimento, sistema) + Links/Testes laterais | done | orquestrador | 3/3 |
+| T-060 | E5 | Contrato do diário data/paper (UNIT-013) | done | orquestrador | 1/1 |
+| T-061 | E5 | PaperClient: dados públicos + exchange simulada, sem chaves | doing | ag-paper | 0/3 |
+| T-062 | E5 | IA stub + diário (estado, eventos, equity, preços) | todo | — | 0/0 |
+| T-063 | E5 | Testes do modo papel (sem endpoint privado, sem Gemini) | todo | — | 0/0 |
+| T-064 | E5 | Rodar o modo papel em paralelo (processo no D:) | todo | — | 0/0 |
+| T-065 | E5 | View /papel no painel: gráficos + fluxo de decisões | doing | orquestrador | 3/4 |
+| T-066 | E5 | Card Modo papel no painel + botão para a view | done | orquestrador | 2/2 |
 
 ## Decisões para o Micael
 
@@ -79,28 +88,28 @@
 
 ## Últimos eventos
 
-- `2026-11-11T22:52:50-03:00` **orquestrador** — commit v3.13.7: Agora unificado
-- `2026-11-11T22:52:49-03:00` **orquestrador** — T-051 doing → done
-- `2026-11-11T22:52:49-03:00` **orquestrador** — T-051 ✓ prints desk/mobile
-- `2026-11-11T22:51:58-03:00` **orquestrador** — status → active
-- `2026-11-11T22:51:58-03:00` **orquestrador** — T-051 todo → doing
-- `2026-11-11T22:51:58-03:00` **orquestrador** — T-051 ✓ tarefa velha não aparece
-- `2026-11-11T22:51:58-03:00` **orquestrador** — T-051 ✓ cartão Agora unificado
-- `2026-11-11T22:47:06-03:00` **orquestrador** — status → waiting
-- `2026-11-11T22:47:01-03:00` **orquestrador** — commit v3.13.6: Agora com eventos reais e Ao vivo organizado
-- `2026-11-11T22:47:00-03:00` **orquestrador** — T-050 doing → done
-- `2026-11-11T22:47:00-03:00` **orquestrador** — T-050 ✓ grade 3x3 ordenada
-- `2026-11-11T22:45:36-03:00` **orquestrador** — T-050 todo → doing
-- `2026-11-11T22:45:36-03:00` **orquestrador** — T-050 ✓ células uniformes no Ao vivo
-- `2026-11-11T22:45:36-03:00` **orquestrador** — T-050 ✓ motor/estado históricos
-- `2026-11-11T22:45:36-03:00` **orquestrador** — T-050 ✓ feed Agora a partir do STATUS
+- `2026-11-11T23:06:35-03:00` **orquestrador** — commit v3.14.0: view /papel e card Modo papel no painel
+- `2026-11-11T23:06:33-03:00` **orquestrador** — T-066 doing → done
+- `2026-11-11T23:06:33-03:00` **orquestrador** — T-066 ✓ print
+- `2026-11-11T23:06:33-03:00` **orquestrador** — T-065 ✓ teste com diário falso
+- `2026-11-11T23:05:01-03:00` **orquestrador** — T-066 todo → doing
+- `2026-11-11T23:05:01-03:00` **orquestrador** — T-066 ✓ card no painel + botão
+- `2026-11-11T23:05:01-03:00` **orquestrador** — T-065 todo → doing
+- `2026-11-11T23:05:01-03:00` **orquestrador** — T-065 ✓ view: tiles, fluxo, gráficos, trades, eventos
+- `2026-11-11T23:05:01-03:00` **orquestrador** — T-065 ✓ coletor + rotas /papel e /papel.json
+- `2026-11-11T23:01:46-03:00` **ag-paper** — T-061 todo → doing
+- `2026-11-11T23:01:45-03:00` **ag-paper** — agente criado (Modo papel)
+- `2026-11-11T23:01:45-03:00` **ag-paper** — status → active
+- `2026-11-11T23:01:07-03:00` **orquestrador** — status → active
+- `2026-11-11T23:01:04-03:00` **orquestrador** — T-060 doing → done
+- `2026-11-11T23:01:03-03:00` **orquestrador** — T-060 todo → doing
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.13.7
+  version: v3.14.0
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -110,16 +119,12 @@ agents:
 - id: orquestrador
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
-  task: T-051
-  step: conferindo o Agora unificado
+  task: T-065
+  step: despachando ag-paper; começando a view
   kind: orchestrator
   status: active
-  heartbeat: '2026-11-11T22:51:58-03:00'
+  heartbeat: '2026-11-11T23:01:07-03:00'
   step_log:
-  - at: '2026-11-11T00:27:10-03:00'
-    step: revisando e commitando E1
-  - at: '2026-11-11T00:31:19-03:00'
-    step: aguardando ag-sim, ag-ui, ag-calib
   - at: '2026-11-11T00:37:08-03:00'
     step: commit E3 (UI do app)
   - at: '2026-11-11T00:40:01-03:00'
@@ -156,6 +161,10 @@ agents:
     step: Agora e Ao vivo corrigidos; aguardando o Micael
   - at: '2026-11-11T22:51:58-03:00'
     step: conferindo o Agora unificado
+  - at: '2026-11-11T22:52:55-03:00'
+    step: Agora unificado; aguardando o Micael
+  - at: '2026-11-11T23:01:07-03:00'
+    step: despachando ag-paper; começando a view
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -276,6 +285,19 @@ agents:
     step: testes do gate SMA200
   - at: '2026-11-11T00:53:50-03:00'
     step: concluído T-040
+- id: ag-paper
+  name: Modo papel
+  role: Motor real com dados públicos, exchange simulada e IA stub
+  task: T-061
+  step: escrevendo PaperClient
+  kind: worker
+  status: active
+  heartbeat: '2026-11-11T23:04:38-03:00'
+  step_log:
+  - at: '2026-11-11T23:01:45-03:00'
+    step: lendo motor
+  - at: '2026-11-11T23:04:38-03:00'
+    step: escrevendo PaperClient
 epics:
 - id: E0
   title: Painel de acompanhamento do desenvolvimento
@@ -298,6 +320,11 @@ epics:
   priority: 2
   status: review
   note: Gate SMA200 aplicado; aguarda D-407 e D-201
+- id: E5
+  title: Modo papel + view ao vivo no painel
+  status: doing
+  note: motor real com preços públicos, exchange simulada e IA stub
+  priority: 0
 tasks:
 - id: T-001
   title: CLI track.py (STATUS/TEMPO com lock)
@@ -714,6 +741,73 @@ tasks:
   - name: prints desk/mobile
     done: true
     at: '2026-11-11T22:52:49-03:00'
+- id: T-060
+  title: Contrato do diário data/paper (UNIT-013)
+  epic: E5
+  agent: orquestrador
+  status: done
+  steps:
+  - name: contrato
+    done: true
+    at: '2026-11-11T23:01:03-03:00'
+- id: T-061
+  title: 'PaperClient: dados públicos + exchange simulada, sem chaves'
+  epic: E5
+  status: doing
+  steps:
+  - name: PaperClient público+privado simulado
+    done: false
+  - name: ganchos config/manager/crypto_trading
+    done: false
+    doing: true
+  - name: carteira persistente
+    done: false
+  agent: ag-paper
+- id: T-062
+  title: IA stub + diário (estado, eventos, equity, preços)
+  epic: E5
+  status: todo
+  steps: []
+- id: T-063
+  title: Testes do modo papel (sem endpoint privado, sem Gemini)
+  epic: E5
+  status: todo
+  steps: []
+- id: T-064
+  title: Rodar o modo papel em paralelo (processo no D:)
+  epic: E5
+  status: todo
+  steps: []
+- id: T-065
+  title: 'View /papel no painel: gráficos + fluxo de decisões'
+  epic: E5
+  agent: orquestrador
+  status: doing
+  steps:
+  - name: coletor + rotas /papel e /papel.json
+    done: true
+    at: '2026-11-11T23:05:01-03:00'
+  - name: 'view: tiles, fluxo, gráficos, trades, eventos'
+    done: true
+    at: '2026-11-11T23:05:01-03:00'
+  - name: teste com diário falso
+    done: true
+    at: '2026-11-11T23:06:33-03:00'
+  - name: teste com o motor real em papel
+    done: false
+    doing: true
+- id: T-066
+  title: Card Modo papel no painel + botão para a view
+  epic: E5
+  agent: orquestrador
+  status: done
+  steps:
+  - name: card no painel + botão
+    done: true
+    at: '2026-11-11T23:05:01-03:00'
+  - name: print
+    done: true
+    at: '2026-11-11T23:06:33-03:00'
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -1620,7 +1714,58 @@ events:
 - at: '2026-11-11T22:52:50-03:00'
   who: orquestrador
   msg: 'commit v3.13.7: Agora unificado'
-updated_at: '2026-11-11T22:52:50-03:00'
+- at: '2026-11-11T22:52:55-03:00'
+  who: orquestrador
+  msg: status → waiting
+- at: '2026-11-11T23:01:03-03:00'
+  who: orquestrador
+  msg: T-060 ✓ contrato
+- at: '2026-11-11T23:01:03-03:00'
+  who: orquestrador
+  msg: T-060 todo → doing
+- at: '2026-11-11T23:01:04-03:00'
+  who: orquestrador
+  msg: T-060 doing → done
+- at: '2026-11-11T23:01:07-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T23:01:45-03:00'
+  who: ag-paper
+  msg: status → active
+- at: '2026-11-11T23:01:45-03:00'
+  who: ag-paper
+  msg: agente criado (Modo papel)
+- at: '2026-11-11T23:01:46-03:00'
+  who: ag-paper
+  msg: T-061 todo → doing
+- at: '2026-11-11T23:05:01-03:00'
+  who: orquestrador
+  msg: T-065 ✓ coletor + rotas /papel e /papel.json
+- at: '2026-11-11T23:05:01-03:00'
+  who: orquestrador
+  msg: 'T-065 ✓ view: tiles, fluxo, gráficos, trades, eventos'
+- at: '2026-11-11T23:05:01-03:00'
+  who: orquestrador
+  msg: T-065 todo → doing
+- at: '2026-11-11T23:05:01-03:00'
+  who: orquestrador
+  msg: T-066 ✓ card no painel + botão
+- at: '2026-11-11T23:05:01-03:00'
+  who: orquestrador
+  msg: T-066 todo → doing
+- at: '2026-11-11T23:06:33-03:00'
+  who: orquestrador
+  msg: T-065 ✓ teste com diário falso
+- at: '2026-11-11T23:06:33-03:00'
+  who: orquestrador
+  msg: T-066 ✓ print
+- at: '2026-11-11T23:06:33-03:00'
+  who: orquestrador
+  msg: T-066 doing → done
+- at: '2026-11-11T23:06:35-03:00'
+  who: orquestrador
+  msg: 'commit v3.14.0: view /papel e card Modo papel no painel'
+updated_at: '2026-11-11T23:06:35-03:00'
 proxima:
   texto: 'Revisar o painel novo e aprovar o hook do feed Agora (.claude/settings.json); depois decidir D-201/D-211
     (o que fazer com o live: a estratégia não paga os custos na simulação) e D-407 (manter o filtro SMA200 ligado).'
