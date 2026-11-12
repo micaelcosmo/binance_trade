@@ -45,6 +45,7 @@ LIMITE_PRIMEIRO_PLANO_S = 15 * 60
 LIMITE_SEGUNDO_PLANO_S = 60 * 60
 EVENTOS_QUE_FECHAM = ("PreToolUse", "Stop", "SubagentStop", "Tarefa")
 MOTOR_PARADO_S = 180
+MOTOR_DESLIGADO_S = 24 * 3600   # sem sinal há mais de 1 dia: bot desligado, dados são históricos
 
 TASK_ESTADO = {"todo": "pendente", "doing": "andamento", "done": "concluida", "blocked": "bloqueada",
                "review": "aguardando", "cancelled": "concluida"}
@@ -285,6 +286,7 @@ def coletar_bot() -> dict:
         hb = float(hb) if isinstance(hb, (int, float)) else mt
         out["motor"] = {
             "existe": True, "heartbeatEpoch": hb, "parado": (time.time() - hb) > MOTOR_PARADO_S,
+            "desligado": (time.time() - hb) > MOTOR_DESLIGADO_S,
             "status": str(st.get("status") or "")[:80], "moeda": st.get("coin"),
             "tradesHoje": st.get("daily_trades"), "maxTrades": st.get("max_daily_trades"),
             "ganhos": st.get("trades_won"), "perdas": st.get("trades_lost"),
@@ -336,8 +338,29 @@ def _ler_eventos() -> list:
     return eventos
 
 
+def _eventos_do_tracker() -> list:
+    """Eventos do STATUS.md (track.py) no formato do feed, mais um "Stop" sintético quando o
+    orquestrador está marcado como aguardando. Assim o "Agora" reflete o trabalho real mesmo
+    sem o hook do Claude Code ligado."""
+    s, _ = track.load()
+    out = []
+    for ev in s["events"][-ATIVIDADE_N:]:
+        who = ev.get("who") or "orquestrador"
+        if who == "micael":
+            continue
+        out.append({"hora": ev.get("at"), "evento": "Track", "ferramenta": "track", "descricao": ev.get("msg"),
+                    "agente": "" if who == "orquestrador" else who, "epoch": epoch_de(ev.get("at"))})
+    orq = next((a for a in s["agents"] if a["id"] == "orquestrador"), None)
+    if orq and orq.get("status") in ("waiting", "idle") and orq.get("heartbeat"):
+        out.append({"hora": orq["heartbeat"], "evento": "Stop", "ferramenta": "", "descricao": orq.get("step") or "",
+                    "agente": "", "epoch": epoch_de(orq["heartbeat"])})
+    return out
+
+
 def coletar_atividade() -> list:
-    evs = [e for e in _ler_eventos() if e.get("evento") != "PostToolUse"]
+    evs = [e for e in _ler_eventos() if e.get("evento") != "PostToolUse"] + _eventos_do_tracker()
+    evs = [e for e in evs if e.get("epoch") is not None]
+    evs.sort(key=lambda e: e["epoch"])
     campos = ("hora", "evento", "ferramenta", "descricao", "agente", "epoch")
     return [{k: e.get(k) for k in campos} for e in evs[-ATIVIDADE_N:]]
 
@@ -372,10 +395,21 @@ def coletar_rodando(agora=None) -> list:
 
 
 def coletar_tarefa():
+    """Tarefa atual: a mais recente entre o evento "Tarefa" do hook e a task do orquestrador no STATUS."""
+    hook = None
     for e in reversed(_ler_eventos()):
         if e.get("evento") == "Tarefa":
-            return {"descricao": e.get("descricao"), "desde": e.get("hora"), "desdeEpoch": e.get("epoch")}
-    return None
+            hook = {"descricao": e.get("descricao"), "desde": e.get("hora"), "desdeEpoch": e.get("epoch")}
+            break
+    s, t = track.load()
+    orq = next((a for a in s["agents"] if a["id"] == "orquestrador"), None)
+    tk = next((x for x in s["tasks"] if orq and x["id"] == orq.get("task")), None)
+    status = None
+    if tk and tk.get("status") not in ("done", "cancelled"):
+        ini = t["tasks"].get(tk["id"], {}).get("started_at") or orq.get("heartbeat")
+        status = {"descricao": f"{tk['id']} · {tk.get('title')}", "desde": ini, "desdeEpoch": epoch_de(ini)}
+    candidatos = [c for c in (hook, status) if c and c.get("desdeEpoch")]
+    return max(candidatos, key=lambda c: c["desdeEpoch"]) if candidatos else None
 
 
 # ------------------------------------------------------------------ montagem

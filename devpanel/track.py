@@ -303,6 +303,11 @@ def cmd_agent(a, s, t):
 
 
 def cmd_task(a, s, t):
+    existente = find(s["tasks"], a.id, create=False)
+    if existente and not a.force:
+        for campo, novo in (("title", a.title), ("epic", a.epic)):
+            if novo is not None and existente.get(campo) and existente[campo] != novo:
+                sys.exit(f"{a.id} já existe com {campo}={existente[campo]!r}; use outro id ou --force")
     tk = find(s["tasks"], a.id)
     rec = t["tasks"].setdefault(a.id, {})
     for field in ("title", "epic", "agent", "note", "deliverable"):
@@ -445,6 +450,7 @@ def build_parser():
     tk.add_argument("--add-step", action="append")
     tk.add_argument("--step-done", action="append", help="nome, trecho ou índice do step")
     tk.add_argument("--step-doing", help="marca step em andamento")
+    tk.add_argument("--force", action="store_true", help="permite trocar título/épico de task existente")
     tk.set_defaults(fn=cmd_task)
 
     ep = sub.add_parser("epic")

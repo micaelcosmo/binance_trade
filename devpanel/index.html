@@ -142,14 +142,19 @@
   /* ---------- topo em grade: [título | próxima+links] / [ao vivo | próxima+links] ---------- */
   .cantos { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "topo pilha" "aovivo pilha"; grid-template-rows: auto 1fr; gap: 12px; margin-bottom: 12px; align-items: stretch; }
   .cantos > .topo { grid-area: topo; margin: 0; align-items: flex-end; }
-  .cantos > .aovivo { grid-area: aovivo; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); align-content: start; gap: 12px 18px; padding: 12px 14px; font-size: 12px; }
+  .cantos > .aovivo { grid-area: aovivo; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 8px; padding: 12px 14px; font-size: 12px; }
   .cantos > .aovivo .av-tit { grid-column: 1 / -1; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .cantos > .aovivo .av-sep { display: none; }
-  .cantos > .aovivo .av-grp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
-  .cantos > .aovivo .av-grp > .k { flex: 0 0 74px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .cantos > .aovivo .av-grp { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 4px; min-width: 0; padding: 7px 9px; border-radius: 9px; background: var(--surface-2); }
+  .cantos > .aovivo .av-grp > .k { flex: 0 0 100%; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
   .cantos > .aovivo .av-grp[data-k="git"] { grid-column: 1 / -1; }
+  .cantos > .aovivo .av-grp[data-k="web app"] { order: 1; } .cantos > .aovivo .av-grp[data-k="motor"] { order: 2; } .cantos > .aovivo .av-grp[data-k="estado"] { order: 3; }
+  .cantos > .aovivo .av-grp[data-k="coletor"] { order: 4; } .cantos > .aovivo .av-grp[data-k="processos"] { order: 5; } .cantos > .aovivo .av-grp[data-k="python"] { order: 6; }
+  .cantos > .aovivo .av-grp[data-k="STATUS.md"] { order: 7; } .cantos > .aovivo .av-grp[data-k="arch.yaml"] { order: 8; } .cantos > .aovivo .av-grp[data-k="disco"] { order: 9; }
+  .cantos > .aovivo .av-grp[data-k="git"] { order: 10; } .cantos > .aovivo .av-grp[data-k="bot"] { order: 1; grid-column: 1 / -1; }
   .cantos > .aovivo .av-grp[data-k="git"] .av-txt { flex: 1 1 260px; min-width: 0; }
   .cantos > .aovivo .av { white-space: normal; }
+  .cantos > .aovivo .av:not(.ok):not(.warn):not(.bad) { background: var(--surface); }
   .cantos > .pilha { grid-area: pilha; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
   .pilha > section { margin: 0 !important; padding: 12px 14px !important; min-width: 0; }
   .pilha > .proxima { flex: 1 1 auto; }
@@ -170,7 +175,8 @@
   @media (max-width: 960px) {
     .cantos { grid-template-columns: minmax(0, 1fr); grid-template-areas: "topo" "aovivo" "pilha"; grid-template-rows: auto; }
   }
-  @media (max-width: 640px) { .cantos .prox-meta { grid-template-columns: minmax(0, 1fr) !important; } .cantos > .aovivo { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 640px) { .cantos .prox-meta { grid-template-columns: minmax(0, 1fr) !important; } .cantos > .aovivo { grid-template-columns: minmax(0, 1fr); } .cantos > .aovivo .av-grp { grid-column: auto !important; } }
+  @media (min-width: 641px) and (max-width: 760px) { .cantos > .aovivo { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .proxima.topo-prox .label { font-size: 12px; }
   .proxima .prox-txt { overflow-wrap: anywhere; }
   .prox-meta { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 16px; margin-top: 10px; font-size: 13px; }
@@ -746,9 +752,12 @@
     else {
       if (w.erro) partes.push(grp('web app', av('bad', 'fora do ar · ' + esc(w.erro), 'GET 127.0.0.1:5000/' + (w.ms != null ? ' · ' + w.ms + ' ms' : ''))));
       else partes.push(grp('web app', av(w.ok ? 'ok' : 'warn', 'de pé · :5000' + (w.ms != null ? ' · ' + w.ms + ' ms' : ''), 'GET / · HTTP ' + w.codigo)));
-      if (!mo.existe) partes.push(grp('motor', av('', 'sem bot_status.json · nunca rodou aqui')));
-      else partes.push(grp('motor', av(mo.parado ? 'warn' : 'ok', (mo.parado ? 'parado · ' : 'vivo · ') + spanIdade(mo.heartbeatEpoch, 'heartbeat há ') + (mo.tradesHoje != null ? ' · ' + mo.tradesHoje + '/' + (mo.maxTrades || '?') + ' trades' : ''), mo.status || '')));
-      if (es.dia) partes.push(grp('estado', av(es.emOperacao ? 'warn' : '', (es.emOperacao ? 'em operação' : 'sem posição') + ' · dia ' + esc(dataCurta(es.dia)) + ' · ' + esc(es.lucroDiaPct) + '%', 'profit_gain_state.json')));
+      if (!mo.existe) partes.push(grp('motor', av('', 'nunca rodou aqui')));
+      else if (mo.desligado) partes.push(grp('motor', av('', 'desligado · último sinal ' + spanIdade(mo.heartbeatEpoch, 'há '), mo.status || '')));
+      else partes.push(grp('motor', av(mo.parado ? 'warn' : 'ok', (mo.parado ? 'parado · ' : 'vivo · ') + spanIdade(mo.heartbeatEpoch, 'sinal há ') + (mo.tradesHoje != null ? ' · ' + mo.tradesHoje + '/' + (mo.maxTrades || '?') + ' trades' : ''), mo.status || '')));
+      if (es.dia) partes.push(grp('estado', mo.desligado
+        ? av('', 'último salvo em ' + esc(dataCurta(es.dia)) + (es.emOperacao ? ' · com posição' : ' · sem posição'), 'profit_gain_state.json (histórico: o motor está desligado)')
+        : av(es.emOperacao ? 'warn' : '', (es.emOperacao ? 'em operação' : 'sem posição') + ' · dia ' + esc(dataCurta(es.dia)) + ' · ' + esc(es.lucroDiaPct) + '%', 'profit_gain_state.json')));
     }
     partes.push('<span class="av-sep"></span>');
     var g = e.git || {};
@@ -823,6 +832,7 @@
     if (ev.evento === 'Stop') return '⏸️';
     if (ev.evento === 'SubagentStop') return '📨';
     if (ev.evento === 'Tarefa') return '📌';
+    if (ev.evento === 'Track') return '🗂️';
     return FERR_ICO[ev.ferramenta] || '⚙️';
   }
   function agQuem(ev) {
@@ -832,9 +842,10 @@
   }
   function agTexto(ev) {
     if (ev.evento === 'UserPromptSubmit') return 'mandou uma mensagem';
-    if (ev.evento === 'Stop') return 'terminou a vez; aguardando o Micael';
+    if (ev.evento === 'Stop') return 'terminou a vez; aguardando o Micael' + (ev.descricao ? ' (' + ev.descricao + ')' : '');
     if (ev.evento === 'SubagentStop') return 'terminou e devolveu o relatório';
     if (ev.evento === 'Tarefa') return 'nova tarefa: ' + (ev.descricao || '?');
+    if (ev.evento === 'Track') return ev.descricao || '?';
     return (AG_VERBO[ev.ferramenta] || '') + (ev.descricao || ev.ferramenta || '?');
   }
   function agQuemHtml(ev) { return '<b class="' + (ev.agente || ev.evento === 'SubagentStop' ? 'q-agente' : '') + '">' + esc(agQuem(ev)) + ':</b> '; }

@@ -1,6 +1,6 @@
 # TEMPO — estimado × gasto
 
-> Atualizado em **2026-11-11T22:42:44-03:00** · estimado total **915 min** · gasto total **240 min**. Tempos em minutos (relógio de parede).
+> Atualizado em **2026-11-11T22:47:01-03:00** · estimado total **935 min** · gasto total **241 min**. Tempos em minutos (relógio de parede).
 
 ## Por task
 
@@ -29,12 +29,13 @@
 | T-007 | Fluxo: faixa com UNITs sem task, cor pelo status da spec | 15.0 | — | — | 2026-11-11T22:36:43-03:00 | 2026-11-11T22:36:43-03:00 |
 | T-008 | Painel: topo compacto (título / ao vivo / próxima+links no canto) e Agora/Testes lado a lado | 20.0 | — | — | 2026-11-11T22:40:56-03:00 | 2026-11-11T22:40:57-03:00 |
 | T-009 | Painel: topo em grade alinhada (título+ao vivo / próxima+links), alturas iguais | 20.0 | — | — | 2026-11-11T22:42:43-03:00 | 2026-11-11T22:42:43-03:00 |
+| T-050 | Painel: Agora com eventos reais do tracker e Ao vivo sem dado velho como atual | 20.0 | 1.4 | -19 | 2026-11-11T22:45:36-03:00 | 2026-11-11T22:47:00-03:00 |
 
 ## Por agente
 
 | agente | criado | encerrado | vivo (min) |
 |---|---|---|---|
-| orquestrador | 2026-11-10T23:49:29-03:00 | — | 1373.3 |
+| orquestrador | 2026-11-10T23:49:29-03:00 | — | 1377.5 |
 | ag-spec | 2026-11-10T23:51:53-03:00 | 2026-11-11T00:18:26-03:00 | 26.6 |
 | ag-sim | 2026-11-10T23:52:06-03:00 | 2026-11-11T01:14:20-03:00 | 82.2 |
 | ag-ui | 2026-11-10T23:52:07-03:00 | 2026-11-11T00:36:13-03:00 | 44.1 |
@@ -158,10 +159,15 @@ tasks:
     started_at: '2026-11-11T22:42:43-03:00'
     spent_min: 0.0
     finished_at: '2026-11-11T22:42:43-03:00'
+  T-050:
+    estimate_min: 20.0
+    started_at: '2026-11-11T22:45:36-03:00'
+    spent_min: 1.4
+    finished_at: '2026-11-11T22:47:00-03:00'
 agents:
   orquestrador:
     spawned_at: '2026-11-10T23:49:29-03:00'
-    alive_min: 1373.3
+    alive_min: 1377.5
   ag-spec:
     spawned_at: '2026-11-10T23:51:53-03:00'
     alive_min: 26.6
@@ -179,7 +185,7 @@ agents:
     alive_min: 22.6
     ended_at: '2026-11-11T00:53:50-03:00'
 totals:
-  estimate_min: 915.0
-  spent_min: 240.0
+  estimate_min: 935.0
+  spent_min: 241.4
 ```
 <!-- DATA:END -->
