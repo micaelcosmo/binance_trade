@@ -50,7 +50,7 @@ $T decision D-101 --question "..." --options "A|B" --recommendation "A" --who ag
 $T show
 ```
 
-- Painel: `.venv/Scripts/python devpanel/server.py` → http://127.0.0.1:5055 (auto-refresh; alerta agente `active` sem heartbeat > 15 min; Micael responde decisões pela UI).
+- Painel: `.venv/Scripts/python devpanel/server.py` → http://127.0.0.1:5055 (só leitura, atualiza a cada 3 s; cartão "Próxima interação" via `track.py proxima`, Links via `track.py link`, feed "Agora" via hook `devpanel/registrar_atividade.py`, card Testes via `devpanel/rodar_testes.py`). Decisões são respondidas no chat.
 - Heartbeat: atualizar o agente a cada mudança de step (no máximo ~10 min).
 - Decisões do dono: `--blocking` só se impedir de continuar; caso contrário seguir com a recomendação.
 
