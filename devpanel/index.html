@@ -139,30 +139,38 @@
   .proxima .prox-txt.vago { color: var(--muted); font-weight: 500; }
   .proxima .prox-txt a { color: var(--active); word-break: break-all; }
   .proxima.topo-prox { margin-bottom: 12px; padding: 14px 16px; }
-  /* ---------- cantos: próxima interação + links compactos no canto superior direito ---------- */
-  .cantos { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
-  .cantos > .topo { flex: 1 1 300px; min-width: 0; margin: 0; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; }
-  .cantos > .aovivo { flex: 0 1 400px; align-content: flex-start; gap: 5px 8px; font-size: 11px; }
-  .cantos > .aovivo .av { font-size: 10.5px; padding: 1px 7px; white-space: normal; }
+  /* ---------- topo em grade: [título | próxima+links] / [ao vivo | próxima+links] ---------- */
+  .cantos { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "topo pilha" "aovivo pilha"; grid-template-rows: auto 1fr; gap: 12px; margin-bottom: 12px; align-items: stretch; }
+  .cantos > .topo { grid-area: topo; margin: 0; align-items: flex-end; }
+  .cantos > .aovivo { grid-area: aovivo; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); align-content: start; gap: 12px 18px; padding: 12px 14px; font-size: 12px; }
+  .cantos > .aovivo .av-tit { grid-column: 1 / -1; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   .cantos > .aovivo .av-sep { display: none; }
-  .cantos > .aovivo .av-txt { font-size: 11px; }
-  .cantos > .pilha { flex: 0 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-  .cantos > section, .pilha > section { flex: 0 1 340px; min-width: 0; margin: 0 !important; padding: 10px 12px !important; }
-  .pilha > section { flex: 0 0 auto; }
+  .cantos > .aovivo .av-grp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+  .cantos > .aovivo .av-grp > .k { flex: 0 0 74px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .cantos > .aovivo .av-grp[data-k="git"] { grid-column: 1 / -1; }
+  .cantos > .aovivo .av-grp[data-k="git"] .av-txt { flex: 1 1 260px; min-width: 0; }
+  .cantos > .aovivo .av { white-space: normal; }
+  .cantos > .pilha { grid-area: pilha; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .pilha > section { margin: 0 !important; padding: 12px 14px !important; min-width: 0; }
+  .pilha > .proxima { flex: 1 1 auto; }
+  .pilha > .links { flex: 0 0 auto; }
   .cantos .proxima .label, .cantos .links h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-  .cantos .proxima .prox-txt { font-size: 13px; line-height: 1.4; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .cantos .proxima:hover .prox-txt, .cantos .proxima:focus-within .prox-txt { -webkit-line-clamp: unset; }
-  .cantos .prox-meta { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 4px 12px; margin-top: 8px; font-size: 12px; }
+  .cantos .proxima .prox-txt { font-size: 13.5px; line-height: 1.45; margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .cantos .prox-meta #ultimo { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cantos .proxima:hover .prox-txt, .cantos .proxima:focus-within .prox-txt, .cantos .proxima:hover #ultimo { -webkit-line-clamp: unset; }
+  .cantos .prox-meta { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; }
   .cantos .prox-meta .k { font-size: 10px; }
   .cantos .prox-meta .v.timer-live { font-size: 13px; }
-  .cantos .links .card-head { margin-bottom: 6px; }
+  .cantos .links .card-head { margin-bottom: 8px; }
   .cantos .links-lista { gap: 6px; }
-  .cantos .link-btn { min-height: 40px; padding: 7px 12px; border-radius: 10px; }
+  .cantos .link-btn { min-height: 44px; padding: 8px 12px; border-radius: 10px; }
   .cantos .link-btn .lb-tit { font-size: 14px; }
   .cantos .link-btn .lb-url { font-size: 11px; }
-  .cantos .lb-nota { font-size: 11.5px; margin-top: 3px; }
-  @media (max-width: 1100px) { .cantos > .topo { flex-basis: 100%; } }
-  @media (max-width: 640px) { .cantos > section, .cantos > .pilha { flex-basis: 100%; } .cantos .prox-meta { grid-template-columns: minmax(0, 1fr) !important; } }
+  .cantos .lb-nota { font-size: 11.5px; margin-top: 4px; }
+  @media (max-width: 960px) {
+    .cantos { grid-template-columns: minmax(0, 1fr); grid-template-areas: "topo" "aovivo" "pilha"; grid-template-rows: auto; }
+  }
+  @media (max-width: 640px) { .cantos .prox-meta { grid-template-columns: minmax(0, 1fr) !important; } .cantos > .aovivo { grid-template-columns: minmax(0, 1fr); } }
   .proxima.topo-prox .label { font-size: 12px; }
   .proxima .prox-txt { overflow-wrap: anywhere; }
   .prox-meta { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 16px; margin-top: 10px; font-size: 13px; }
@@ -207,7 +215,7 @@
   /* ---------- "Agora" (atividade.jsonl: o hook grava cada movimento do orquestrador) ---------- */
   .card.agora { margin: 0 0 12px; padding: 14px; }
   /* Agora | Testes lado a lado */
-  .lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 12px; align-items: start; }
+  .lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 12px; align-items: stretch; }
   @media (min-width: 860px) { .lado { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
   .lado > .card { margin: 0 !important; }
   .agora .card-head { margin-bottom: 8px; }
@@ -641,7 +649,9 @@
     var s = Math.max(0, Math.round(agoraS() - epoch));
     if (s < 90) return s + ' s';
     var m = Math.round(s / 60);
-    return m < 90 ? m + ' min' : Math.floor(m / 60) + ' h ' + pad2(m % 60) + ' min';
+    if (m < 90) return m + ' min';
+    var hs = Math.floor(m / 60);
+    return hs < 48 ? hs + ' h ' + pad2(m % 60) + ' min' : Math.floor(hs / 24) + ' d';
   }
   function dataCurta(iso) { var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] : String(iso || '—'); }
   function horaDe(iso) { var m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; }
@@ -718,7 +728,7 @@
 
   // ------------------------------------------------------------------ faixa "ao vivo"
   function av(cls, html, title) { return '<span class="av ' + cls + '"' + (title ? ' title="' + esc(title) + '"' : '') + '>' + html + '</span>'; }
-  function grp(k, html) { return '<span class="av-grp"><span class="k">' + esc(k) + '</span>' + html + '</span>'; }
+  function grp(k, html) { return '<span class="av-grp" data-k="' + esc(k) + '"><span class="k">' + esc(k) + '</span>' + html + '</span>'; }
   function spanIdade(epoch, prefixo, sufixo) { return '<span data-epoch="' + (epoch == null ? '' : epoch) + '" data-prefixo="' + esc(prefixo || '') + '"' + (sufixo ? ' data-sufixo="' + esc(sufixo) + '"' : '') + '>' + esc((prefixo || '') + idade(epoch) + (sufixo || '')) + '</span>'; }
   var avHtml = '';
   function renderAoVivo() {
@@ -779,7 +789,7 @@
       return av('', n + ' ' + esc(x.pid), x.vivo === true ? 'processo vivo' : 'não deu para conferir se está vivo');
     }).join('')));
     var d = e.disco || {};
-    var dh = ['C', 'D'].map(function (L) { var x = d[L]; if (!x) return ''; if (x.erro) return av('bad', L + ': ' + esc(x.erro)); return av(x.livreGB < 5 ? 'bad' : x.livreGB < 10 ? 'warn' : '', L + ': ' + esc(String(x.livreGB).replace('.', ',')) + ' GB livres', 'de ' + String(x.totalGB).replace('.', ',') + ' GB'); }).join('');
+    var dh = ['C', 'D'].map(function (L) { var x = d[L]; if (!x) return ''; if (x.erro) return av('bad', L + ': ' + esc(x.erro)); return av(x.livreGB < 5 ? 'bad' : x.livreGB < 10 ? 'warn' : '', L + ': ' + esc(String(x.livreGB).replace('.', ',')) + ' GB', 'livres, de ' + String(x.totalGB).replace('.', ',') + ' GB'); }).join('');
     partes.push(grp('disco', dh || av('bad', d.erro ? esc(d.erro) : 'sem dados')));
     var html = partes.join('');
     if (html !== avHtml) { avHtml = html; morph(el, html); }

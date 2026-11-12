@@ -1,6 +1,6 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T22:40:58-03:00** · branch `check_strategies` · versão `v3.13.4` · 22/22 tasks concluídas.
+> Atualizado em **2026-11-11T22:42:44-03:00** · branch `check_strategies` · versão `v3.13.5` · 23/23 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
@@ -49,6 +49,7 @@
 | T-006 | E0 | Painel: tile/card de UNITs reais e 'tudo concluído' no progresso | done | orquestrador | 3/3 |
 | T-007 | E0 | Fluxo: faixa com UNITs sem task, cor pelo status da spec | done | orquestrador | 3/3 |
 | T-008 | E0 | Painel: topo compacto (título / ao vivo / próxima+links no canto) e Agora/Testes lado a lado | done | orquestrador | 4/4 |
+| T-009 | E0 | Painel: topo em grade alinhada (título+ao vivo / próxima+links), alturas iguais | done | orquestrador | 4/4 |
 
 ## Decisões para o Micael
 
@@ -76,6 +77,13 @@
 
 ## Últimos eventos
 
+- `2026-11-11T22:42:44-03:00` **orquestrador** — commit v3.13.5: topo do painel em grade alinhada
+- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 doing → done
+- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 todo → doing
+- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 ✓ prints desk/mobile
+- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 ✓ textos limitados + idades em dias
+- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 ✓ ao vivo em colunas rótulo|valor
+- `2026-11-11T22:42:43-03:00` **orquestrador** — T-009 ✓ grade do topo
 - `2026-11-11T22:40:58-03:00` **orquestrador** — commit v3.13.4: topo compacto e Agora|Testes lado a lado
 - `2026-11-11T22:40:57-03:00` **orquestrador** — T-008 doing → done
 - `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 todo → doing
@@ -84,20 +92,13 @@
 - `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 ✓ Agora e Testes lado a lado
 - `2026-11-11T22:40:56-03:00` **orquestrador** — T-008 ✓ cantos compactos
 - `2026-11-11T22:36:44-03:00` **orquestrador** — commit v3.13.3: UNITs sem task no fluxo do plano
-- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 doing → done
-- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 todo → doing
-- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 ✓ print tema escuro
-- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 ✓ faixa no canvas
-- `2026-11-11T22:36:43-03:00` **orquestrador** — T-007 ✓ coletor backlog
-- `2026-11-11T22:33:36-03:00` **orquestrador** — commit v3.13.2: UNITs reais no painel; app web no ar em :5000
-- `2026-11-11T22:33:35-03:00` **orquestrador** — T-006 doing → done
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.13.4
+  version: v3.13.5
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -660,6 +661,24 @@ tasks:
   - name: prints desk/mobile
     done: true
     at: '2026-11-11T22:40:56-03:00'
+- id: T-009
+  title: 'Painel: topo em grade alinhada (título+ao vivo | próxima+links), alturas iguais'
+  epic: E0
+  agent: orquestrador
+  status: done
+  steps:
+  - name: grade do topo
+    done: true
+    at: '2026-11-11T22:42:43-03:00'
+  - name: ao vivo em colunas rótulo|valor
+    done: true
+    at: '2026-11-11T22:42:43-03:00'
+  - name: textos limitados + idades em dias
+    done: true
+    at: '2026-11-11T22:42:43-03:00'
+  - name: prints desk/mobile
+    done: true
+    at: '2026-11-11T22:42:43-03:00'
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -1491,7 +1510,28 @@ events:
 - at: '2026-11-11T22:40:58-03:00'
   who: orquestrador
   msg: 'commit v3.13.4: topo compacto e Agora|Testes lado a lado'
-updated_at: '2026-11-11T22:40:58-03:00'
+- at: '2026-11-11T22:42:43-03:00'
+  who: orquestrador
+  msg: T-009 ✓ grade do topo
+- at: '2026-11-11T22:42:43-03:00'
+  who: orquestrador
+  msg: T-009 ✓ ao vivo em colunas rótulo|valor
+- at: '2026-11-11T22:42:43-03:00'
+  who: orquestrador
+  msg: T-009 ✓ textos limitados + idades em dias
+- at: '2026-11-11T22:42:43-03:00'
+  who: orquestrador
+  msg: T-009 ✓ prints desk/mobile
+- at: '2026-11-11T22:42:43-03:00'
+  who: orquestrador
+  msg: T-009 todo → doing
+- at: '2026-11-11T22:42:43-03:00'
+  who: orquestrador
+  msg: T-009 doing → done
+- at: '2026-11-11T22:42:44-03:00'
+  who: orquestrador
+  msg: 'commit v3.13.5: topo do painel em grade alinhada'
+updated_at: '2026-11-11T22:42:44-03:00'
 proxima:
   texto: 'Revisar o painel novo e aprovar o hook do feed Agora (.claude/settings.json); depois decidir D-201/D-211
     (o que fazer com o live: a estratégia não paga os custos na simulação) e D-407 (manter o filtro SMA200 ligado).'
