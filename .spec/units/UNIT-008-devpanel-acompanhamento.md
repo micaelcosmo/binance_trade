@@ -1,6 +1,6 @@
 # UNIT-008 · Painel de acompanhamento do desenvolvimento (E0)
 
-- **Status:** Draft (em andamento — T-001 concluída, T-002 em curso)
+- **Status:** Implemented (T-001…T-005; painel refeito em 2026-11-11 com a cara do modelo pedido pelo Micael) — hook do feed "Agora" aguarda aprovação
 - **Épico:** E0 · **Prioridade:** 0 · **Tasks:** T-001, T-002, T-003
 - **ADRs:** ADR-0010
 - **Arquitetura:** `arch.yaml#dev_tooling`, `#runtime.processes.devpanel`, `#components.devpanel`
@@ -23,3 +23,11 @@ Dar ao Micael visibilidade em tempo real do trabalho multi-agente: agentes, task
 - [ ] Responder decisão pela UI atualiza STATUS.md (`status: answered`) e gera evento.
 - [ ] Alerta visível de agente parado (T-003).
 - [ ] Layout validado pelo Micael (decisão D-001).
+
+## Revisão 2026-11-11 (T-005)
+
+O Micael pediu a mesma cara de um painel modelo que ele já usa. A página passou a seguir esse modelo (tema claro/escuro, cartão "Próxima interação", Links, faixa "ao vivo", feed "Agora", card Testes, progresso por épico, tiles, canvas de fluxo com raia de agentes, Agentes | Pendências, ADRs, tabela de tasks). Nenhum nome ou arquivo do projeto modelo entra aqui.
+
+- `devpanel/coletor.py` monta `estado.json`; `devpanel/server.py` passou a stdlib, só leitura (decisões são respondidas no chat, não pelo painel).
+- `devpanel/registrar_atividade.py` (hook) e `devpanel/rodar_testes.py` alimentam "Agora" e "Testes".
+- Pendente: ligar o hook em `.claude/settings.json` (aprovação do Micael).

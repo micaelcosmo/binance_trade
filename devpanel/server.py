@@ -1,120 +1,101 @@
-"""Painel de acompanhamento do desenvolvimento.
+"""Servidor do painel de desenvolvimento (stdlib, só leitura).
 
-Lê .spec/STATUS.md e .spec/TEMPO.md (bloco YAML gerado por devpanel/track.py)
-e serve um dashboard em http://127.0.0.1:5055 com auto-refresh.
+    .venv/Scripts/python devpanel/server.py [--port 5055]   →  http://127.0.0.1:5055
 
-    .venv/Scripts/python devpanel/server.py [--port 5055]
+Rotas fixas, só GET/HEAD: /, /index.html, /estado.json (montado pelo coletor, cache de 2 s),
+/arch.yaml (o de .spec/). Qualquer outro caminho → 404; outros métodos → 405.
+X-Painel-Versao = mtime do index.html: abas abertas recarregam sozinhas quando a página muda.
 """
 from __future__ import annotations
 
 import argparse
-import datetime as dt
+import json
 import os
-import subprocess
 import sys
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from flask import Flask, jsonify, request, send_from_directory
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import coletor  # noqa: E402
 
-sys.path.insert(0, os.path.dirname(__file__))
-import track  # noqa: E402
-
-STALE_MIN = 15  # agente "active" sem heartbeat há mais que isso = alerta
 HERE = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__, static_folder=None)
+PAGINA = os.path.join(HERE, "index.html")
+ARCH = os.path.join(coletor.SPEC, "arch.yaml")
+CACHE_S = 2.0
+
+_cache = {"t": 0.0, "corpo": b""}
+_trava = threading.Lock()
 
 
-def _git(*args: str) -> str:
-    try:
-        return subprocess.run(["git", *args], cwd=track.ROOT, capture_output=True, text=True,
-                              encoding="utf-8", timeout=5).stdout.strip()
-    except Exception:
-        return ""
+def estado_json() -> bytes:
+    with _trava:
+        if time.time() - _cache["t"] > CACHE_S:
+            proc = {"servidor": {"pid": os.getpid(), "vivo": True}}
+            _cache["corpo"] = json.dumps(coletor.coletar(proc), ensure_ascii=False).encode("utf-8")
+            _cache["t"] = time.time()
+        return _cache["corpo"]
 
 
-def git_info() -> dict:
-    log = _git("log", "-8", "--pretty=format:%h\x1f%s\x1f%cI\x1f%D")
-    commits = []
-    for line in filter(None, log.splitlines()):
-        h, subj, when, refs = (line.split("\x1f") + ["", "", ""])[:4]
-        tag = next((r.strip()[5:] for r in refs.split(",") if r.strip().startswith("tag: ")), None)
-        commits.append({"hash": h, "subject": subj, "at": when, "tag": tag})
-    dirty = [ln for ln in _git("status", "--porcelain").splitlines() if ln.strip()]
-    return {
-        "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
-        "last_tag": _git("describe", "--tags", "--abbrev=0"),
-        "commits": commits,
-        "dirty_files": len(dirty),
-    }
+class Handler(BaseHTTPRequestHandler):
+    server_version = "painel-dev"
+
+    def _enviar(self, corpo: bytes, tipo: str, so_cabecalho: bool = False):
+        self.send_response(200)
+        self.send_header("Content-Type", tipo)
+        self.send_header("Content-Length", str(len(corpo)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Painel-Versao", str(int(os.path.getmtime(PAGINA))))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.end_headers()
+        if not so_cabecalho:
+            self.wfile.write(corpo)
+
+    def _rota(self, so_cabecalho: bool):
+        caminho = self.path.split("?", 1)[0]
+        if "%" in caminho or "\\" in caminho:
+            return self.send_error(404)
+        try:
+            if caminho in ("/", "/index.html"):
+                with open(PAGINA, "rb") as f:
+                    return self._enviar(f.read(), "text/html; charset=utf-8", so_cabecalho)
+            if caminho == "/estado.json":
+                return self._enviar(estado_json(), "application/json; charset=utf-8", so_cabecalho)
+            if caminho == "/arch.yaml":
+                with open(ARCH, "rb") as f:
+                    return self._enviar(f.read(), "text/plain; charset=utf-8", so_cabecalho)
+        except OSError:
+            return self.send_error(503)
+        self.send_error(404)
+
+    def do_GET(self):
+        self._rota(False)
+
+    def do_HEAD(self):
+        self._rota(True)
+
+    def _nao_permitido(self):
+        self.send_response(405)
+        self.send_header("Allow", "GET, HEAD")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    do_POST = do_PUT = do_DELETE = do_PATCH = _nao_permitido
+
+    def log_message(self, *args):  # silencioso: o poll de 3 s encheria o log
+        pass
 
 
-def build_state() -> dict:
-    s, t = track.load()
-    now = dt.datetime.now().astimezone()
-    for a in s["agents"]:
-        hb = track.parse_ts(a.get("heartbeat"))
-        a["heartbeat_age_min"] = round((now - hb).total_seconds() / 60, 1) if hb else None
-        a["stale"] = a.get("status") == "active" and (a["heartbeat_age_min"] or 0) > STALE_MIN
-        rec = t["agents"].get(a["id"], {})
-        a["spawned_at"] = rec.get("spawned_at")
-        a["ended_at"] = rec.get("ended_at")
-        a["alive_min"] = track.minutes_between(rec.get("spawned_at"), rec.get("ended_at"))
-    for tk in s["tasks"]:
-        rec = t["tasks"].get(tk["id"], {})
-        tk["estimate_min"] = rec.get("estimate_min")
-        tk["started_at"] = rec.get("started_at")
-        tk["finished_at"] = rec.get("finished_at")
-        tk["spent_min"] = track.minutes_between(rec["started_at"], rec.get("finished_at")) \
-            if rec.get("started_at") else 0
-    p = s["project"]
-    p["session_elapsed_min"] = track.minutes_between(p.get("session_started_at"))
-    dl = track.parse_ts(p.get("session_deadline"))
-    p["session_remaining_min"] = round((dl - now).total_seconds() / 60, 1) if dl else None
-    s["git"] = git_info()
-    s["server_time"] = now.isoformat(timespec="seconds")
-    s["stale_threshold_min"] = STALE_MIN
-    return s
-
-
-@app.get("/")
-def index():
-    return send_from_directory(os.path.join(HERE, "static"), "index.html")
-
-
-@app.get("/static/<path:name>")
-def static_files(name):
-    return send_from_directory(os.path.join(HERE, "static"), name)
-
-
-@app.get("/api/state")
-def api_state():
-    resp = jsonify(build_state())
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
-
-
-@app.post("/api/decisions/<did>")
-def answer_decision(did):
-    body = request.get_json(silent=True) or {}
-    answer = str(body.get("answer", "")).strip()
-    if not answer:
-        return jsonify({"error": "resposta vazia"}), 400
-    with track.locked():
-        s, t = track.load()
-        d = track.find(s["decisions"], did, create=False)
-        if d is None:
-            return jsonify({"error": "decisão não encontrada"}), 404
-        d["answer"] = answer[:2000]
-        d["status"] = "answered"
-        d["answered_at"] = track.now()
-        track.event(s, "micael", f"respondeu {did}: {answer[:120]}")
-        track.save(s, t)
-    return jsonify({"ok": True})
-
-
-if __name__ == "__main__":
+def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=5055)
     ap.add_argument("--host", default="127.0.0.1")
     a = ap.parse_args()
-    print(f"Painel de dev em http://{a.host}:{a.port}")
-    app.run(host=a.host, port=a.port, debug=False, threaded=True)
+    srv = ThreadingHTTPServer((a.host, a.port), Handler)
+    print(f"Painel de dev em http://{a.host}:{a.port}", flush=True)
+    srv.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

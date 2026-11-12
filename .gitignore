@@ -23,3 +23,4 @@ supported_coin_list
 .venv/
 data/sim/
 .spec/.track.lock
+devpanel/atividade.jsonl

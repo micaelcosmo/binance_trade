@@ -457,9 +457,13 @@ quality:
 
 dev_tooling:
   devpanel:
-    track_cli: "devpanel/track.py — subcomandos agent|task|epic|decision|event|project|show; lock .spec/.track.lock (expira 30s) + escrita atômica"
-    server: "devpanel/server.py → http://127.0.0.1:5055 (GET /, /api/state, POST /api/decisions/<id>); alerta agente active sem heartbeat > 15 min"
-    files: {".spec/STATUS.md": "agentes, épicos, tasks, decisões, eventos (bloco YAML = fonte)", ".spec/TEMPO.md": "tempos por task/step"}
+    track_cli: "devpanel/track.py — subcomandos agent|task|epic|decision|event|project|proxima|link|show; lock .spec/.track.lock (expira 30s) + escrita atômica"
+    collector: "devpanel/coletor.py — monta estado.json: STATUS/TEMPO (épicos→fases, tasks→nós, agentes, decisões abertas→pendências, próxima interação, links), .spec/adr e .spec/units, git, disco, bot (web app :5000, bot_status.json, profit_gain_state.json), atividade.jsonl, testes.json, simulation/reports"
+    server: "devpanel/server.py (stdlib) → http://127.0.0.1:5055; só GET/HEAD em /, /index.html, /estado.json (cache 2 s), /arch.yaml; 405 p/ outros métodos; X-Painel-Versao recarrega abas abertas"
+    page: "devpanel/index.html — próxima interação, links, ao vivo, Agora, Testes, progresso por épico, tiles, fluxo do plano (canvas n8n + raia de agentes), agentes, pendências, ADRs, tabela de tasks; tema auto/claro/escuro"
+    activity_hook: "devpanel/registrar_atividade.py — hook PreToolUse/PostToolUse/UserPromptSubmit/Stop/SubagentStop → devpanel/atividade.jsonl (só descrição curta/caminho relativo); --tarefa grava a tarefa atual; ligar em .claude/settings.json requer aprovação do Micael"
+    tests_card: "devpanel/rodar_testes.py — pytest no venv313 → devpanel/testes.json (placar + falhas)"
+    files: {".spec/STATUS.md": "agentes, épicos, tasks, decisões, eventos, próxima interação, links (bloco YAML = fonte)", ".spec/TEMPO.md": "tempos por task/step"}
     rule: "STATUS.md/TEMPO.md só via track.py (ADR-0010)"
   git: "commits semânticos com versão; só minor/patch (ADR-0011); orquestrador commita"
   workspace: "D:\\binance_trade; temporários em D:\\binance_trade_work\\tmp (ADR-0012)"

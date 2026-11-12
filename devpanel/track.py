@@ -402,6 +402,27 @@ def cmd_project(a, s, t):
         s["project"]["session_deadline"] = a.session_deadline
 
 
+def cmd_proxima(a, s, t):
+    """Cartão "Próxima interação do Micael" do painel."""
+    p = s.setdefault("proxima", {})
+    for field in ("texto", "quando", "duracao"):
+        val = getattr(a, field)
+        if val is not None:
+            p[field] = val
+    p["atualizado_em"] = now()
+
+
+def cmd_link(a, s, t):
+    """Botões da caixa "Links" do painel (só http/https). --remover apaga pelo título."""
+    links = s.setdefault("links", [])
+    links[:] = [ln for ln in links if ln.get("titulo") != a.titulo]
+    if a.remover:
+        return
+    if not str(a.url or "").lower().startswith(("http://", "https://")):
+        sys.exit("url precisa começar com http:// ou https://")
+    links.append({"titulo": a.titulo, "url": a.url, "nota": a.nota or "", "desde": now()})
+
+
 def cmd_show(a, s, t):
     print(render_status(s).split(BEGIN)[0])
 
@@ -450,6 +471,18 @@ def build_parser():
         pr.add_argument(f"--{f}")
     pr.add_argument("--session-start", action="store_true")
     pr.set_defaults(fn=cmd_project)
+
+    px = sub.add_parser("proxima", help="cartão 'Próxima interação do Micael'")
+    for f in ("texto", "quando", "duracao"):
+        px.add_argument(f"--{f}")
+    px.set_defaults(fn=cmd_proxima)
+
+    lk = sub.add_parser("link", help="botão na caixa de Links do painel")
+    lk.add_argument("titulo")
+    lk.add_argument("--url")
+    lk.add_argument("--nota")
+    lk.add_argument("--remover", action="store_true")
+    lk.set_defaults(fn=cmd_link)
 
     sh = sub.add_parser("show")
     sh.set_defaults(fn=cmd_show)

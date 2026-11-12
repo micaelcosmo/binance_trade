@@ -1,13 +1,13 @@
 # STATUS — acompanhamento de desenvolvimento
 
-> Atualizado em **2026-11-11T01:15:25-03:00** · branch `check_strategies` · versão `v3.12.0` · 18/18 tasks concluídas.
+> Atualizado em **2026-11-11T22:22:22-03:00** · branch `check_strategies` · versão `v3.13.0` · 19/19 tasks concluídas.
 > Fonte de verdade = bloco YAML no fim. Atualize via `python devpanel/track.py ...`. Painel: `python devpanel/server.py` → http://127.0.0.1:5055
 
 ## Agentes
 
 | id | nome | status | task | step atual | heartbeat |
 |---|---|---|---|---|---|
-| orquestrador | Orquestrador | active | — | commit sim-002 | 2026-11-11T01:15:22-03:00 |
+| orquestrador | Orquestrador | waiting | — | painel refeito; aguardando o Micael | 2026-11-11T22:22:22-03:00 |
 | ag-spec | Arquiteto .spec | done | T-014 | concluído | 2026-11-11T00:18:26-03:00 |
 | ag-sim | Simulador | done | T-024 | concluído (T-024) | 2026-11-11T01:14:20-03:00 |
 | ag-ui | Designer do app | done | T-031 | concluído | 2026-11-11T00:36:13-03:00 |
@@ -17,7 +17,7 @@
 
 | id | P | épico | status |
 |---|---|---|---|
-| E0 | 0 | Painel de acompanhamento do desenvolvimento | doing |
+| E0 | 0 | Painel de acompanhamento do desenvolvimento | done |
 | E1 | 1 | Reestruturar .spec (README, arch.yaml, ADRs, UNITs) | done |
 | E2 | 1 | Simulação ≥50 variações (mock) p/ calibrar previsão, entrada, stoploss/stopwin | done |
 | E3 | 2 | Repaginar página do app (amigável/futurista, sóbria) | done |
@@ -45,6 +45,7 @@
 | T-041 | E4 | Parametrizar profit_gain (defaults atuais) + fix latência do stop e fill real | done | ag-calib | 6/6 |
 | T-004 | E0 | Painel: evitar re-render a cada 4s (clique/scroll estáveis) + verificação visual | done | orquestrador | 2/2 |
 | T-024 | E2 | sim-002: variações estruturais (R:R, confirmação, custos) | done | ag-sim | 4/4 |
+| T-005 | E0 | Painel com a cara do modelo pedido (ao vivo, Agora, fluxo n8n, agentes, pendências) | done | orquestrador | 6/6 |
 
 ## Decisões para o Micael
 
@@ -68,31 +69,32 @@
 | D-407 | não | Gate SMA200 diário ligado por padrão (regime_filter_sma200=true). Mantém? | Manter ligado / Desligar por padrão | pending | — |
 | D-210 | não | sim-002: entrada limit −0,6% válida 1h (+taxa BNB) é a única melhora relevante (carteira IS +0,05%/trade), mas depende do modelo de fill. Implementar? | A: implementar em shadow/paper e medir fill real / B: não implementar | pending | — |
 | D-211 | não | 190 configurações (sim-001+002) sem edge líquido robusto na profit_gain; problema está no sinal (edge bruto ≈ custo). O que fazer? | A: live com tamanho mínimo + IA em shadow-mode / B: pausar live / C: spec de nova tese de entrada | pending | — |
+| D-008 | não | Ligar o hook do feed Agora (.claude/settings.json → devpanel/registrar_atividade.py em PreToolUse/PostToolUse/UserPromptSubmit/Stop/SubagentStop)? Só vale abrindo o Claude Code em D:\binance_trade. | Ligar / Não ligar | pending | — |
 
 ## Últimos eventos
 
+- `2026-11-11T22:22:22-03:00` **orquestrador** — status → waiting
+- `2026-11-11T22:22:21-03:00` **orquestrador** — commit v3.13.0: painel refeito com a cara do modelo
+- `2026-11-11T22:22:20-03:00` **orquestrador** — decisão aberta D-008: Ligar o hook do feed Agora (.claude/settings.json → devpanel/registrar_atividade.py em PreToolUse/PostToolUse/UserPromptSubmit/Stop/SubagentStop)? Só vale abrindo o Claude Code em D:\binance_trade.
+- `2026-11-11T22:22:20-03:00` **orquestrador** — T-005 doing → done
+- `2026-11-11T22:22:20-03:00` **orquestrador** — T-005 ✓ hook do feed Agora
+- `2026-11-11T22:22:20-03:00` **orquestrador** — T-005 ✓ verificação visual 1440/390
+- `2026-11-11T22:21:11-03:00` **orquestrador** — T-005 ✓ testes testes/sim no card
+- `2026-11-11T22:21:11-03:00` **orquestrador** — T-005 ✓ página adaptada
+- `2026-11-11T22:21:11-03:00` **orquestrador** — T-005 ✓ coletor estado.json com nossas fontes
+- `2026-11-11T22:15:59-03:00` **orquestrador** — status → active
+- `2026-11-11T22:15:58-03:00` **orquestrador** — T-005 todo → doing
+- `2026-11-11T22:15:58-03:00` **orquestrador** — T-005 ✓ estudar o modelo (layout + contrato)
+- `2026-11-11T01:15:48-03:00` **orquestrador** — status → idle
+- `2026-11-11T01:15:46-03:00` **orquestrador** — sessão autônoma encerrada: tudo commitado até v3.12.0; pendências = decisões do Micael
 - `2026-11-11T01:15:25-03:00` **orquestrador** — commit v3.12.0: sim-002 (89 variações estruturais): nenhuma robusta; problema é o sinal
-- `2026-11-11T01:15:22-03:00` **orquestrador** — status → active
-- `2026-11-11T01:14:20-03:00` **ag-sim** — status → done
-- `2026-11-11T01:14:19-03:00` **ag-sim** — T-024 ok: sim-002 (89 config, todas c/ SMA200). Nenhuma positiva e robusta; R:R/breakeven/parcial/time-stop pioram; só limit −0,6%×1h + BNB ≈ empate (IS +0,05%/trade, OOS −0,14%, @close −0,19/−0,52). D-210/D-211 abertas
-- `2026-11-11T01:14:18-03:00` **ag-sim** — T-024 doing → done
-- `2026-11-11T01:14:17-03:00` **ag-sim** — T-024 ✓ relatório sim-002
-- `2026-11-11T01:14:16-03:00` **ag-sim** — T-024 ✓ grade estrutural >=50 var
-- `2026-11-11T01:14:16-03:00` **ag-sim** — decisão aberta D-211: 190 configurações (sim-001+002) sem edge líquido robusto na profit_gain; problema está no sinal (edge bruto ≈ custo). O que fazer?
-- `2026-11-11T01:14:14-03:00` **ag-sim** — decisão aberta D-210: sim-002: entrada limit −0,6% válida 1h (+taxa BNB) é a única melhora relevante (carteira IS +0,05%/trade), mas depende do modelo de fill. Implementar?
-- `2026-11-11T00:57:31-03:00` **orquestrador** — status → waiting
-- `2026-11-11T00:56:22-03:00` **orquestrador** — commit v3.11.0: gate de regime SMA200 diária (89 testes)
-- `2026-11-11T00:55:53-03:00` **orquestrador** — status → active
-- `2026-11-11T00:53:50-03:00` **ag-calib** — status → done
-- `2026-11-11T00:53:35-03:00` **ag-calib** — T-040 concluída: gate SMA200 diário (Porteiro+Tribunal, fail-closed, cache diário) na profit_gain; D-407 aberta
-- `2026-11-11T00:53:27-03:00` **ag-calib** — T-040 doing → done
 
 <!-- DATA:BEGIN (gerado por devpanel/track.py — não edite à mão) -->
 ```yaml
 project:
   name: binance_trade
   branch: check_strategies
-  version: v3.12.0
+  version: v3.13.0
   goal: Painel de dev (P0), .spec ADR/UNIT/arch.yaml, simulação ≥50 variações p/ calibrar entrada/stop, repaginar
     app
   repo: D:\binance_trade
@@ -103,10 +105,10 @@ agents:
   name: Orquestrador
   role: Planeja, cria/encerra agentes, commita
   task: —
-  step: commit sim-002
+  step: painel refeito; aguardando o Micael
   kind: orchestrator
-  status: active
-  heartbeat: '2026-11-11T01:15:22-03:00'
+  status: waiting
+  heartbeat: '2026-11-11T22:22:22-03:00'
   step_log:
   - at: '2026-11-10T23:49:29-03:00'
     step: construindo painel
@@ -138,6 +140,14 @@ agents:
     step: aguardando ag-sim (sim-002)
   - at: '2026-11-11T01:15:22-03:00'
     step: commit sim-002
+  - at: '2026-11-11T01:15:48-03:00'
+    step: fim do fluxo autônomo — aguardando decisões do Micael
+  - at: '2026-11-11T22:15:59-03:00'
+    step: coletor estado.json
+  - at: '2026-11-11T22:21:11-03:00'
+    step: verificação visual do painel novo
+  - at: '2026-11-11T22:22:22-03:00'
+    step: painel refeito; aguardando o Micael
 - id: ag-spec
   name: Arquiteto .spec
   role: Reestrutura .spec
@@ -261,7 +271,7 @@ agents:
 epics:
 - id: E0
   title: Painel de acompanhamento do desenvolvimento
-  status: doing
+  status: done
   priority: 0
 - id: E1
   title: Reestruturar .spec (README, arch.yaml, ADRs, UNITs)
@@ -572,6 +582,31 @@ tasks:
   - name: relatório sim-002
     done: true
     at: '2026-11-11T01:14:17-03:00'
+- id: T-005
+  title: Painel com a cara do modelo pedido (ao vivo, Agora, fluxo n8n, agentes, pendências)
+  epic: E0
+  agent: orquestrador
+  status: done
+  steps:
+  - name: estudar o modelo (layout + contrato)
+    done: true
+    at: '2026-11-11T22:15:58-03:00'
+  - name: coletor estado.json com nossas fontes
+    done: true
+    at: '2026-11-11T22:21:11-03:00'
+  - name: página adaptada
+    done: true
+    at: '2026-11-11T22:21:11-03:00'
+  - name: hook do feed Agora
+    done: true
+    at: '2026-11-11T22:22:20-03:00'
+  - name: testes testes/sim no card
+    done: true
+    at: '2026-11-11T22:21:11-03:00'
+  - name: verificação visual 1440/390
+    done: true
+    at: '2026-11-11T22:22:20-03:00'
+  note: hook pronto; ligar em .claude/settings.json aguarda aprovação
 decisions:
 - id: D-001
   question: O painel de referência (trycloudflare) devolve 403 para acesso automatizado; o layout foi desenhado
@@ -772,6 +807,16 @@ decisions:
   status: pending
   blocking: false
   opened_at: '2026-11-11T01:14:16-03:00'
+- id: D-008
+  question: Ligar o hook do feed Agora (.claude/settings.json → devpanel/registrar_atividade.py em PreToolUse/PostToolUse/UserPromptSubmit/Stop/SubagentStop)?
+    Só vale abrindo o Claude Code em D:\binance_trade.
+  options:
+  - Ligar
+  - Não ligar
+  recommendation: Ligar
+  status: pending
+  blocking: false
+  opened_at: '2026-11-11T22:22:20-03:00'
 events:
 - at: '2026-11-10T23:49:14-03:00'
   who: orquestrador
@@ -1293,6 +1338,60 @@ events:
 - at: '2026-11-11T01:15:25-03:00'
   who: orquestrador
   msg: 'commit v3.12.0: sim-002 (89 variações estruturais): nenhuma robusta; problema é o sinal'
-updated_at: '2026-11-11T01:15:25-03:00'
+- at: '2026-11-11T01:15:46-03:00'
+  who: orquestrador
+  msg: 'sessão autônoma encerrada: tudo commitado até v3.12.0; pendências = decisões do Micael'
+- at: '2026-11-11T01:15:48-03:00'
+  who: orquestrador
+  msg: status → idle
+- at: '2026-11-11T22:15:58-03:00'
+  who: orquestrador
+  msg: T-005 ✓ estudar o modelo (layout + contrato)
+- at: '2026-11-11T22:15:58-03:00'
+  who: orquestrador
+  msg: T-005 todo → doing
+- at: '2026-11-11T22:15:59-03:00'
+  who: orquestrador
+  msg: status → active
+- at: '2026-11-11T22:21:11-03:00'
+  who: orquestrador
+  msg: T-005 ✓ coletor estado.json com nossas fontes
+- at: '2026-11-11T22:21:11-03:00'
+  who: orquestrador
+  msg: T-005 ✓ página adaptada
+- at: '2026-11-11T22:21:11-03:00'
+  who: orquestrador
+  msg: T-005 ✓ testes testes/sim no card
+- at: '2026-11-11T22:22:20-03:00'
+  who: orquestrador
+  msg: T-005 ✓ verificação visual 1440/390
+- at: '2026-11-11T22:22:20-03:00'
+  who: orquestrador
+  msg: T-005 ✓ hook do feed Agora
+- at: '2026-11-11T22:22:20-03:00'
+  who: orquestrador
+  msg: T-005 doing → done
+- at: '2026-11-11T22:22:20-03:00'
+  who: orquestrador
+  msg: 'decisão aberta D-008: Ligar o hook do feed Agora (.claude/settings.json → devpanel/registrar_atividade.py
+    em PreToolUse/PostToolUse/UserPromptSubmit/Stop/SubagentStop)? Só vale abrindo o Claude Code em D:\binance_trade.'
+- at: '2026-11-11T22:22:21-03:00'
+  who: orquestrador
+  msg: 'commit v3.13.0: painel refeito com a cara do modelo'
+- at: '2026-11-11T22:22:22-03:00'
+  who: orquestrador
+  msg: status → waiting
+updated_at: '2026-11-11T22:22:22-03:00'
+proxima:
+  texto: 'Revisar o painel novo e aprovar o hook do feed Agora (.claude/settings.json); depois decidir D-201/D-211
+    (o que fazer com o live: a estratégia não paga os custos na simulação) e D-407 (manter o filtro SMA200 ligado).'
+  quando: agora
+  duracao: ~10 min
+  atualizado_em: '2026-11-11T22:21:47-03:00'
+links:
+- titulo: Web app do bot
+  url: http://127.0.0.1:5000/
+  nota: painel do trade bot (app.py); fora do ar enquanto o bot não roda
+  desde: '2026-11-11T22:21:48-03:00'
 ```
 <!-- DATA:END -->
